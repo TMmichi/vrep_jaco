@@ -1,0 +1,34 @@
+{
+    "configurations": [
+        {
+            "browse": {
+                "databaseFilename": "",
+                "limitSymbolsToIncludedHeaders": true
+            },
+            "includePath": [
+                "/home/ljh/Project/vrep_jaco/devel/include/**",
+                "/opt/ros/melodic/include/**",
+                "/usr/include/**",
+                "/opt/ros/melodic/include",
+                "${workspaceFolder}/jaco_arm_pkgs/convenience-pkgs/arm_components_name_manager/include",
+                "${workspaceFolder}/jaco_arm_pkgs/convenience-pkgs/convenience_math_functions/include",
+                "${workspaceFolder}/jaco_arm_pkgs/joint_control_pkgs/include",
+                "${workspaceFolder}/jaco_arm_pkgs/joint_trajectory_execution/include",
+                "${workspaceFolder}/jaco_arm_pkgs/convenience-pkgs/baselib_binding/include",
+                "${workspaceFolder}/action_client/include",
+                "${workspaceFolder}/vrep_api/include",
+                "${workspaceFolder}/vrep_api/include/vrep_api",
+                "${workspaceFolder}/moveit/moveit_ros/move_group/include",
+                "${workspaceFolder}/jaco_controller",
+                "${workspaceFolder}/kinova-ros/kinova_driver/include",
+                "/home/ljh/Project/vrep_jaco/devel/include"
+            ],
+            "name": "ROS",
+            "intelliSenseMode": "gcc-x64",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++17"
+        }
+    ],
+    "version": 4
+}
