@@ -15,6 +15,7 @@
 #include <ros/console.h>
 #include <std_msgs/Float64.h>
 #include <std_msgs/Float64MultiArray.h>
+#include <std_msgs/Bool.h>
 #include <sensor_msgs/JointState.h>
 #include <actionlib/server/simple_action_server.h>
 #include <control_msgs/FollowJointTrajectoryAction.h>
@@ -31,6 +32,9 @@ public:
 
     /** Actionlib callback for trajectory command */
     void trajCB(const control_msgs::FollowJointTrajectoryGoalConstPtr &goal);
+
+    /** Reset Vrep Simulation*/
+    void resetCB(const std_msgs::Bool &reset)
 
 private:
     /** Initialises jointStates and jointHandles. Return true if success.
@@ -75,6 +79,9 @@ private:
     /** Subscriber to target torques */
     ros::Subscriber torqueSub_;
     ros::Publisher tempPub_;
+    /** Subscriber for reset simulation */
+    ros::Subscriber resetSub_;
+    ros::Publisher resetPub_;
 
     /** Stores joint state */
     sensor_msgs::JointState jointState_;

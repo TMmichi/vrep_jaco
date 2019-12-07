@@ -86,6 +86,8 @@ VrepInterface::VrepInterface(ros::NodeHandle& n) :
         torqueSub_ = n.subscribe("target_torques", 1,
                 &VrepInterface::torqueCallback, this);
     }
+    resetSub_ = n.subscribe("trpo/reset_signal", 1, &VrepInterface::resetCB, this);
+    resetPub_ = n.advertise<std_msgs::Bool>("simulation/reset", 1);
 
     publishWorkerTimer_ = n.createWallTimer(ros::WallDuration(1.0 / feedbackRate_),
             &VrepInterface::publishWorker, this);
@@ -113,7 +115,7 @@ void VrepInterface::publishWorker(const ros::WallTimerEvent& e) {
 }
 
 void VrepInterface::trajCB(
-        const control_msgs::FollowJointTrajectoryGoalConstPtr &goal) {
+    const control_msgs::FollowJointTrajectoryGoalConstPtr &goal) {
     ROS_INFO("VrepInterface received trajectory");
     control_msgs::FollowJointTrajectoryResult result;
     const auto& points = goal->trajectory.points;
@@ -178,6 +180,28 @@ void VrepInterface::trajCB(
         }
         setVrepPosition(target);
         posUpdateRate_.sleep();
+    }
+}
+
+void resetCB(const std_msgs::Bool reset){
+    if(reset.data){
+        simxStopSimulation(clientID_,simx_opmode_blocking);
+        while(true){
+            simxGetIntegerSignal(clientID_,"dummy",simx_opmode_blocking);
+            simxUChar[1] e;
+            simxGetInMessageInfo(clientID_, simx_headeroffset_server_state,e);
+            char not_stopped = e & 1;
+            if(!not_stopped) {break;}
+        }
+        simxSynchronous(clientID_,true);
+        simxStartSimulation(clientID_,simx_opmode_blocking);
+        
+        //TODO: set each joint position randomly
+
+        //Publish simulation/reset signal
+        std_msgs::Bool reset_;
+        reset_.data = true;
+        resetPub_.publish(reset_);
     }
 }
 
