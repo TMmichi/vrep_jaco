@@ -88,7 +88,7 @@ class Vrep_jaco_data:
             self.data_buff_temp[2] = self.pressure_state[-1]
             self.pressure_trigger = False
             if not self.joint_trigger:
-                self.data_buff_temp.append(self.data_buff_temp)
+                self.data_buff.append(self.data_buff_temp)
                 if msg_time > 3:
                     self.data_record()
 

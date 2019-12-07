@@ -1,4 +1,3 @@
-
 import tensorflow as tf
 from keras.models import Model
 from keras.layers import Input, Dense
@@ -55,10 +54,8 @@ class TRPO(NeuralNetwork):
 
     def _init_placeholders(self):
         self.r = tf.placeholder(shape=[None, 1], dtype='float32', name='rewards')
-        #TODO: change env.get_num_action to my #
         self.actions_ph = tf.placeholder('float32', [None, self.env.get_num_action()], name="actions")
         self.advantages_ph = tf.placeholder('float32', [None, 1], name="GAE_advantages")
-        #TODO: change env.get_num_action to my #
         self.prev_mu_ph = tf.placeholder('float32', [None, self.env.get_num_action()], name="prev_iteration_mu")
         self.prev_sigma_ph = tf.placeholder('float32', [None, self.env.get_num_action()], name="prev_iteration_sigma")
         self.beta_ph = tf.placeholder(shape=[], dtype='float32', name='beta_2nd_loss')
@@ -71,11 +68,9 @@ class TRPO(NeuralNetwork):
         mu_model_input = Input(tensor=self.input_ph)
         mu_model = Dense(units=128, activation=self.activation, kernel_initializer=RandomNormal(0,0.1))(mu_model_input)
         mu_model = Dense(units=128, activation=self.activation, kernel_initializer=RandomNormal(0,0.1))(mu_model)
-        
         mean = Dense(units=self.env.get_num_action(), activation=None, kernel_initializer=RandomNormal())(mu_model)
 
         ''' state value network '''
-        #TODO: change env.get_state_shape to my #
         value_model_input = Input(batch_shape=(None, self.env.get_state_shape()[0]))
         value_model = Dense(units=128,
                             activation=self.activation,
@@ -96,7 +91,6 @@ class TRPO(NeuralNetwork):
         ''' model outputs '''
         self.mu = policy_mu_model(self.input_ph)
         self.value = self.value_model(self.input_ph)
-        #TODO: change env.get_action_number to my #
         self.sigma = tf.get_variable('sigma', (1, self.env_action_number),
                                      tf.float32,
                                      tf.constant_initializer(0.6))
@@ -131,7 +125,6 @@ class TRPO(NeuralNetwork):
         return session.run(self.sampled_action, feed_dict = {self.input_ph: np.reshape(inpt, (-1, self.env.get_state_shape()[0]))})
 
     def _update_policy(self, session, t, auditor):
-
         states = t['states']
         actions = t['actions']
         advantages = t['advantages']
@@ -144,7 +137,6 @@ class TRPO(NeuralNetwork):
                      }
 
         prev_mu, prev_sigma = session.run([self.mu, self.sigma], feed_dict)
-        #TODO: change env.get_num_action to my #
         feed_dict[self.prev_mu_ph] = np.reshape(prev_mu, (-1, self.env.get_num_action()))
         feed_dict[self.prev_sigma_ph] = np.reshape(prev_sigma, (-1, self.env.get_num_action()))
 

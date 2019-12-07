@@ -71,6 +71,8 @@
         "string_view": "cpp",
         "regex": "cpp",
         "slist": "cpp",
-        "valarray": "cpp"
-    }
+        "valarray": "cpp",
+        "__split_buffer": "cpp"
+    },
+    "python.pythonPath": "/Users/jeonghoon/anaconda3/envs/jaco/bin/python"
 }

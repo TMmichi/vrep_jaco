@@ -3,7 +3,6 @@ from keras.models import Sequential
 
 class Brain(object):
     def __init__(self, **kwargs):
-        #TODO: To vrep env
         self.env = kwargs['env']
         self.model = Sequential()
 

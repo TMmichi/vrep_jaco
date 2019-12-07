@@ -10,7 +10,7 @@ class TRPOTrainer(GeneralTrainer):
 
         self.local_brain = TRPO(**kwargs)
 
-        ''' 
+        '''
         Running Statistics.
         normalize observations using running mean and std over the course of the entire experiment,
         fix the running statistics per batch
@@ -20,7 +20,7 @@ class TRPOTrainer(GeneralTrainer):
         self.rew_scale = 0.0025
 
     ''' 
-    core training routine. 
+    core training routine.
         updates value using previous batch of trajectories, 
         updates policy using current batch of trajectories,
         For details, see https://arxiv.org/pdf/1703.02660.pdf
@@ -92,7 +92,7 @@ class TRPOTrainer(GeneralTrainer):
             norm_states.append(state_normalized)
 
             action = self.local_brain.sample_action(session, state_normalized)
-            new_state, reward, terminal = self.env.perform_action(action)
+            new_state, reward, terminal = self.env.step(action)
             actions.append(action)
             rewards.append(reward * self.rew_scale)
 

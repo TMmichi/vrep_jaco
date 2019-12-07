@@ -30,7 +30,6 @@ train_op = tf.train.AdamOptimizer(learn_rate).minimize(loss)
 #total_batch = int(n_samples / batch_size)
 min_tot_loss = 1e99
 
-
 config = tf.ConfigProto()
 config.gpu_options.allow_growth=True
 outputlist = []

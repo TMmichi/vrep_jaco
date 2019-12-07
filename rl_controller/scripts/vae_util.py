@@ -5,6 +5,7 @@ import random
 from datetime import datetime as dt
 
 
+#TODO: Implement FiLM Architecture
 def CNN_Encoder(x, z_dim, drop_rate=0.2, trainable=True, d_switch=False):
     d_switch = d_switch or trainable
     random.seed(dt.now())
@@ -98,7 +99,7 @@ def CNN_Decoder(z, drop_rate=0.2, reuse=False):
             inputs=de_dropout1, filters=32, kernel_size=5, strides=(2,2), padding='same',
             activation=tf.nn.relu, name="DeConv2")
         de_dropout2 = tf.layers.dropout(
-            inputs=de_layer2, rate=drop_rate)
+            inputs=de_layer2, rate=drop_rate) 
 
         de_layer3 = tf.layers.conv2d_transpose(
             inputs=de_dropout2, filters=16, kernel_size=6, strides=(2,2), padding='same',
@@ -142,14 +143,6 @@ def autoencoder(x, dim_z, drop_rate=0.2, trainable=True):
     return x_hat, z, loss, -marginal_likelihood, KL_divergence
 
 
-def sensor_fusion(image, camera_position, gripper_pressure, joint_states, attension):
-    train_total_data, train_size, _, _, test_data, test_labels = mnist_data.prepare_MNIST_data()
-    n_samples = train_size
-
-
-def graph_init():
-    x = tf.placeholder(tf.float32, shape=[None, dim_img], name='input_img')
-    drop_rate = tf.placeholder(tf.float32, name='drop_rate')
-    x_hat, z, _, _, _ = autoencoder(x, dim_img, dim_z, n_hidden, drop_rate, trainable=False)
-
-    return x, z, x_hat
+#TODO: build data_fusion graph
+def data_fusion_MLP():
+    pass
