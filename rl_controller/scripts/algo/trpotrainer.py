@@ -1,8 +1,10 @@
 import numpy as np
-from trainer import GeneralTrainer
 import scipy.signal
-from runningstat import RunningStats
-from trpo import TRPO
+from algo.runningstat import RunningStats
+from algo.trainer import GeneralTrainer
+from algo.trpo import TRPO
+
+
 
 class TRPOTrainer(GeneralTrainer):
     def __init__(self, **kwargs):

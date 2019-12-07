@@ -1,8 +1,9 @@
-
 ''' modified from https://github.com/liyanage/python-modules/blob/master/running_stats.py,
  detailed in http://www.johndcook.com/standard_deviation.html'''
 
 import numpy as np
+
+
 class RunningStats:
     def __init__(self, dim):
         self.n = 0

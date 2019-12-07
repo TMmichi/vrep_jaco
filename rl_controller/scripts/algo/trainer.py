@@ -1,4 +1,4 @@
-from logger import Auditor
+from algo.logger import Auditor
 
 class GeneralTrainer(object):
     def __init__(self, **kwargs):

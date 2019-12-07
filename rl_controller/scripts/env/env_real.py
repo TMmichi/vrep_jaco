@@ -1,7 +1,8 @@
-from environment import Environment
-from state_generator import State_generator
 import time
 import numpy as np
+
+from env.environment import Environment
+from state_gen.state_generator import State_generator
 
 import rospy
 from std_msgs.msg import Header
@@ -22,7 +23,7 @@ class Real(Environment):
         
         ### ------  REAL ROBOT RESET  ------ ###
         self.reset_signal = False
-        self.reset_pub = rosspy.Publisher("/trpo/reset",Bool,queue_size=1)
+        self.reset_pub = rospy.Publisher("/trpo/reset",Bool,queue_size=1)
         self.reset_sub = rospy.Subscriber("/simulation/reset",Bool,self.__reset_CB,queue_size=1)
 
         ### ------  STATE GENERATION  ------ ###

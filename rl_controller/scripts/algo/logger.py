@@ -1,4 +1,3 @@
-
 import os
 import pprint
 import tensorflow as tf
@@ -6,6 +5,8 @@ import tensorflow as tf
 '''
 Purpose: log output and statistics to STDOUT and TensorBoard
 '''
+
+
 class Auditor(object):
 
     def __init__(self, instance_name):

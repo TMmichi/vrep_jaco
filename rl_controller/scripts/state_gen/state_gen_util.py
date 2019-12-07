@@ -1,9 +1,7 @@
-#!/usr/bin/env python3
 import tensorflow as tf
 import numpy as np
 import random
 from datetime import datetime as dt
-
 
 #TODO: Implement FiLM Architecture
 def CNN_Encoder(x, z_dim, drop_rate=0.2, trainable=True, d_switch=False):
@@ -143,6 +141,22 @@ def autoencoder(x, dim_z, drop_rate=0.2, trainable=True):
     return x_hat, z, loss, -marginal_likelihood, KL_divergence
 
 
+def feature_fushion_MLP(mean_feature, input_placeholder):
+
+    return []
+
 #TODO: build data_fusion graph
-def data_fusion_MLP():
-    pass
+def data_fusion_graph(input_placeholder):
+    mean_feature = []
+    # depth_arm
+    mean_feature.append(CNN_Encoder(input_placeholder[0], z_dim=64, trainable=False)[0])
+    # depth_bed
+    mean_feature.append(CNN_Encoder(input_placeholder[1], z_dim=64, trainable=False)[0])
+    # image_arm
+    mean_feature.append(CNN_Encoder(input_placeholder[2], z_dim=64, trainable=False)[0])
+    # image_bed
+    mean_feature.append(CNN_Encoder(input_placeholder[3], z_dim=64, trainable=False)[0])
+
+    state = feature_fushion_MLP(mean_feature, input_placeholder)
+
+    return state

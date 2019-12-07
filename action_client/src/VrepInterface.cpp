@@ -194,6 +194,7 @@ void resetCB(const std_msgs::Bool reset){
             if(!not_stopped) {break;}
         }
         simxSynchronous(clientID_,true);
+        simxSynchronousTrigger(clientID_);
         simxStartSimulation(clientID_,simx_opmode_blocking);
         
         //TODO: set each joint position randomly

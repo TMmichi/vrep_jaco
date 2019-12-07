@@ -1,11 +1,11 @@
 import tensorflow as tf
+import numpy as np
 from keras.models import Model
 from keras.layers import Input, Dense
 from keras.optimizers import Adam
 from keras.initializers import RandomNormal
 from keras.regularizers import l2
-from brain import NeuralNetwork
-import numpy as np
+from algo.brain import NeuralNetwork
 
 
 class TRPO(NeuralNetwork):

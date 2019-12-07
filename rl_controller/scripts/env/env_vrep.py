@@ -1,7 +1,8 @@
-from environment import Environment
-from state_generator import State_generator
 import time
 import numpy as np
+
+from env.environment import Environment
+from state_gen.state_generator import State_generator
 
 import rospy
 from std_msgs.msg import Header
@@ -43,7 +44,7 @@ class Vrep(Environment):
         self.data_buff_temp = [0,0,0]
 
         # State Generator
-        self.state_gen = State_generator(kwargs['sess'])
+        self.state_gen = State_generator(**kwargs)
 
         ### ------  ACTION ------ ###
         # Action Publisher

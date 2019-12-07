@@ -4,20 +4,19 @@ import time
 import random
 import math
 import cv2 as cv
-from cv_bridge import CvBridge, CvBridgeError
-from matplotlib import pyplot as plt
 import numpy as np
 import tensorflow as tf
 from keras import backend as K
+from matplotlib import pyplot as plt
+
+from algo.trpo import TRPO
+from algo.trpotrainer import TRPOTrainer
 
 import rospy
 from std_msgs.msg import Bool
 from argparser import ArgParser
 from env_vrep import Vrep
 from env_real import Real
-
-from trpo import TRPO
-from trpotrainer import TRPOTrainer
 
 
 class RL_controller:
@@ -28,7 +27,7 @@ class RL_controller:
         parser = ArgParser()
         args = parser.parse_args()
         tf.reset_default_graph()
-        
+
         config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
         self.sess = tf.compat.v1.Session(config=config)
         args.sess = self.sess
