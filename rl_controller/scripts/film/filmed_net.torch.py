@@ -4,8 +4,6 @@ import math
 import ipdb as pdb
 import pprint
 from termcolor import colored
-import tensorflow as tf
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -15,6 +13,17 @@ import torchvision.models
 from film.layers import init_modules, GlobalAveragePool, Flatten
 from film.layers import build_classifier, build_stem
 import film.programs
+
+
+class FiLM(nn.Module):
+  """
+  A Feature-wise Linear Modulation Layer from
+  'FiLM: Visual Reasoning with a General Conditioning Layer'
+  """
+  def forward(self, x, gammas, betas):
+    gammas = gammas.unsqueeze(2).unsqueeze(3).expand_as(x)
+    betas = betas.unsqueeze(2).unsqueeze(3).expand_as(x)
+    return (gammas * x) + betas
 
 
 class FiLMedNet(nn.Module):
