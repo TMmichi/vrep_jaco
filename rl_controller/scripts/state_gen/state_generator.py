@@ -1,6 +1,5 @@
 import tensorflow as tf
 import numpy as np
-import os
 from state_gen.state_gen_util import data_fusion_graph
 
 state_size = 10
@@ -53,7 +52,6 @@ class State_generator:
         pressure_data = tf.compat.v1.placeholder(tf.float32, shape=[None, 10], name='input_pressure')
         input_placeholder.append(pressure_data)
         keep_prob = tf.compat.v1.placeholder(tf.float32, name='keep_prob')
-
         
         state = data_fusion_graph(input_placeholder)
 

@@ -4,6 +4,9 @@ import random
 from datetime import datetime as dt
 
 #TODO: Implement FiLM Architecture
+def FiLM(x,gamma_tensor,beta_tensor):
+    return tf.add(tf.multiply(x,gamma_tensor),beta_tensor)
+
 def CNN_Encoder(x, z_dim, drop_rate=0.2, trainable=True, d_switch=False):
     d_switch = d_switch or trainable
     random.seed(dt.now())
