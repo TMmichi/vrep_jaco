@@ -21,12 +21,8 @@ class FiLMGen:
 
   def _build_graph(self,input_image):
     x = input_image
-    
+
     pass
-
-
-
-
 
 
 
@@ -47,20 +43,8 @@ class FiLMGen:
 
 
   def encoder(self, x):
-    V_in, V_out, D, H, H_full, L, N, T_in, T_out = self.get_dims(x=x)
-    x, idx = self.before_rnn(x)  # Tokenized word sequences (questions), end index
-    embed = self.encoder_embed(x)
-    h0 = Variable(torch.zeros(L, N, H).type_as(embed.data))
-
-    if self.encoder_type == 'lstm':
-      c0 = Variable(torch.zeros(L, N, H).type_as(embed.data))
-      out, _ = self.encoder_rnn(embed, (h0, c0))
-    elif self.encoder_type == 'gru':
-      out, _ = self.encoder_rnn(embed, h0)
-
-    # Pull out the hidden state for the last non-null value in each input
-    idx = idx.view(N, 1, 1).expand(N, 1, H_full)
-    return out.gather(1, idx).view(N, H_full)
+    
+    return 
 
   def decoder(self, encoded, dims, h0=None, c0=None):
     V_in, V_out, D, H, H_full, L, N, T_in, T_out = dims

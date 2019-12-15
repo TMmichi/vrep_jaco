@@ -13,6 +13,7 @@ class FiLM(layers.Layer):
     def __init__(self):
         super().__init__()
     
+     
     def call(self,x,gammas,betas):
         height = x.shape[1]
         width = x.shape[2]
@@ -44,6 +45,7 @@ class FCBlock(layers.Layer):
         #Dropout layer
         self.dropout = tf.keras.layers.Dropout(1-self.survival_prob)
 
+     
     def call(self,
             inputs,
             training = True):
@@ -69,6 +71,7 @@ class FiLMedFCBlock(layers.Layer):
         #Dropout layer
         self.dropout = tf.keras.layers.Dropout(1-self.survival_prob)
 
+     
     def call(self,
             inputs,
             gammas,
@@ -121,6 +124,7 @@ class ConvBlock(layers.Layer):
         #Dropout layer
         self.dropout = tf.keras.layers.Dropout(1-self.survival_prob)
     
+     
     def call(self,
             inputs,            
             training=True):
@@ -178,6 +182,7 @@ class FiLMedConvBlock(layers.Layer):
         #Dropout layer
         self.dropout = tf.keras.layers.Dropout(1-self.survival_prob)
 
+     
     def call(self,
             inputs,
             gammas,
@@ -244,6 +249,7 @@ class DeConvBlock(layers.Layer):
         #Dropout layer
         self.dropout = tf.keras.layers.Dropout(1-self.survival_prob)
     
+     
     def call(self,
             inputs,            
             training=True):
@@ -294,6 +300,7 @@ class CNN_Encoder(tf.keras.Model):
         #FC layer
         for idx in range(self.num_fc_blocks):
             block_id = 'fc_block%s' % str(idx+1)
+            print(block_id)
             setting = block_setting[block_id]
             if self.fc_isfilmed:
                 block = FiLMedFCBlock(**setting)
@@ -309,6 +316,7 @@ class CNN_Encoder(tf.keras.Model):
             block = FCBlock(**setting)
         self._blocks.append([block,self.latent_isfilmed,block_id])
 
+     
     def call(self,
             inputs,
             gammas=None,
@@ -317,7 +325,7 @@ class CNN_Encoder(tf.keras.Model):
         x = inputs
         for idx, [block,isfilm,block_id] in enumerate(self._blocks):
             #Conv Blocks (FiLMed or Not)
-            with tf.variable_scope(block_id):
+            with tf.compat.v1.variable_scope(block_id):
                 if isfilm:
                     if gammas == None or betas == None:
                         raise NameError("Gammas, Betas are not given")
@@ -356,6 +364,7 @@ class CNN_Decoder(tf.keras.Model):
         #DeFC layer
         for idx in range(self.num_defc_blocks):
             block_id = 'defc_block%s' % str(idx+1)
+            print(block_id)
             setting = block_setting[block_id]
             block = FCBlock(**setting)
             self._blocks.append([block,False,block_id])     
@@ -369,17 +378,20 @@ class CNN_Decoder(tf.keras.Model):
         #Stack DeConv Blocks
         for idx in range(self.num_deconv_blocks):
             block_id = 'deconv_block%s' % str(idx+1)
+            print(block_id)
             setting = block_setting[block_id]
             setting['survival_prob'] = 1.0 - self.drop_rate * float(idx) / len(self._blocks)
             block = DeConvBlock(**setting)
             self._blocks.append([block,False,block_id])
+        '''
         #Deconv Output
         block_id = 'deconv_output'
         setting = block_setting[block_id]
         setting['survival_prob'] = 1.0 - self.drop_rate
         block = DeConvBlock(**setting)
-        self._blocks.append([block,False,block_id])
+        self._blocks.append([block,False,block_id])'''
 
+     
     def call(self,
             z,
             gammas=None,
@@ -389,7 +401,7 @@ class CNN_Decoder(tf.keras.Model):
         x_hat = z
         for [block,isfilm,block_id] in self._blocks:
             #Conv Blocks (FiLMed or Not)
-            with tf.variable_scope(block_id):
+            with tf.compat.v1.variable_scope(block_id):
                 if not isfilm:
                     x_hat = block(
                         x_hat, 
@@ -405,31 +417,50 @@ class CNN_Decoder(tf.keras.Model):
 class Autoencoder(tf.keras.Model):
     def __init__(self,**kwargs):
         super().__init__()
-        self.num_conv_blocks = kwargs.get('num_conv_blocks',5)
-        self.num_fc_blocks = kwargs.get('num_fc_blocks',2)
         self.latent_dim = kwargs.get('latent_dim',32)
-        self.condition_method = kwargs.get('condition_method','conv-film')
-        self.survival_prob = kwargs.get('survival_prob',0.8)
-        self.drop_rate = 1.0 - self.survival_prob
-        self.d_switch = kwargs.get('d_switch',False)
-        self.conv_isfilmed = kwargs.get('conv_isfilmed',False)
-        self.fc_isfilmed = kwargs.get('fc_isfilmed',False)
-        self.latent_isfilmed = kwargs.get('latent_isfilmed',False)
-        self._build()
+        kwargs['num_deconv_blocks'] = kwargs.get('num_conv_blocks',5)
+        kwargs['num_defc_blocks'] = kwargs.get('num_fc_blocks',2)
+        
+        self._build(**kwargs)
 
-    def _build(self):
-        self.encoder = CNN_Encoder()
-        self.decoder = CNN_Decoder()
+    def _build(self,**kwargs):
+        self.encoder = CNN_Encoder(**kwargs)
+        self.decoder = CNN_Decoder(**kwargs)
     
-    def reparam(self,mean,logvar):
+    def reparameterize(self,mean,logvar):
         eps = tf.random.normal(shape=mean.shape)
         return eps * tf.exp(logvar * .5) + mean
     
     def sample(self, sample_num=1,eps=None):
         if eps is None:
             eps = tf.random.normal(shape=(sample_num, self.latent_dim))
-        return self.decode(eps, apply_sigmoid=True)
+        return self.decoder(eps, apply_sigmoid=True)
 
+    def _log_normal_pdf(self,sample, mean, logvar, raxis=1):
+        log2pi = tf.math.log(2. * np.pi)
+        return tf.reduce_sum(
+            -.5 * ((sample - mean) ** 2. * tf.exp(-logvar) + logvar + log2pi),
+            axis=raxis)
+
+    def compute_loss(self,x):
+        mean, logvar = self.encoder(x)
+        z = self.reparameterize(mean, logvar)
+        x_logit = self.decoder(mean)
+        cross_ent = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit, labels=x)
+        logpx_z = -tf.reduce_sum(cross_ent, axis=[1, 2, 3])
+        logpz = self._log_normal_pdf(z, 0., 0.)
+        logqz_x = self._log_normal_pdf(z, mean, logvar)
+        result = -tf.reduce_mean(logpx_z + logpz - logqz_x)
+        return result
+    
+    @tf.function
+    def compute_apply_gradients(self, x, optimizer):
+        with tf.GradientTape() as tape:
+            loss = self.compute_loss(x)
+        gradients = tape.gradient(loss, self.trainable_variables)
+        optimizer.apply_gradients(zip(gradients, self.trainable_variables))
+
+    @tf.function
     def call(self,
             inputs,
             gammas=None,
@@ -437,148 +468,9 @@ class Autoencoder(tf.keras.Model):
             training=True):
         x = inputs
         mean, logvar = self.encoder(x,gammas,betas)
-        z = self.reparam(mean, logvar)
+        z = self.reparameterize(mean, logvar)
         probs = self.decoder(z)
         return probs
-
-
-'''
-def CNN_Encoder(**kwargs):
-    d_switch = kwargs['d_switch'] or kwargs['trainable']
-    random.seed(dt.now())
-    seed = random.randint(0,12345)
-    x = kwargs['depth_input']
-    with tf.compat.v1.variable_scope("CNN_Encoder"):
-        print(x.shape)
-        batch1 = tf.layers.batch_normalization(
-            inputs=x, axis=-1, scale=True, training=trainable, name="BN1")
-        layer1 = tf.layers.conv2d(
-            inputs=batch1, filters=16, kernel_size=8, strides=(1,1), padding='same',
-            activation=tf.nn.relu, trainable=trainable, name="Conv1")
-        pool1 = tf.layers.max_pooling2d(
-            inputs=layer1,pool_size=[2,2],strides=2)
-        dropout1 = tf.layers.dropout(
-            inputs=pool1, rate=drop_rate, seed=seed, training=d_switch)
-        print(dropout1.shape)
-
-        batch2 = tf.layers.batch_normalization(
-            inputs=dropout1, axis=-1, scale=True, training=trainable, name="BN2")
-        layer2 = tf.layers.conv2d(
-            inputs=batch2, filters=32, kernel_size=4, strides=(1,1), padding='same',
-            activation=tf.nn.relu, trainable=trainable, name="Conv2")
-        pool2 = tf.layers.max_pooling2d(
-            inputs=layer2,pool_size=[2,2],strides=2)
-        dropout2 = tf.layers.dropout(
-            inputs=pool2, rate=drop_rate, seed=seed, training=d_switch)
-        print(dropout2.shape)
-
-        batch3 = tf.layers.batch_normalization(
-            inputs=dropout2, axis=-1, scale=True, training=trainable, name="BN3")
-        layer3 = tf.layers.conv2d(
-            inputs=batch3, filters=64, kernel_size=4, strides=(1,1), padding='same',
-            activation=tf.nn.relu, trainable=trainable, name="Conv3")
-        pool3 = tf.layers.max_pooling2d(
-            inputs=layer3,pool_size=[2,2],strides=2)
-        dropout3 = tf.layers.dropout(
-            inputs=pool3, rate=drop_rate, seed=seed, training=d_switch)
-        print(dropout3.shape)
-
-        batch4 = tf.layers.batch_normalization(
-            inputs=dropout3, axis=-1, scale=True, training=trainable, name="BN4")
-        layer4 = tf.layers.conv2d(
-            inputs=batch4, filters=128, kernel_size=4, strides=(1,1), padding='same',
-            activation=tf.nn.relu, trainable=trainable, name="Conv4")
-        pool4 = tf.layers.max_pooling2d(
-            inputs=layer4,pool_size=[2,2],strides=2)
-        dropout4 = tf.layers.dropout(
-            inputs=pool4, rate=drop_rate, seed=seed, training=d_switch)
-        print(dropout4.shape)
-
-        flat = tf.layers.flatten(dropout4)
-        print(flat.shape)
-        fc1 = tf.layers.dense(
-            inputs=flat, units=512, name="FC1")
-        dropout_fc1 = tf.layers.dropout(
-            inputs=fc1, rate=drop_rate, seed=seed, training=d_switch)
-        print(dropout_fc1.shape)
-        
-        fc2 = tf.layers.dense(
-            inputs=dropout_fc1, units=2*z_dim, name="FC2")
-        print(fc2.shape)
-        
-        mean = fc2[:, :z_dim]
-        stddev = 1e-6 + tf.nn.softplus(fc2[:, z_dim:])
-
-    return mean, stddev
-
-
-def CNN_Decoder(z, drop_rate=0.2, reuse=False):
-    with tf.variable_scope("CNN_Decoder", reuse=reuse):
-        de_fc1 = tf.layers.dense(
-            inputs=z, units=512, name="de_FC1")
-        dropout_de_fc1 = tf.layers.dropout(
-            inputs=de_fc1, rate=drop_rate)
-
-        de_fc2 = tf.layers.dense(
-            inputs=dropout_de_fc1, units=153600, name="de_FC2")
-        dropout_de_fc2 = tf.layers.dropout(
-            inputs=de_fc2, rate=drop_rate)
-
-        unflat = tf.reshape(
-            tensor=dropout_de_fc2, shape=[-1,30,40,128])
-
-        de_layer1 = tf.layers.conv2d_transpose(
-            inputs=unflat, filters=64, kernel_size=5, strides=(2,2), padding='same',
-            activation=tf.nn.relu, name="DeConv1")
-        de_dropout1 = tf.layers.dropout(
-            inputs=de_layer1, rate=drop_rate)
-
-        de_layer2 = tf.layers.conv2d_transpose(
-            inputs=de_dropout1, filters=32, kernel_size=5, strides=(2,2), padding='same',
-            activation=tf.nn.relu, name="DeConv2")
-        de_dropout2 = tf.layers.dropout(
-            inputs=de_layer2, rate=drop_rate) 
-
-        de_layer3 = tf.layers.conv2d_transpose(
-            inputs=de_dropout2, filters=16, kernel_size=6, strides=(2,2), padding='same',
-            activation=tf.nn.relu, name="DeConv3")
-        de_dropout3 = tf.layers.dropout(
-            inputs=de_layer3, rate=drop_rate)
-        
-        de_layer4 = tf.layers.conv2d_transpose(
-            inputs=de_dropout3, filters=1, kernel_size=8, strides=(2,2), padding='same', name="DeConv4")
-        
-        x_hat = tf.sigmoid(de_layer4)
-
-    return x_hat
-
-
-# Gateway
-def autoencoder(x, dim_z, drop_rate=0.2, trainable=True):
-
-    # encoding
-    mu, sigma = CNN_Encoder(x, dim_z, drop_rate, trainable)
-
-    # sampling by re-parameterization technique
-    z = mu + sigma * tf.random_normal(tf.shape(mu), 0, 1, dtype=tf.float32)
-
-    # decoding
-    x_hat = CNN_Decoder(z, drop_rate)
-    x_hat = tf.clip_by_value(x_hat, 1e-8, 1 - 1e-8)
-
-    # loss
-    marginal_likelihood = tf.reduce_sum(x * tf.log(1e-8 +x_hat) + (1 - x) * tf.log(1e-8 + 1 - x_hat), 1)
-    #marginal_likelihood = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=x,logits=x_hat))
-    KL_divergence = 0.5 * tf.reduce_sum(tf.square(mu) + tf.square(sigma) - tf.log(1e-8 + tf.square(sigma)) - 1, 1)
-
-    marginal_likelihood = tf.reduce_mean(marginal_likelihood)
-    KL_divergence = tf.reduce_mean(KL_divergence)
-
-    ELBO = marginal_likelihood - KL_divergence
-
-    loss = -ELBO
-
-    return x_hat, z, loss, -marginal_likelihood, KL_divergence
 
 
 def feature_fushion_MLP(mean_feature, input_placeholder):
@@ -600,5 +492,3 @@ def data_fusion_graph(input_placeholder):
     state = feature_fushion_MLP(mean_feature, input_placeholder)
 
     return state
-
-'''
