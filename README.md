@@ -3,7 +3,7 @@
 IITP Anthrophomorphic Robot Arm & Hand Project
 
 Consists:
-'''
+```
 - action_client
 - jaco_arm_pkgs
 - jaco_controller
@@ -15,6 +15,6 @@ Consists:
 - vrep_jaco_bringup
 - vrep_jaco_data
 - vrep_jaco_moveit
-'''
+```
 
-'action_client' package wraps vrep environment with C++ client
+`action_client` package wraps vrep environment with C++ client
