@@ -1,0 +1,4 @@
+<launch>
+  <param name="use_sim_time" value="true" />
+  <node name="env_client" pkg="env_client" type="env_client" output="screen"></node>
+</launch>
