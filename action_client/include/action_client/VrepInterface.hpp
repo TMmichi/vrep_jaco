@@ -33,9 +33,6 @@ public:
     /** Actionlib callback for trajectory command */
     void trajCB(const control_msgs::FollowJointTrajectoryGoalConstPtr &goal);
 
-    /** Reset Vrep Simulation*/
-    void resetCB(const std_msgs::Bool &reset)
-
 private:
     /** Initialises jointStates and jointHandles. Return true if success.
      *  Part of the process is getting V-REP handles. The suffixCode can be
@@ -61,6 +58,7 @@ private:
     /** Set joint positions */
     void setVrepPosition(const std::vector<double>& pos);
 
+
     std::vector<double> interpolate( const std::vector<double>& last,
             const std::vector<double>& current, double alpha);
 
@@ -78,10 +76,6 @@ private:
     ros::Publisher feedbackPub_;
     /** Subscriber to target torques */
     ros::Subscriber torqueSub_;
-    ros::Publisher tempPub_;
-    /** Subscriber for reset simulation */
-    ros::Subscriber resetSub_;
-    ros::Publisher resetPub_;
 
     /** Stores joint state */
     sensor_msgs::JointState jointState_;

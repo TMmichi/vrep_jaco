@@ -20,7 +20,7 @@ class Vrep(Environment):
         ### ------  VREP RESET  ------ ###
         self.reset_signal = False
         self.reset_pub = rospy.Publisher("/trpo/reset",Bool,queue_size=1)
-        self.reset_sub = rospy.Subscriber("/simulation/reset",Bool,self.__reset_CB,queue_size=1)\
+        self.reset_sub = rospy.Subscriber("/simulation/reset",Bool,self.__reset_CB,queue_size=1)
 
         ### ------  STATE GENERATION  ------ ###
         # Data Subscriber
@@ -91,9 +91,9 @@ class Vrep(Environment):
         return self.action_space_max
     
     def step(self,action):
-        time_required = self.__vrep_action_send(action) #action @ t
+        time_required, reward, terminal_signal = self.__vrep_action_send(action) #action @ t
         # action time should be taken account into the next state transition or somewhere
-        next_state, terminal_signal = self.__get_state() #state @ t+t()
+        next_state = self.__get_state() #state @ t+t()
         reward = [] #TODO
         if terminal_signal: #TODO
             terminal = True

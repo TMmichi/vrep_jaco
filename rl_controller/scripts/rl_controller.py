@@ -56,6 +56,7 @@ class RL_controller:
 if __name__=="__main__":
     try:
         controller_class = RL_controller()
+        #TODO: Make sure that using spin is a proper choice when training
         controller_class.spin(10)
     except rospy.ROSInternalException:
         rospy.loginfo("node terminated.")

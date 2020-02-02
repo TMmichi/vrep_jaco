@@ -2,6 +2,9 @@
 
 using namespace kinova;
 
+
+
+
 GripperCommandActionController::GripperCommandActionController(ros::NodeHandle &n, std::string &robot_name):
     nh_(n),
     has_active_goal_(false)
