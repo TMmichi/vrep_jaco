@@ -119,8 +119,8 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		startPos = self.jointState_.position
 		i = 0
 		while not rospy.is_shutdown():
-			if self.trajAS_.isPremmptRequested():
-				self.trajAS_.setPreempted()
+			if self.trajAS_.is_preempt_requested():
+				self.trajAS_.set_preempted()
 				break
 			fromStart = rospy.Time.now() - startTime
 			while i < len(points) - 1 and points[i+1].time_from_start < fromStart:
@@ -321,7 +321,7 @@ def main(args):
 if __name__ == '__main__':
 	#time.sleep(3)
 	vrepenv_class = JacoVrepEnv()
-	rospy.spin(10)
+	rospy.spin()
 	while not rospy.is_shutdown():
 		pass
 	rospy.loginfo("node terminated.")
