@@ -4,9 +4,7 @@ from vrep_env import vrep_env
 from vrep_env import vrep # vrep.sim_handle_parent
 
 import os
-#vrep_scenes_path = os.environ['VREP_SCENES_PATH']
-vrep_scenes_path = os.path.realpath("../../vrep_jaco_bringup/scene")
-
+import time
 
 import gym
 from gym import spaces
@@ -33,20 +31,19 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		self,
 		server_addr='127.0.0.1',
 		server_port=19997,
-		scene_path=vrep_scenes_path+'/jaco_table2.ttt',
 		feedbackRate_=50):
 		
 		rospy.init_node("JacoVrepEnv",anonymous=True)
 		
 		#Initialize Vrep API
-		vrep_env.VrepEnv.__init__(self,server_addr,server_port,scene_path)
+		vrep_env.VrepEnv.__init__(self,server_addr,server_port)
 
 		### ------  PREREQUESITES FOR ACTION LIBRARY  ------ ###
 		self.jointState_ = JointState()
 		self.feedback_ = FollowJointTrajectoryFeedback()
 		self.jointHandles_ = []
-		self.jointPub_ = rospy.Publisher("jaco/joint_states",JointState,1)
-		self.feedbackPub_ = rospy.Publisher("feedback_states",FollowJointTrajectoryFeedback,1)
+		self.jointPub_ = rospy.Publisher("jaco/joint_states",JointState,queue_size=1)
+		self.feedbackPub_ = rospy.Publisher("feedback_states",FollowJointTrajectoryFeedback,queue_size=1)
 		self.publishWorkerTimer_ = rospy.Timer(rospy.Duration(2), self.publishWorker)
 
 		### ------  ACTION LIBRARY INITIALIZATION  ------ ###
@@ -322,8 +319,9 @@ def main(args):
 	return 0
 
 if __name__ == '__main__':
+	#time.sleep(3)
 	vrepenv_class = JacoVrepEnv()
+	rospy.spin(10)
 	while not rospy.is_shutdown():
-		rospy.spin(10)
 		pass
 	rospy.loginfo("node terminated.")
