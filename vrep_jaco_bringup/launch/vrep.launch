@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <launch>
-  <include file="$(find action_client)/launch/vrep_interface.launch"/>
+  <!--<include file="$(find action_client)/launch/vrep_interface.launch"/>-->
+  <include file="$(find env_client)/launch/env_client.launch"/>
   
   <arg name="vrep_path"/>
   <arg name="scene_file"/>
