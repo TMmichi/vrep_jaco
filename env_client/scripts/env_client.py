@@ -323,7 +323,7 @@ def main(args):
 
 if __name__ == '__main__':
 	vrepenv_class = JacoVrepEnv()
-	rospy.spin(10)
 	while not rospy.is_shutdown():
+		rospy.spin(10)
 		pass
 	rospy.loginfo("node terminated.")
