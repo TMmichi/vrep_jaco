@@ -62,11 +62,12 @@ class VrepEnv(gym.Env):
 				connectionPort                 = server_port,
 				waitUntilConnected             = True,
 				doNotReconnectOnceDisconnected = True,
-				timeOutInMs                    = 1000,
-				commThreadCycleInMs            = 0)
+				timeOutInMs                    = 2000,
+				commThreadCycleInMs            = 5)
 			attempts += 1
 			if self.cID != -1:
 				self.connected = True
+				print("Connected to V-REP")
 				break
 			elif attempts < max_attempts:
 				print('Unable to connect to V-REP at ',server_addr,':',server_port,'. Retrying...')
