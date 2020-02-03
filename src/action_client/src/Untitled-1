@@ -1,0 +1,37 @@
+vrep interface:
+
+    arguments:
+        1. arm joints
+        2. finger joints
+        3. finger tip joints
+        4. feedback rate
+        5. pos update rate
+        6. client ID = -1
+        7. sync = False
+
+    1. setup target torques
+    2. setup ros nodehandle
+    3. set torque mode (sync) #TODO: check
+    4. set joint name prefix
+
+    5. connect to Vrep
+    6. set simxSynchronous with clientID if sync == True -> False.
+    7. initJoints - initialize jointState mesage and get vrep handles
+        arguments: jaco_joint_, jaco_joint_, 6, jointState_, jointHandles_
+        1. 
+        2. simxGetObjectHandle
+    
+    8. Initialize feedback message: control_msgs.msg FollowJointTrajectoryFeedback
+        append jointState_.name to joint_names
+        append 0 to actual.positions
+
+    9. Initialize ROS subscribers and publisher
+        1. joint pub
+        2. feedback pub
+        3. if torque mode -> torque sub
+        4. publisher worker timer
+
+    10. start action servers
+    
+
+    
