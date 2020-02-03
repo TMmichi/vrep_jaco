@@ -65,7 +65,7 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 			urdfArmPrefix,urdfFingerPrefix,urdfFingerTipPrefix)
 
 		#Feedback message initialization
-		for i in range(1,7):
+		for i in range(0,6):
 			self.feedback_.joint_names.append(self.jointState_.name[i])
 			self.feedback_.actual.positions.append(0)
 
@@ -97,11 +97,11 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 
 		# #modify: if size of action space is different than number of joints
 		# Example: One action per joint
-		num_act = len(self.oh_joint)
+		num_act = 9
 
 		# #modify: if size of observation space is different than number of joints
 		# Example: 3 dimensions of linear and angular (2) velocities + 6 additional dimension
-		num_obs = (len(self.oh_shape)*3*2) + 3*2
+		num_obs = 9
 
 		# #modify: action_space and observation_space to suit your needs
 		self.joints_max_velocity = 3.0
@@ -179,7 +179,7 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 			self.jointState_.name.append(outname)
 			self.jointState_.velocity.append(0)
 			self.jointState_.effort.append(0)
-		for i in range(1,7):
+		for i in range(1,4):
 			in_names.append(vrepFingerPrefix+str(i))
 			outname = urdfFingerTipPrefix+str(i)
 			self.jointState_.name.append(outname)
@@ -192,7 +192,7 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 			self.jointState_.velocity.append(0)
 			self.jointState_.effort.append(0)
 		jointHandles_ = list(map(self.get_object_handle, in_names))
-		self.jointState_.position = list(map(self.obj_get_joint_angle,self.jointState_.name))
+		self.jointState_.position = list(map(self.obj_get_joint_angle,jointHandles_))
 		return jointHandles_
 
 	def publishWorker(self, e):
@@ -209,7 +209,7 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 	def publishJointInfo(self):
 		self.jointPub_.publish(self.jointState_)
 		self.feedback_.header.stamp = rospy.Time.now()
-		for i in range(1,7):
+		for i in range(0,6):
 			self.feedback_.actual.positions[i] = self.jointState_.position[i]
 		self.feedbackPub_.publish(self.feedback_)		
 
