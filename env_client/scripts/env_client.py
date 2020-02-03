@@ -4,7 +4,9 @@ from vrep_env import vrep_env
 from vrep_env import vrep # vrep.sim_handle_parent
 
 import os
-vrep_scenes_path = os.environ['VREP_SCENES_PATH']
+#vrep_scenes_path = os.environ['VREP_SCENES_PATH']
+vrep_scenes_path = os.path.realpath("../../vrep_jaco_bringup/scene")
+
 
 import gym
 from gym import spaces
@@ -19,7 +21,7 @@ from sensor_msgs.msg import JointState
 from control_msgs.msg import FollowJointTrajectoryAction
 from control_msgs.msg import FollowJointTrajectoryFeedback
 from control_msgs.msg import FollowJointTrajectoryResult
-from trajectory_msgss.msg import JointTrajectory
+from trajectory_msgs.msg import JointTrajectory
 from geometry_msgs.msg import Pose
 
 import numpy as np
