@@ -6,6 +6,7 @@ from vrep_env import vrep # vrep.sim_handle_parent
 import os
 import time
 import math
+import random
 
 import gym
 from gym import spaces
@@ -58,6 +59,7 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		self.trajAS_.start()
 
 		#Joint prefix
+		vrepRespondablePrefix = "jaco_link_"
 		vrepArmPrefix = "jaco_joint_"
 		vrepFingerPrefix = "jaco_joint_finger_"
 		vrepFingerTipPrefix = "jaco_joint_finger_tip_"
@@ -66,11 +68,10 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		urdfFingerTipPrefix = "jaco_joint_finger_tip_"
 
 		#Joint initialization
-		self.jointHandles_ = self._initJoints(
+		self.jointHandles_, self.respondHanldes_ = self._initJoints(
 			vrepArmPrefix,vrepFingerPrefix,vrepFingerTipPrefix,
-			urdfArmPrefix,urdfFingerPrefix,urdfFingerTipPrefix)
-
-		self.base_handle_ = self.get_object_handle("jaco_joint_base")
+			urdfArmPrefix,urdfFingerPrefix,urdfFingerTipPrefix,
+			vrepRespondablePrefix)
 		
 		#Feedback message initialization
 		for i in range(0,6):
@@ -188,16 +189,19 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 	def _initJoints(
 		self,
 		vrepArmPrefix,vrepFingerPrefix,vrepFingerTipPrefix,
-		urdfArmPrefix,urdfFingerPrefix,urdfFingerTipPrefix):
+		urdfArmPrefix,urdfFingerPrefix,urdfFingerTipPrefix,
+		vrepRespondablePrefix):
 		"""Initialize joints object handles and joint states
 		"""
 		in_names = []
+		resp_names = []
 		for i in range(1,7):
 			in_names.append(vrepArmPrefix+str(i))
 			outname = urdfArmPrefix+str(i)
 			self.jointState_.name.append(outname)
 			self.jointState_.velocity.append(0)
 			self.jointState_.effort.append(0)
+			resp_names.append(vrepRespondablePrefix+str(i)+"_respondable")
 		for i in range(1,4):
 			in_names.append(vrepFingerPrefix+str(i))
 			outname = urdfFingerPrefix+str(i)
@@ -211,11 +215,14 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 			self.jointState_.velocity.append(0)
 			self.jointState_.effort.append(0)
 		jointHandles_ = list(map(self.get_object_handle, in_names))
+		print(resp_names)
+		#respondHanldes_ = list(map(self.get_object_handle, resp_names))
+		respondHanldes_ = []
+		
 		self.jointState_.position = list(map(self.obj_get_joint_angle,jointHandles_))
-		return jointHandles_
+		return jointHandles_, respondHanldes_
 
 	def _publishWorker(self, e):
-		self.ping_check()
 		self._updateJointState()
 		self._publishJointInfo()
 
@@ -311,18 +318,23 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 			self.start_simulation()
 			self.stop_simulation()
 		#TODO: Reset joints with random angles
-		##
-		prop = self.get_dynamic_setting(self.base_handle_)[0]
-		prop = prop | vrep.sim_modelproperty_not_dynamic
-		self.set_dynamic_setting(self.base_handle_,prop)
+		self.start_simulation(True)
 		random_init_angle = [90,90,90,90,90,90] #angle in degree
 		for i, degree in enumerate(random_init_angle):
-			self.obj_set_position_target(self.jointHandles_[i],-degree)
+			prop = self.get_dynamic_setting(self.jointHandles_[i])[0]
+			print(prop)
+			prop = prop | vrep.sim_modelproperty_not_dynamic
+			print(prop)
+			self.set_dynamic_setting(self.jointHandles_[i],prop)
+			print("joint ",i,":",self.get_dynamic_setting(self.jointHandles_[i]))
+			noise = random.randint(-30,30)
+			self.obj_set_position_target(self.jointHandles_[i],-degree+noise)
 		prop -= vrep.sim_modelproperty_not_dynamic
-		#self.set_dynamic_setting(self.base_handle_,prop)
-		self.start_simulation()
-		self.step_simulation()
+		self.step_simulation() #TODO: Later be uncommented
+		for i, degree in enumerate(random_init_angle):
+			self.set_dynamic_setting(self.jointHandles_[i],prop)
 		##
+		self.step_simulation()
 		self._make_observation()
 		return []#self.observation
 	

@@ -15,7 +15,6 @@ class VrepEnv(gym.Env):
 		self.scene_path  = scene_path
 		
 		self.opM_get = vrep.simx_opmode_blocking
-		#self.opM_get = vrep.simx_opmode_oneshot
 		self.opM_set = vrep.simx_opmode_oneshot
 		
 		# Status
@@ -62,7 +61,7 @@ class VrepEnv(gym.Env):
 				connectionPort                 = server_port,
 				waitUntilConnected             = True,
 				doNotReconnectOnceDisconnected = True,
-				timeOutInMs                    = 2000,
+				timeOutInMs                    = 1000,
 				commThreadCycleInMs            = 5)
 			attempts += 1
 			if self.cID != -1:
@@ -115,7 +114,7 @@ class VrepEnv(gym.Env):
 		self.RAPI_rc(vrep.simxCloseScene(self.cID, vrep.simx_opmode_blocking))
 		self.scene_loaded = False
 	
-	def start_simulation(self):
+	def start_simulation(self,sync=False):
 		if self.sim_running:
 			raise RuntimeError('Simulation is already running.')
 		
@@ -125,7 +124,7 @@ class VrepEnv(gym.Env):
 		# Optionally override delta time
 		#self.set_float_parameter(vrep.sim_floatparam_simulation_time_step, 25)
 		
-		self.RAPI_rc(vrep.simxSynchronous(self.cID,True))
+		self.RAPI_rc(vrep.simxSynchronous(self.cID,sync))
 		self.RAPI_rc(vrep.simxStartSimulation(self.cID, vrep.simx_opmode_blocking))
 		
 		# Enable Threaded Rendering for faster simulation
@@ -152,6 +151,7 @@ class VrepEnv(gym.Env):
 		self.sim_running = False
 	
 	def step_simulation(self):
+		self.RAPI_rc(vrep.simxSynchronous(self.cID,True))
 		self.RAPI_rc(vrep.simxSynchronousTrigger(self.cID))
 
 	def ping_check(self):
