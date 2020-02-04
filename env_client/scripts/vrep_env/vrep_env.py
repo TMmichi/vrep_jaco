@@ -153,6 +153,15 @@ class VrepEnv(gym.Env):
 	
 	def step_simulation(self):
 		self.RAPI_rc(vrep.simxSynchronousTrigger(self.cID))
+
+	def ping_check(self):
+		self.RAPI_rc(vrep.simxGetPingTime(self.cID))
+	
+	def get_dynamic_setting(self, handle):
+		return self.RAPI_rc(vrep.simxGetModelProperty(self.cID,handle,self.opM_get))
+
+	def set_dynamic_setting(self, handle, prop):
+		self.RAPI_rc(vrep.simxSetModelProperty(self.cID,handle,prop,self.opM_set))
 	
 	# Below are all wrapped methods unrelated to connection/scene
 	
@@ -191,8 +200,11 @@ class VrepEnv(gym.Env):
 		return self.RAPI_rc(vrep.simxGetObjectVelocity( self.cID,handle,
 			self.opM_get))
 	def obj_get_joint_angle(self, handle):
+		opmode = vrep.simx_opmode_oneshot
+		#angle, = self.RAPI_rc(vrep.simxGetJointPosition( self.cID,handle,
+		#		self.opM_get))
 		angle, = self.RAPI_rc(vrep.simxGetJointPosition( self.cID,handle,
-				self.opM_get))
+				opmode))
 		#return -np.rad2deg(angle[0])
 		return angle
 	def obj_get_joint_angle_continuous(self, handle):
