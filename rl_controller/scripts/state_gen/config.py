@@ -50,6 +50,11 @@ conv_blk5['stride'] = (2,2)
 conv_blk5['padding'] = 'SAME'
 conv_blk5['activation']='relu'
 
+#Fushion layer settings
+fushion = dict()
+fushion['units'] = 256
+fushion['survival_prob'] = 0.6
+
 #FC layer1 settings
 fc_1 = dict()
 fc_1['units'] = 512
@@ -139,6 +144,7 @@ block_setting['conv_block2'] = conv_blk2
 block_setting['conv_block3'] = conv_blk3
 block_setting['conv_block4'] = conv_blk4
 block_setting['conv_block5'] = conv_blk5
+block_setting['fushion'] = fushion
 block_setting['fc_block1'] = fc_1
 block_setting['fc_block2'] = fc_2
 block_setting['latent_layer'] = latent_layer
