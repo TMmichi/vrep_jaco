@@ -14,9 +14,15 @@ VrepInterface::VrepInterface(ros::NodeHandle& n) :
         numArmJoints_(6), numFingerJoints_(3), numFingerTipJoints_(3), feedbackRate_(50.0),
         posUpdateRate_(50.0), clientID_(-1),
         sync_(false) {
+    targetTorques_ = std::vector<double>(numArmJoints_, 0.0);
 
     // Get params
     ros::NodeHandle private_node("~");
+    private_node.param("torque_mode", torqueMode_, false);
+    ROS_INFO_STREAM("Torque mode: " << torqueMode_);
+    if (torqueMode_) {
+        sync_ = true;
+    }
 
     std::string vrepArmPrefix = "jaco_joint_";
     std::string vrepFingerPrefix = "jaco_joint_finger_";
@@ -35,6 +41,13 @@ VrepInterface::VrepInterface(ros::NodeHandle& n) :
         }
     }
     ROS_INFO("Connected to V-REP");
+
+    // Enable synchronous mode if needed
+    if (sync_) {
+        simxSynchronous(clientID_, true);
+        simxSynchronousTrigger(clientID_);
+        ROS_INFO("Enabled V-REP sync mode");
+    }
 
     // Initialise jointState_ message with joint names and get V-REP handles
     bool success = initJoints(vrepArmPrefix, urdfArmPrefix, numArmJoints_,
@@ -69,6 +82,10 @@ VrepInterface::VrepInterface(ros::NodeHandle& n) :
     jointPub_ = n.advertise<sensor_msgs::JointState>("jaco/joint_states", 1);
     feedbackPub_ = n.advertise<control_msgs::FollowJointTrajectoryFeedback>(
             "feedback_states", 1);
+    if (torqueMode_) {
+        torqueSub_ = n.subscribe("target_torques", 1,
+                &VrepInterface::torqueCallback, this);
+    }
 
     publishWorkerTimer_ = n.createWallTimer(ros::WallDuration(1.0 / feedbackRate_),
             &VrepInterface::publishWorker, this);
@@ -82,8 +99,17 @@ VrepInterface::VrepInterface(ros::NodeHandle& n) :
 
 void VrepInterface::publishWorker(const ros::WallTimerEvent& e) {
     int ping;
+    if (sync_) {
+        simxGetPingTime(clientID_, &ping);   // Block until step is done
+    }
     updateJointState();
     publishJointInfo();
+    if (torqueMode_) {
+        setVrepTorque(targetTorques_);
+    }
+    if (sync_) {
+        simxSynchronousTrigger(clientID_);   // Trigger next simulation step
+    }
 }
 
 void VrepInterface::trajCB(
@@ -189,6 +215,11 @@ bool VrepInterface::initJoints(std::string inPrefix, std::string outPrefix,
     return true;
 }
 
+void VrepInterface::torqueCallback(
+        const std_msgs::Float64MultiArray::ConstPtr& msg) {
+    targetTorques_ = msg->data;
+}
+
 void VrepInterface::updateJointState() {
     std::vector<double> pos = getVrepPosition();
     for (int i = 0; i < numArmJoints_; i++) {
@@ -218,6 +249,23 @@ std::vector<double> VrepInterface::getVrepPosition() {
         result[i] = pos;
     }
     return result;
+}
+
+void VrepInterface::setVrepTorque(const std::vector<double>& targets) {
+    for (int i = 0; i < numArmJoints_; i++) {
+        simxSetJointForce(clientID_, jointHandles_[i],
+                std::abs(targets[i]), simx_opmode_oneshot);
+        double velDir;
+        if (targets[i] < 0) {
+            velDir = -10000;
+        } else if (targets[i] > 0) {
+            velDir = 10000;
+        } else {
+            velDir = 0;
+        }
+        simxSetJointTargetVelocity(clientID_, jointHandles_[i], velDir,
+                simx_opmode_oneshot);
+    }
 }
 
 void VrepInterface::setVrepPosition(const std::vector<double>& targets) {

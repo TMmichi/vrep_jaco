@@ -16,8 +16,8 @@ from gym.utils import seeding
 
 import rospy
 import actionlib
-import moveit_commander
-from moveit_commander.conversions import pose_to_list
+#import moveit_commander
+#from moveit_commander.conversions import pose_to_list
 from actionlib import SimpleActionServer
 from moveit_msgs.msg import DisplayTrajectory
 from std_msgs.msg import Header
@@ -52,15 +52,15 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		feedbackRate_=50.0):
 		
 		#Initialize moveit! and rospy node
-		moveit_commander.roscpp_initializer(sys.argv)
+		#moveit_commander.roscpp_initializer(sys.argv)
 		rospy.init_node("JacoVrepEnv",anonymous=True)
 		self.rate = rospy.Rate(50)
 
-		jaco = moveit_commander.RobotCommander()
-		scene = moveit_commander.PlanningSceneInterface()
-		group_name = "jaco_arm"
-		group = moveit_commander.MoveGroupCommander(group_name)
-		display_trajectory_publisher = rospy.Publisher("/move_group/display_planned_path",DisplayTrajectory,queue_size=20)
+		#jaco = moveit_commander.RobotCommander()
+		#scene = moveit_commander.PlanningSceneInterface()
+		#group_name = "jaco_arm"
+		#group = moveit_commander.MoveGroupCommander(group_name)
+		#display_trajectory_publisher = rospy.Publisher("/move_group/display_planned_path",DisplayTrajectory,queue_size=20)
 
 		#Key input subscriber
 		self.key_sub = rospy.Subscriber("key_input",Int8,self._keys, queue_size=10)
