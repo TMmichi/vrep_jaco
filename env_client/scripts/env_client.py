@@ -227,6 +227,7 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		self.feedbackPub_.publish(self.feedback_)	
 
 	def _keys(self,msg):
+		#eyuioaslzcn
 		self.key_input = msg.data
 		self.keychk_pub.publish(self.key_input)
 		self.key_input = key_dict[self.key_input]
