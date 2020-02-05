@@ -31,7 +31,8 @@ import numpy as np
 
 key_dict = {97:"a",98:"b",99:"c",100:"d",101:"e",102:"f",103:"g",104:"h",
 105:"i",106:"j",107:"k",108:"l",109:"m",110:"n",111:"o",112:"p",113:"q",
-114:"r",115:"s",116:"t",117:"u",118:"v",119:"w",120:"x",121:"y",122:"z"}
+114:"r",115:"s",116:"t",117:"u",118:"v",119:"w",120:"x",121:"y",122:"z",
+65:"up",66:"down",67:"right",68:"left"}
 
 
 def radtoangle(rad):
@@ -244,6 +245,8 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 			self.action_from_policy = True
 		elif self.key_input == "s": #Action frmo Sample
 			self.action_from_policy = False
+		elif self.key_input in ["o","c","up","down","right","left"]:
+			self.take_manual_action(self.key_input)
 
 	def _make_observation(self):
 		"""Query V-rep to make observation.
@@ -260,6 +263,23 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		# example: set a velocity for each joint
 		for i_oh, i_a in zip(self.oh_joint, a):
 			self.obj_set_velocity(i_oh, i_a)
+	
+	def take_manual_action(self,key):
+		if key == "o":
+			for i in range(6,9):
+					self.obj_set_position_target(self.jointHandles_[i],radtoangle(0))
+		elif key == "c":
+			for i in range(6,9):
+					self.obj_set_position_target(self.jointHandles_[i],radtoangle(-180))
+		elif key == "up":
+			pass
+		elif key == "down":
+			pass
+		elif key == "left":
+			pass
+		elif key == "right":
+			pass
+
 	
 	def step(self, action):
 		"""Gym environment 'step'
