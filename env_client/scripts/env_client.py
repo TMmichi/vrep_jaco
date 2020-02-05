@@ -11,6 +11,7 @@ from random import sample
 
 import gym
 from gym import spaces
+from gym.utils import seeding
 
 import rospy
 import actionlib
@@ -91,26 +92,6 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 
 		'''
 		### ------  STATE GENERATION  ------ ###
-		# Data Subscriber
-		self.rs_image_sub = rospy.Subscriber("/vrep/depth_image",Image,self.__depth_CB, queue_size=1)
-		self.jointstate_sub = rospy.Subscriber("/jaco/joint_states",JointState,self.__jointstate_CB, queue_size=1)
-		self.pressure_sub = rospy.Subscriber("/vrep/pressure_data",Float32MultiArray,self.__pressure_CB, queue_size=1)
-
-		# Data trigger switch
-		self.depth_trigger = False
-		self.joint_trigger = False
-		self.pressure_trigger = False
-
-		# Data Buffer
-		self.image_buffersize = 5
-		self.image_buff = []
-		self.joint_buffersize = 30
-		self.joint_state = []
-		self.pressure_buffersize = 30
-		self.pressure_state = []
-		self.data_buff = []
-		self.data_buff_temp = [0,0,0]
-
 		# State Generator
 		self.state_gen = State_generator(**kwargs)
 		'''
@@ -119,17 +100,12 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		# Example: One action per joint
 		num_act = 9
 
-		# #modify: if size of observation space is different than number of joints
-		# Example: 3 dimensions of linear and angular (2) velocities + 6 additional dimension
-		num_obs = 9
-
 		# #modify: action_space and observation_space to suit your needs
 		self.joints_max_velocity = 3.0
 		act = np.array( [self.joints_max_velocity] * num_act )
-		obs = np.array(          [np.inf]          * num_obs )
 
 		self.action_space      = spaces.Box(-act,act)
-		self.observation_space = spaces.Box(-obs,obs)
+		self.seed()
 		self.reset()
 
 
@@ -238,14 +214,12 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		self._publishJointInfo()
 
 	def _updateJointState(self):
-		then = rospy.Time.now()
 		self.jointState_.header.stamp = rospy.Time.now()
 		position = []
 		for i_jointhandle in self.jointHandles_:
 			position.append(self.obj_get_joint_angle(i_jointhandle))
 		self.jointState_.position = position
 		
-
 	def _publishJointInfo(self):
 		self.jointPub_.publish(self.jointState_)
 		self.feedback_.header.stamp = rospy.Time.now()
@@ -258,36 +232,24 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		self.key_input = key_dict[self.key_input]
 		print("input = ",self.key_input)
 		
-		if self.key_input == "r":
+		if self.key_input == "r": #Reset environment
 			self.reset()
-			self.key_input = "a"
-		elif self.key_input == "s":
-			pass
+			self.key_input = "1"
+		elif self.key_input == "t": #Reset environment (step-wised)
+			self.reset(True)
+		elif self.key_input == "n": #Next step
+			self.step_simulation()
+		elif self.key_input == "p": #Action from Policy
+			self.action_from_policy = True
+		elif self.key_input == "s": #Action frmo Sample
+			self.action_from_policy = False
 
 	def _make_observation(self):
 		"""Query V-rep to make observation.
 		   The observation is stored in self.observation
 		"""
-		# start with empty list
-		lst_o = []
-		 
-		# #modify: optionally include positions or velocities
-		'''
-		pos               = self.obj_get_position(self.oh_shape[0])
-		lin_vel , ang_vel = self.obj_get_velocity(self.oh_shape[0])
-		lst_o += pos
-		lst_o += lin_vel 
-		
-		# #modify
-		# example: include position, linear and angular velocities of all shapes
-		for i_oh in self.oh_shape:
-			rel_pos = self.obj_get_position(i_oh, relative_to=vrep.sim_handle_parent)
-			lst_o += rel_pos
-			lin_vel , ang_vel = self.obj_get_velocity(i_oh)
-			lst_o += ang_vel
-			lst_o += lin_vel
-		'''
-		self.observation = np.array(lst_o).astype('float32')
+		buff = []
+		self.observation = []#self.generate(buff)
 	
 	def _make_action(self, a):
 		"""Query V-rep to make action.
@@ -318,7 +280,7 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		head_pos_x = self.observation[0] # front/back
 		head_pos_y = self.observation[1] # left/right
 		head_pos_z = self.observation[2] # up/down
-		nrm_action  = np.linalg.norm(actions)
+		nrm_action  = np.linalg.norm(action)
 		r_regul     = -(nrm_action**2)
 		r_alive = 1.0
 		# example: different weights in reward
@@ -332,7 +294,7 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		
 		return self.observation, reward, done, {}
 	
-	def reset(self):
+	def reset(self,sync=False):
 		"""Gym environment 'reset'
 		"""
 		if self.sim_running:
@@ -340,27 +302,28 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		else:
 			self.start_simulation()
 			self.stop_simulation()
-		#TODO: Reset joints with random angles
-		random_init_angle = [sample(range(-180,180),1)[0],110,sample(range(20,130),1)[0],sample(range(50,130),1)[0],sample(range(500,130),1)[0],sample(range(50,130),1)[0]] #angle in degree
+		random_init_angle = [sample(range(-180,180),1)[0],110,sample(range(20,130),1)[0],sample(range(50,130),1)[0],sample(range(50,130),1)[0],sample(range(50,130),1)[0]] #angle in degree
 		for i, degree in enumerate(random_init_angle):
 			noise = random.randint(-30,30)
 			self.obj_set_position_inst(self.jointHandles_[i],-degree+noise)
 			self.obj_set_position_target(self.jointHandles_[i],-degree+noise)
-		##
-		self.start_simulation()
+		self.start_simulation(sync)
+		if sync:
+			self.step_simulation()
+			time.sleep(1)
+		else:
+			pass
 		self._make_observation()
 		return self.observation
 	
 	def render(self, mode='human', close=False):
-		"""Gym environment 'render'
-		"""
 		pass
 	
 	def seed(self, seed=None):
-		"""Gym environment 'seed'
-		"""
-		return []
+		self.np_random, seed = seeding.np_random(seed)
+		return [seed]
 	
+
 def main(args):
 	"""main function used as test and example.
 	   Agent does random actions with 'action_space.sample()'
