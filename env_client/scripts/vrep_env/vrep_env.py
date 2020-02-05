@@ -161,7 +161,8 @@ class VrepEnv(gym.Env):
 		return self.RAPI_rc(vrep.simxGetModelProperty(self.cID,handle,self.opM_get))
 
 	def set_dynamic_setting(self, handle, prop):
-		self.RAPI_rc(vrep.simxSetModelProperty(self.cID,handle,prop,self.opM_set))
+		opmode = vrep.simx_opmode_oneshot_wait
+		self.RAPI_rc(vrep.simxSetModelProperty(self.cID,handle,prop,opmode))
 	
 	# Below are all wrapped methods unrelated to connection/scene
 	
@@ -238,6 +239,10 @@ class VrepEnv(gym.Env):
 	
 	def obj_set_position_target(self, handle, angle):
 		return self.RAPI_rc(vrep.simxSetJointTargetPosition( self.cID,handle,
+			-np.deg2rad(angle),
+			self.opM_set))
+	def obj_set_position_inst(self, handle, angle):
+		return self.RAPI_rc(vrep.simxSetJointPosition( self.cID,handle,
 			-np.deg2rad(angle),
 			self.opM_set))
 	def obj_set_velocity(self, handle, v):

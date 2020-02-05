@@ -7,6 +7,7 @@ import os
 import time
 import math
 import random
+import getch
 
 import gym
 from gym import spaces
@@ -16,6 +17,7 @@ import actionlib
 from actionlib import SimpleActionServer
 from std_msgs.msg import Header
 from std_msgs.msg import Float32MultiArray
+from rosgraph_msgs.msg import Clock
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import JointState
 from control_msgs.msg import FollowJointTrajectoryAction
@@ -26,7 +28,7 @@ from geometry_msgs.msg import Pose
 
 import numpy as np
 
-
+key_dict = {97:"a",98:"b",99:"c",100:"d",101:"e",102:"f"}
 def radtoangle(rad):
 	return rad / math.pi * 180
 
@@ -41,6 +43,10 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		
 		rospy.init_node("JacoVrepEnv",anonymous=True)
 		self.rate = rospy.Rate(50)
+
+		#Key input subscriber
+		self.key_sub = rospy.Subscriber("clock",Clock,self._keys, queue_size=1)
+		self.key_input = 0
 		
 		#Initialize Vrep API
 		vrep_env.VrepEnv.__init__(self,server_addr,server_port)
@@ -201,7 +207,10 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 			self.jointState_.name.append(outname)
 			self.jointState_.velocity.append(0)
 			self.jointState_.effort.append(0)
-			resp_names.append(vrepRespondablePrefix+str(i)+"_respondable")
+			if i != 6:
+				resp_names.append(vrepRespondablePrefix+str(i)+"_respondable")
+			else:
+				resp_names.append(vrepRespondablePrefix+"hand_respondable")
 		for i in range(1,4):
 			in_names.append(vrepFingerPrefix+str(i))
 			outname = urdfFingerPrefix+str(i)
@@ -215,10 +224,7 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 			self.jointState_.velocity.append(0)
 			self.jointState_.effort.append(0)
 		jointHandles_ = list(map(self.get_object_handle, in_names))
-		print(resp_names)
-		#respondHanldes_ = list(map(self.get_object_handle, resp_names))
-		respondHanldes_ = []
-		
+		respondHanldes_ = list(map(self.get_object_handle, resp_names))
 		self.jointState_.position = list(map(self.obj_get_joint_angle,jointHandles_))
 		return jointHandles_, respondHanldes_
 
@@ -239,7 +245,17 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		self.jointPub_.publish(self.jointState_)
 		self.feedback_.header.stamp = rospy.Time.now()
 		self.feedback_.actual.positions = self.jointState_.position
-		self.feedbackPub_.publish(self.feedback_)		
+		self.feedbackPub_.publish(self.feedback_)	
+
+	def _keys(self,msg):
+		key_input = ord(getch.getch())# this is used to convert the keypress event in the keyboard or joypad , joystick to a ord value
+		try:
+			key_input = key_dict[key_input]
+		except Exception:
+			pass
+		if self.key_input != key_input:
+			self.key_input = key_input
+			print(self.key_input)
 
 	def _make_observation(self):
 		"""Query V-rep to make observation.
@@ -263,8 +279,8 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 			lin_vel , ang_vel = self.obj_get_velocity(i_oh)
 			lst_o += ang_vel
 			lst_o += lin_vel
-		
-		self.observation = np.array(lst_o).astype('float32')'''
+		'''
+		self.observation = np.array(lst_o).astype('float32')
 	
 	def _make_action(self, a):
 		"""Query V-rep to make action.
@@ -318,25 +334,15 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 			self.start_simulation()
 			self.stop_simulation()
 		#TODO: Reset joints with random angles
-		self.start_simulation(True)
 		random_init_angle = [90,90,90,90,90,90] #angle in degree
 		for i, degree in enumerate(random_init_angle):
-			prop = self.get_dynamic_setting(self.jointHandles_[i])[0]
-			print(prop)
-			prop = prop | vrep.sim_modelproperty_not_dynamic
-			print(prop)
-			self.set_dynamic_setting(self.jointHandles_[i],prop)
-			print("joint ",i,":",self.get_dynamic_setting(self.jointHandles_[i]))
 			noise = random.randint(-30,30)
+			self.obj_set_position_inst(self.jointHandles_[i],-degree+noise)
 			self.obj_set_position_target(self.jointHandles_[i],-degree+noise)
-		prop -= vrep.sim_modelproperty_not_dynamic
-		self.step_simulation() #TODO: Later be uncommented
-		for i, degree in enumerate(random_init_angle):
-			self.set_dynamic_setting(self.jointHandles_[i],prop)
 		##
-		self.step_simulation()
+		self.start_simulation()
 		self._make_observation()
-		return []#self.observation
+		return self.observation
 	
 	def render(self, mode='human', close=False):
 		"""Gym environment 'render'
