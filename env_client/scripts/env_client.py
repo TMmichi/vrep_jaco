@@ -7,7 +7,7 @@ import os
 import time
 import math
 import random
-import getch
+from random import sample
 
 import gym
 from gym import spaces
@@ -17,7 +17,7 @@ import actionlib
 from actionlib import SimpleActionServer
 from std_msgs.msg import Header
 from std_msgs.msg import Float32MultiArray
-from rosgraph_msgs.msg import Clock
+from std_msgs.msg import Int8
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import JointState
 from control_msgs.msg import FollowJointTrajectoryAction
@@ -28,7 +28,11 @@ from geometry_msgs.msg import Pose
 
 import numpy as np
 
-key_dict = {97:"a",98:"b",99:"c",100:"d",101:"e",102:"f"}
+key_dict = {97:"a",98:"b",99:"c",100:"d",101:"e",102:"f",103:"g",104:"h",
+105:"i",106:"j",107:"k",108:"l",109:"m",110:"n",111:"o",112:"p",113:"q",
+114:"r",115:"s",116:"t",117:"u",118:"v",119:"w",120:"x",121:"y",122:"z"}
+
+
 def radtoangle(rad):
 	return rad / math.pi * 180
 
@@ -45,7 +49,8 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		self.rate = rospy.Rate(50)
 
 		#Key input subscriber
-		self.key_sub = rospy.Subscriber("clock",Clock,self._keys, queue_size=1)
+		self.key_sub = rospy.Subscriber("key_input",Int8,self._keys, queue_size=10)
+		self.keychk_pub = rospy.Publisher("key_check",Int8,queue_size=10)
 		self.key_input = 0
 		
 		#Initialize Vrep API
@@ -248,14 +253,16 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		self.feedbackPub_.publish(self.feedback_)	
 
 	def _keys(self,msg):
-		key_input = ord(getch.getch())# this is used to convert the keypress event in the keyboard or joypad , joystick to a ord value
-		try:
-			key_input = key_dict[key_input]
-		except Exception:
+		self.key_input = msg.data
+		self.keychk_pub.publish(self.key_input)
+		self.key_input = key_dict[self.key_input]
+		print("input = ",self.key_input)
+		
+		if self.key_input == "r":
+			self.reset()
+			self.key_input = "a"
+		elif self.key_input == "s":
 			pass
-		if self.key_input != key_input:
-			self.key_input = key_input
-			print(self.key_input)
 
 	def _make_observation(self):
 		"""Query V-rep to make observation.
@@ -334,7 +341,7 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 			self.start_simulation()
 			self.stop_simulation()
 		#TODO: Reset joints with random angles
-		random_init_angle = [90,90,90,90,90,90] #angle in degree
+		random_init_angle = [sample(range(-180,180),1)[0],110,sample(range(20,130),1)[0],sample(range(50,130),1)[0],sample(range(500,130),1)[0],sample(range(50,130),1)[0]] #angle in degree
 		for i, degree in enumerate(random_init_angle):
 			noise = random.randint(-30,30)
 			self.obj_set_position_inst(self.jointHandles_[i],-degree+noise)
