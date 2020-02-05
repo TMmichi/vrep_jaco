@@ -4,8 +4,9 @@ from vrep_env import vrep_env
 from vrep_env import vrep # vrep.sim_handle_parent
 
 import os
+import sys
 import time
-import math
+from math import pi
 import random
 from random import sample
 
@@ -15,7 +16,10 @@ from gym.utils import seeding
 
 import rospy
 import actionlib
+import moveit_commander
+from moveit_commander.conversions import pose_to_list
 from actionlib import SimpleActionServer
+from moveit_msgs.msg import DisplayTrajectory
 from std_msgs.msg import Header
 from std_msgs.msg import Float32MultiArray
 from std_msgs.msg import Int8
@@ -32,11 +36,11 @@ import numpy as np
 key_dict = {97:"a",98:"b",99:"c",100:"d",101:"e",102:"f",103:"g",104:"h",
 105:"i",106:"j",107:"k",108:"l",109:"m",110:"n",111:"o",112:"p",113:"q",
 114:"r",115:"s",116:"t",117:"u",118:"v",119:"w",120:"x",121:"y",122:"z",
-65:"up",66:"down",67:"right",68:"left"}
+65:"up",66:"down",67:"right",68:"left",33:"!",64:"@",35:"#"}
 
 
 def radtoangle(rad):
-	return rad / math.pi * 180
+	return rad / pi * 180
 
 
 class JacoVrepEnv(vrep_env.VrepEnv):
@@ -47,8 +51,16 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		server_port=19997,
 		feedbackRate_=50.0):
 		
+		#Initialize moveit! and rospy node
+		moveit_commander.roscpp_initializer(sys.argv)
 		rospy.init_node("JacoVrepEnv",anonymous=True)
 		self.rate = rospy.Rate(50)
+
+		jaco = moveit_commander.RobotCommander()
+		scene = moveit_commander.PlanningSceneInterface()
+		group_name = "jaco_arm"
+		group = moveit_commander.MoveGroupCommander(group_name)
+		display_trajectory_publisher = rospy.Publisher("/move_group/display_planned_path",DisplayTrajectory,queue_size=20)
 
 		#Key input subscriber
 		self.key_sub = rospy.Subscriber("key_input",Int8,self._keys, queue_size=10)
@@ -255,7 +267,7 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		buff = []
 		self.observation = []#self.generate(buff)
 	
-	def _make_action(self, a):
+	def _take_action(self, a):
 		"""Query V-rep to make action.
 		   no return value
 		"""
@@ -270,7 +282,7 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 					self.obj_set_position_target(self.jointHandles_[i],radtoangle(0))
 		elif key == "c":
 			for i in range(6,9):
-					self.obj_set_position_target(self.jointHandles_[i],radtoangle(-180))
+					self.obj_set_position_target(self.jointHandles_[i],radtoangle(-20))
 		elif key == "up":
 			pass
 		elif key == "down":
@@ -289,30 +301,18 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		assert self.action_space.contains(action), "Action {} ({}) is invalid".format(action, type(action))
 		
 		# Actuate
-		self._make_action(action)
+		self._take_action(action)
 		# Step
 		self.step_simulation()
 		# Observe
 		self._make_observation()
-		
 		# Reward
-		# #modify the reward computation
-		# example: possible variables used in reward
-		head_pos_x = self.observation[0] # front/back
-		head_pos_y = self.observation[1] # left/right
-		head_pos_z = self.observation[2] # up/down
-		nrm_action  = np.linalg.norm(action)
-		r_regul     = -(nrm_action**2)
-		r_alive = 1.0
-		# example: different weights in reward
-		reward = (8.0)*(r_alive) +(4.0)*(head_pos_x) +(1.0)*(head_pos_z)
+		reward = 0
 		
 		# Early stop
-		# #modify if the episode should end earlier
 		tolerable_threshold = 0.20
-		done = (head_pos_z < tolerable_threshold)
-		#done = False
-		
+		#done = (head_pos_z < tolerable_threshold)
+		done = False
 		return self.observation, reward, done, {}
 	
 	def reset(self,sync=False):
@@ -368,5 +368,7 @@ if __name__ == '__main__':
 	try:
 		vrepenv_class = JacoVrepEnv()
 		rospy.spin()
+		vrepenv_class.stop_simulation()
 	except rospy.ROSInitException:
+		vrepenv_class.stop_simulation()
 		rospy.loginfo("node terminated.")
