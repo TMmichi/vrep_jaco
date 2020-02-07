@@ -50,13 +50,13 @@ catkin_package(
 
 include_directories(${THIS_PACKAGE_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIR} ${EIGEN3_INCLUDE_DIRS})
 
-add_executable(jaco_controller src/jaco_controller_integrated.cpp)
-target_link_libraries(jaco_controller ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+add_executable(jaco_controller_integrated src/jaco_controller_integrated.cpp)
+target_link_libraries(jaco_controller_integrated ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 
 add_dependencies(
-  jaco_controller
+  jaco_controller_integrated
   ${action_client_EXPORTED_TARGETS}
 )
 
-install(TARGETS jaco_controller DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+install(TARGETS jaco_controller_integrated DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 install(DIRECTORY launch DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
