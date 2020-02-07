@@ -37,7 +37,7 @@ int main(int argc, char** argv)
   double p_constant;
   int p_iter;
   nh.param("/jaco_ros_controller/constant",p_constant,0.03);
-  nh.param("/jaco_ros_controller/iter",p_iter,20);
+  nh.param("/jaco_ros_controller/iter",p_iter,1);
 
   printf(MOVEIT_CONSOLE_COLOR_BLUE "Move_group setup within controller.\n" MOVEIT_CONSOLE_COLOR_RESET);
   static const string PLANNING_GROUP_ = "arm";
