@@ -30,7 +30,7 @@ double giverand(){
 int main(int argc, char** argv)
 {
   printf(MOVEIT_CONSOLE_COLOR_BLUE "JACO MAIN.\n" MOVEIT_CONSOLE_COLOR_RESET);
-  ros::init(argc, argv, "jaco_controller");
+  ros::init(argc, argv, "jaco_ros_controller");
   ros::AsyncSpinner spinner(1);
   spinner.start();
   ros::NodeHandle nh;
@@ -40,7 +40,7 @@ int main(int argc, char** argv)
   nh.param("/jaco_ros_controller/iter",p_iter,20);
 
   printf(MOVEIT_CONSOLE_COLOR_BLUE "Move_group setup within controller.\n" MOVEIT_CONSOLE_COLOR_RESET);
-  static const string PLANNING_GROUP_ = "jaco_arm";
+  static const string PLANNING_GROUP_ = "arm";
   moveit::planning_interface::MoveGroupInterface move_group(PLANNING_GROUP_);
   printf(MOVEIT_CONSOLE_COLOR_BLUE "Move_group setup finished.\n" MOVEIT_CONSOLE_COLOR_RESET);
 

@@ -26,12 +26,10 @@
     -->
   </include>
 
-  <!--Jaco controller script-->
   <param name="/use_sim_time" value="true"/>
-  <node name="jaco_ros_controller" pkg="jaco_controller" type="jaco_controller" respawn="false" output="screen"/>
+  <node name="jaco_ros_controller" pkg="jaco_controller_integrated" type="jaco_controller_integrated" respawn="false" output="screen"/>
 
-  <!--RVIZ-->
-  <include file="$(find vrep_jaco_moveit)/launch/moveit_rviz.launch">
+  <include file="$(find j2n6s300_moveit_config)/launch/moveit_rviz.launch">
     <arg name="config" value="true"/>
     <arg name="debug" value="false"/>    
   </include>

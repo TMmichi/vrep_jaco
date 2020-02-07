@@ -22,11 +22,11 @@
   <link name="root"/>
 
   <!-- for gazebo -->
-  <link name="world"/>
+  <link name="world_joint"/>
   
   <joint name="connect_root_and_world" type="fixed">
     <child link="root" />
-    <parent link="world" />
+    <parent link="world_joint" />
     <origin xyz="0 0 0" rpy="0 0 0" />    
   </joint> 
 
