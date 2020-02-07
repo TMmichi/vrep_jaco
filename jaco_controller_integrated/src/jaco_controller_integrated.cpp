@@ -70,18 +70,42 @@ int main(int argc, char** argv)
   ROS_INFO("orientation_z: %f",current_pose.orientation.z);
 
   for (int i=0;i<p_iter;i++){
+    std::vector<geometry_msgs::Pose> waypoints;
+    waypoints.push_back(current_pose);
+
+    geometry_msgs::Pose target_pose = current_pose;
+
+    target_pose.position.z -= 0.2;
+    waypoints.push_back(target_pose);  // down
+
+    target_pose.position.y -= 0.2;
+    waypoints.push_back(target_pose);  // right
+
+    target_pose.position.x += 0.2;
+    waypoints.push_back(target_pose);  // right
+
+    target_pose.position.z += 0.2;
+    target_pose.position.y += 0.2;
+    target_pose.position.x -= 0.2;
+    waypoints.push_back(target_pose);
+
+    /*
     geometry_msgs::Pose target_pose;
     target_pose.position.x = current_pose.position.x + giverand() * p_constant;
     target_pose.position.y = current_pose.position.y + giverand() * p_constant;
     target_pose.position.z = current_pose.position.z + giverand() * p_constant;
     target_pose.orientation.w = current_pose.orientation.w;
-    move_group.setPoseTarget(target_pose); //motion planning to a desired pose of the end-effector
+    move_group.setPoseTarget(target_pose); //motion planning to a desired pose of the end-effector*/
 
     moveit::planning_interface::MoveGroupInterface::Plan my_plan;
-    bool success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-    ROS_INFO_NAMED("tutorial", "Visualizing plan 1 (pose goal) %s", success ? "" : "FAILED");
+    moveit_msgs::RobotTrajectory trajectory;
+    const double jump_threshold = 0.0;
+    const double eef_step = 0.001;
+    double fraction = move_group.computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
 
-    move_group.move();
+    my_plan.trajectory_ = trajectory;
+    move_group.execute(my_plan);
+
     /*
     joint_values = move_group.getCurrentJointValues();
 
