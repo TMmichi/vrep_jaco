@@ -74,12 +74,13 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		self.jointState_ = JointState()
 		self.feedback_ = FollowJointTrajectoryFeedback()
 		self.jointHandles_ = []
-		self.jointPub_ = rospy.Publisher("jaco/joint_states",JointState,queue_size=1)
+		self.jointPub_ = rospy.Publisher("j2n6s300/joint_states",JointState,queue_size=1)
 		self.feedbackPub_ = rospy.Publisher("feedback_states",FollowJointTrajectoryFeedback,queue_size=1)
 		self.publishWorkerTimer_ = rospy.Timer(rospy.Duration(1.0/feedbackRate_), self._publishWorker)
 
 		### ------  ACTION LIBRARY INITIALIZATION  ------ ###
-		self._action_name = "jaco/joint_trajectory_action"
+		#self._action_name = "j2n6s300/joint_trajectory_action"
+		self._action_name = "j2n6s300/follow_joint_trajectory"
 		self.trajAS_ = SimpleActionServer(self._action_name, FollowJointTrajectoryAction, self._trajCB, False)
 		self.trajAS_.start()
 
@@ -87,9 +88,9 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		vrepArmPrefix = "jaco_joint_"
 		vrepFingerPrefix = "jaco_joint_finger_"
 		vrepFingerTipPrefix = "jaco_joint_finger_tip_"
-		urdfArmPrefix = "jaco_joint_"
-		urdfFingerPrefix = "jaco_joint_finger_"
-		urdfFingerTipPrefix = "jaco_joint_finger_tip_"
+		urdfArmPrefix = "j2n6s300_joint_"
+		urdfFingerPrefix = "j2n6s300_joint_finger_"
+		urdfFingerTipPrefix = "j2n6s300_joint_finger_tip_"
 
 		#Joint initialization
 		self.jointHandles_ = self._initJoints(
@@ -107,11 +108,7 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		self.state_gen = State_generator(**kwargs)
 		'''
 
-		# #modify: if size of action space is different than number of joints
-		# Example: One action per joint
 		num_act = 9
-
-		# #modify: action_space and observation_space to suit your needs
 		self.joints_max_velocity = 3.0
 		act = np.array( [self.joints_max_velocity] * num_act )
 
@@ -191,7 +188,6 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		"""Initialize joints object handles and joint states
 		"""
 		in_names = []
-		resp_names = []
 		for i in range(1,7):
 			in_names.append(vrepArmPrefix+str(i))
 			outname = urdfArmPrefix+str(i)

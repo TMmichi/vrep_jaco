@@ -18,11 +18,6 @@ VrepInterface::VrepInterface(ros::NodeHandle& n) :
 
     // Get params
     ros::NodeHandle private_node("~");
-    private_node.param("torque_mode", torqueMode_, false);
-    ROS_INFO_STREAM("Torque mode: " << torqueMode_);
-    if (torqueMode_) {
-        sync_ = true;
-    }
 
     std::string vrepArmPrefix = "jaco_joint_";
     std::string vrepFingerPrefix = "jaco_joint_finger_";
@@ -41,13 +36,6 @@ VrepInterface::VrepInterface(ros::NodeHandle& n) :
         }
     }
     ROS_INFO("Connected to V-REP");
-
-    // Enable synchronous mode if needed
-    if (sync_) {
-        simxSynchronous(clientID_, true);
-        simxSynchronousTrigger(clientID_);
-        ROS_INFO("Enabled V-REP sync mode");
-    }
 
     // Initialise jointState_ message with joint names and get V-REP handles
     bool success = initJoints(vrepArmPrefix, urdfArmPrefix, numArmJoints_,
@@ -95,6 +83,8 @@ VrepInterface::VrepInterface(ros::NodeHandle& n) :
     trajAS_.reset(new actionlib::SimpleActionServer<control_msgs::FollowJointTrajectoryAction>(
             n, "jaco/joint_trajectory_action", boost::bind(&VrepInterface::trajCB, this, _1), false));
     trajAS_->start();
+
+
 }
 
 void VrepInterface::publishWorker(const ros::WallTimerEvent& e) {
@@ -104,12 +94,6 @@ void VrepInterface::publishWorker(const ros::WallTimerEvent& e) {
     }
     updateJointState();
     publishJointInfo();
-    if (torqueMode_) {
-        setVrepTorque(targetTorques_);
-    }
-    if (sync_) {
-        simxSynchronousTrigger(clientID_);   // Trigger next simulation step
-    }
 }
 
 void VrepInterface::trajCB(
@@ -215,9 +199,14 @@ bool VrepInterface::initJoints(std::string inPrefix, std::string outPrefix,
     return true;
 }
 
-void VrepInterface::torqueCallback(
-        const std_msgs::Float64MultiArray::ConstPtr& msg) {
-    targetTorques_ = msg->data;
+std::vector<double> VrepInterface::interpolate(const std::vector<double>& last,
+            const std::vector<double>& current, double alpha) {
+    ROS_WARN_STREAM_COND(alpha < 0, "Negative alpha in interpolate? " << alpha);
+    std::vector<double> intermediate;
+    for (int i = 0; i < last.size(); i++) {
+        intermediate.push_back(last[i] + alpha * (current[i] - last[i]));
+    }
+    return intermediate;
 }
 
 void VrepInterface::updateJointState() {
@@ -251,23 +240,6 @@ std::vector<double> VrepInterface::getVrepPosition() {
     return result;
 }
 
-void VrepInterface::setVrepTorque(const std::vector<double>& targets) {
-    for (int i = 0; i < numArmJoints_; i++) {
-        simxSetJointForce(clientID_, jointHandles_[i],
-                std::abs(targets[i]), simx_opmode_oneshot);
-        double velDir;
-        if (targets[i] < 0) {
-            velDir = -10000;
-        } else if (targets[i] > 0) {
-            velDir = 10000;
-        } else {
-            velDir = 0;
-        }
-        simxSetJointTargetVelocity(clientID_, jointHandles_[i], velDir,
-                simx_opmode_oneshot);
-    }
-}
-
 void VrepInterface::setVrepPosition(const std::vector<double>& targets) {
     for (int i = 0; i < numArmJoints_; i++) {
         simxSetJointTargetPosition(clientID_, jointHandles_[i], targets[i],
@@ -275,15 +247,9 @@ void VrepInterface::setVrepPosition(const std::vector<double>& targets) {
     }
 }
 
-std::vector<double> VrepInterface::interpolate(const std::vector<double>& last,
-            const std::vector<double>& current, double alpha) {
-    ROS_WARN_STREAM_COND(alpha < 0, "Negative alpha in interpolate? " << alpha);
-    std::vector<double> intermediate;
-    for (int i = 0; i < last.size(); i++) {
-        intermediate.push_back(last[i] + alpha * (current[i] - last[i]));
-    }
-    return intermediate;
-}
+
+
+
 int main(int argc, char **argv) {
     ros::init(argc, argv, "vrep_interface");
     ros::NodeHandle n;
