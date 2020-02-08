@@ -1,17 +1,4 @@
-#include <ros/ros.h>
-#include <random>
-#include <chrono>
-#include <algorithm>
-
-// MoveIt
-#include "action_client/VrepInterface.hpp"
-#include <actionlib/client/simple_action_client.h>
-#include <actionlib/client/terminal_state.h>
-#include <trajectory_msgs/JointTrajectoryPoint.h>
-#include <sensor_msgs/JointState.h>
-#include <geometry_msgs/Pose.h>
-#include <moveit/move_group_interface/move_group_interface.h>
-#include <moveit/macros/console_colors.h>
+#include "jaco_controller_integrated/jaco_controller_integrated.h"
 
 using namespace std;
 
@@ -30,23 +17,17 @@ double giverand(){
 int main(int argc, char** argv)
 {
   printf(MOVEIT_CONSOLE_COLOR_BLUE "JACO MAIN.\n" MOVEIT_CONSOLE_COLOR_RESET);
-  ros::init(argc, argv, "jaco_controller");
+  ros::init(argc, argv, "jaco_ros_controller");
   ros::AsyncSpinner spinner(1);
   spinner.start();
   ros::NodeHandle nh;
   double p_constant;
   int p_iter;
   nh.param("/jaco_ros_controller/constant",p_constant,0.03);
-  nh.param("/jaco_ros_controller/iter",p_iter,20);
-
-  //actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac("jaco_driver/trajectory_controller",true);
-  //ROS_INFO("Waiting for action server to start.");
-  // wait for the action server to start
-  //ac.waitForServer();
-  //ROS_INFO("Action server started");
+  nh.param("/jaco_ros_controller/iter",p_iter,1);
 
   printf(MOVEIT_CONSOLE_COLOR_BLUE "Move_group setup within controller.\n" MOVEIT_CONSOLE_COLOR_RESET);
-  static const string PLANNING_GROUP_ = "jaco_arm";
+  static const string PLANNING_GROUP_ = "arm";
   moveit::planning_interface::MoveGroupInterface move_group(PLANNING_GROUP_);
   printf(MOVEIT_CONSOLE_COLOR_BLUE "Move_group setup finished.\n" MOVEIT_CONSOLE_COLOR_RESET);
 
@@ -75,27 +56,34 @@ int main(int argc, char** argv)
   ROS_INFO("orientation_y: %f",current_pose.orientation.y);
   ROS_INFO("orientation_z: %f",current_pose.orientation.z);
 
+  std::vector<geometry_msgs::Pose> waypoints;
+
   for (int i=0;i<p_iter;i++){
-    geometry_msgs::Pose target_pose;
-    target_pose.position.x = current_pose.position.x + giverand() * p_constant;
-    target_pose.position.y = current_pose.position.y + giverand() * p_constant;
-    target_pose.position.z = current_pose.position.z + giverand() * p_constant;
-    target_pose.orientation.w = current_pose.orientation.w;
-    move_group.setPoseTarget(target_pose); //motion planning to a desired pose of the end-effector
+    printf(MOVEIT_CONSOLE_COLOR_BLUE "Cartesian Attempt: %d\n",i+1, MOVEIT_CONSOLE_COLOR_RESET);
+    waypoints.clear();
+    current_pose = move_group.getCurrentPose().pose;
+    waypoints.push_back(current_pose);
+
+    geometry_msgs::Pose target_pose = current_pose;
+
+    target_pose.position.z += 0.01;
+    target_pose.position.y += 0.01;
+    target_pose.position.x += 0.01;
+    waypoints.push_back(target_pose);  // down
+
+    //target_pose.position.z += 0.02;
+    //waypoints.push_back(target_pose);  //up
 
     moveit::planning_interface::MoveGroupInterface::Plan my_plan;
-    bool success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-    ROS_INFO_NAMED("tutorial", "Visualizing plan 1 (pose goal) %s", success ? "" : "FAILED");
+    moveit_msgs::RobotTrajectory trajectory;
+    const double jump_threshold = 0.0;
+    const double eef_step = 0.001;
+    double fraction = move_group.computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
 
-    move_group.move();
-    /*
-    joint_values = move_group.getCurrentJointValues();
-
-    control_msgs::FollowJointTrajectoryGoal goal;
-    goal.trajectory.header.stamp = ros::Time::now();
-    goal.trajectory.header.frame_id = "root";
-    ac.sendGoalAndWait(goal);*/
-
+    my_plan.trajectory_ = trajectory;
+    
+    bool success = (move_group.execute(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    ROS_INFO_NAMED("tutorial", "Execution %s", success ? "SUCCESS" : "FAILED");
   }
 
   current_pose = move_group.getCurrentPose().pose;
