@@ -69,33 +69,23 @@ int main(int argc, char** argv)
   ROS_INFO("orientation_y: %f",current_pose.orientation.y);
   ROS_INFO("orientation_z: %f",current_pose.orientation.z);
 
+  std::vector<geometry_msgs::Pose> waypoints;
+
   for (int i=0;i<p_iter;i++){
-    std::vector<geometry_msgs::Pose> waypoints;
+    printf(MOVEIT_CONSOLE_COLOR_BLUE "Cartesian Attempt: %d\n",i+1, MOVEIT_CONSOLE_COLOR_RESET);
+    waypoints.clear();
+    current_pose = move_group.getCurrentPose().pose;
     waypoints.push_back(current_pose);
 
     geometry_msgs::Pose target_pose = current_pose;
 
-    target_pose.position.z -= 0.2;
+    target_pose.position.z += 0.01;
+    target_pose.position.y += 0.01;
+    target_pose.position.x += 0.01;
     waypoints.push_back(target_pose);  // down
 
-    target_pose.position.y -= 0.2;
-    waypoints.push_back(target_pose);  // right
-
-    target_pose.position.x += 0.2;
-    waypoints.push_back(target_pose);  // right
-
-    target_pose.position.z += 0.2;
-    target_pose.position.y += 0.2;
-    target_pose.position.x -= 0.2;
-    waypoints.push_back(target_pose);
-
-    /*
-    geometry_msgs::Pose target_pose;
-    target_pose.position.x = current_pose.position.x + giverand() * p_constant;
-    target_pose.position.y = current_pose.position.y + giverand() * p_constant;
-    target_pose.position.z = current_pose.position.z + giverand() * p_constant;
-    target_pose.orientation.w = current_pose.orientation.w;
-    move_group.setPoseTarget(target_pose); //motion planning to a desired pose of the end-effector*/
+    //target_pose.position.z += 0.02;
+    //waypoints.push_back(target_pose);  //up
 
     moveit::planning_interface::MoveGroupInterface::Plan my_plan;
     moveit_msgs::RobotTrajectory trajectory;
@@ -104,16 +94,9 @@ int main(int argc, char** argv)
     double fraction = move_group.computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
 
     my_plan.trajectory_ = trajectory;
-    move_group.execute(my_plan);
-
-    /*
-    joint_values = move_group.getCurrentJointValues();
-
-    control_msgs::FollowJointTrajectoryGoal goal;
-    goal.trajectory.header.stamp = ros::Time::now();
-    goal.trajectory.header.frame_id = "root";
-    ac.sendGoalAndWait(goal);*/
-
+    
+    bool success = (move_group.execute(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    ROS_INFO_NAMED("tutorial", "Execution %s", success ? "SUCCESS" : "FAILED");
   }
 
   current_pose = move_group.getCurrentPose().pose;
