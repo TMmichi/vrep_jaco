@@ -6,15 +6,13 @@ set(CMAKE_CXX_FLAGS "-std=c++0x -fpermissive ${CMAKE_CXX_FLAGS} -Wfatal-errors\ 
 find_package(catkin REQUIRED
   COMPONENTS
     action_client
-    interactive_markers
     moveit_core
     moveit_visual_tools
     moveit_ros_move_group
     moveit_ros_planning
     moveit_ros_planning_interface
     moveit_ros_perception
-    pluginlib
-    geometric_shapes
+    std_msgs
     pcl_ros
     pcl_conversions
     rosbag
@@ -26,29 +24,27 @@ find_package(catkin REQUIRED
 find_package(Eigen3 REQUIRED)
 find_package(Boost REQUIRED system filesystem date_time thread)
 
-
 set(THIS_PACKAGE_INCLUDE_DIRS
-  interactivity/include
   action_client/include/action_client
 )
 
 catkin_package(
-  LIBRARIES
-  INCLUDE_DIRS
+  LIBRARIES jaco_controller_integrated
+  INCLUDE_DIRS include
   CATKIN_DEPENDS
     moveit_core
     moveit_visual_tools
     moveit_ros_move_group
     moveit_ros_planning
     moveit_ros_planning_interface
-    interactive_markers
+    std_msgs
     tf2_geometry_msgs
     action_client
   DEPENDS
     EIGEN3
 )
 
-include_directories(${THIS_PACKAGE_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIR} ${EIGEN3_INCLUDE_DIRS})
+include_directories(include ${THIS_PACKAGE_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIR} ${EIGEN3_INCLUDE_DIRS})
 
 add_executable(jaco_controller_integrated src/jaco_controller_integrated.cpp)
 target_link_libraries(jaco_controller_integrated ${catkin_LIBRARIES} ${Boost_LIBRARIES})

@@ -20,8 +20,8 @@ class JacoController
 public:
     JacoController();
 private:
-    updateParmas();
-    keyCallback(const std_msgs::Int8::ConstPtr& msg);
+    void updateParams();
+    void keyCallback(const std_msgs::Int8::ConstPtr& msg);
 
     //ROS handles
     ros::NodeHandle nh_;
@@ -32,16 +32,15 @@ private:
     ros::Publisher key_check_pub_;
 
     //Variables
+    moveit::planning_interface::MoveGroupInterface* move_group;
     const robot_state::JointModelGroup* joint_model_group;
     std::vector<geometry_msgs::Pose> waypoints;
     geometry_msgs::Pose current_pose;
     geometry_msgs::Pose target_pose;
     moveit::planning_interface::MoveGroupInterface::Plan my_plan;
-    
-    
 
     //Parameters
-    static const string PLANNING_GROUP_ = "arm";
+    const std::string PLANNING_GROUP_ = "arm";
     int key_input;
     const double jump_threshold = 0.0;
     const double eef_step = 0.001;
