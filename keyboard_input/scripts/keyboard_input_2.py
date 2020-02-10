@@ -14,30 +14,6 @@ import rospy
 from std_msgs.msg import Int8
 from geometry_msgs.msg import Twist
 
-class Velocity(object):
-
-    def __init__(self, min_velocity, max_velocity, num_steps):
-        assert min_velocity > 0 and max_velocity > 0 and num_steps > 0
-        self._min = min_velocity
-        self._max = max_velocity
-        self._num_steps = num_steps
-        if self._num_steps > 1:
-            self._step_incr = (max_velocity - min_velocity) / (self._num_steps - 1)
-        else:
-            # If num_steps is one, we always use the minimum velocity.
-            self._step_incr = 0
-
-    def __call__(self, value, step):
-        """
-        Takes a value in the range [0, 1] and the step and returns the
-        velocity (usually m/s or rad/s).
-        """
-        if step == 0:
-            return 0
-
-        assert step > 0 and step <= self._num_steps
-        max_value = self._min + self._step_incr * (step - 1)
-        return value * max_value
 
 class TextWindow():
 
@@ -61,9 +37,9 @@ class TextWindow():
 
     def write_line(self, lineno, message):
         if lineno < 0 or lineno >= self._num_lines:
-            raise ValueError, 'lineno out of bounds'
+            raise ValueError('lineno out of bounds')
         height, width = self._screen.getmaxyx()
-        y = (height / self._num_lines) * lineno
+        y = int((height / self._num_lines) * lineno)
         x = 10
         for text in message.split('\n'):
             text = text.ljust(width)
@@ -80,7 +56,7 @@ class TextWindow():
 class SimpleKeyTeleop():
     def __init__(self, interface):
         self._interface = interface
-        self._pub_cmd = rospy.Publisher('key_vel', Int8)
+        self._pub_cmd = rospy.Publisher('key_input', Int8)
 
         self._hz = rospy.get_param('~hz', 50)
 
@@ -95,7 +71,7 @@ class SimpleKeyTeleop():
         rate = rospy.Rate(self._hz)
         self._running = True
         self._interface.write_line(2, 'Pressed: None')
-        self._interface.write_line(5, 'Use arrow keys to move, q to exit.')
+        self._interface.write_line(5, 'Use arrow keys to move, z to exit.')
         while self._running:
             while True:
                 keycode = self._interface.read_key()
@@ -103,14 +79,14 @@ class SimpleKeyTeleop():
                     break
                 self._key_pressed(keycode)
                 self._publish(keycode)
-            rate.sleep()
+            #rate.sleep()
 
     def _key_pressed(self, keycode):
-        if keycode == ord('q'):
+        if keycode == ord('z'):
             self._running = False
             rospy.signal_shutdown('Bye')
-        elif keycode > 255:
-            pass
+        elif keycode > 128:
+            keycode = 0
         else:
             self._last_pressed_time = rospy.get_time()
 
@@ -120,7 +96,7 @@ class SimpleKeyTeleop():
             self.key_now = keycode
             self._pub_cmd.publish(self.key_now)
         self._interface.write_line(2, 'Pressed: ' + chr(keycode))
-        self._interface.write_line(5, 'Use arrow keys to move, q to exit.')
+        self._interface.write_line(5, 'Use arrow keys to move, z to exit.')
         self._interface.refresh()
         
 

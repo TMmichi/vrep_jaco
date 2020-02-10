@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
 <launch>
   <param name="use_sim_time" value="true"/>
-  <node name="keyboard_input" pkg="keyboard_input" type="keyboard_input.py" output="screen"></node>
+  <node name="keyboard_input" pkg="keyboard_input" type="keyboard_input_2.py" output="screen"></node>
 </launch>

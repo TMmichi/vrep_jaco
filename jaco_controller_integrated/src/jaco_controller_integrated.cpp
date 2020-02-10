@@ -46,12 +46,12 @@ void JacoController::keyCallback(const std_msgs::Int8::ConstPtr& msg){
   target_pose = current_pose;
 
   switch(key_input){
-    case 65: target_pose.position.y -= 0.01; break;
-    case 66: target_pose.position.y += 0.01; break;
-    case 67: target_pose.position.x -= 0.01; break;
-    case 68: target_pose.position.x += 0.01; break;
-    case 105: target_pose.position.z += 0.01; break;
-    case 111: target_pose.position.z -= 0.01; break;
+    case 119: target_pose.position.y -= 0.01; break;
+    case 115: target_pose.position.y += 0.01; break;
+    case 97: target_pose.position.x -= 0.01; break;
+    case 100: target_pose.position.x += 0.01; break;
+    case 101: target_pose.position.z += 0.01; break;
+    case 113: target_pose.position.z -= 0.01; break;
   }
   waypoints.push_back(target_pose);
 
