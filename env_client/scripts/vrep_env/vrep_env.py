@@ -122,7 +122,7 @@ class VrepEnv(gym.Env):
 		#self.set_integer_parameter(vrep.sim_intparam_dynamic_engine, 0) # 0=Bullet
 		
 		# Optionally override delta time
-		#self.set_float_parameter(vrep.sim_floatparam_simulation_time_step, 25)
+		self.set_float_parameter(vrep.sim_floatparam_simulation_time_step, 0.1)
 		
 		self.RAPI_rc(vrep.simxSynchronous(self.cID,sync))
 		self.RAPI_rc(vrep.simxStartSimulation(self.cID, vrep.simx_opmode_blocking))

@@ -29,7 +29,7 @@ JacoController::JacoController() : nh_(""), nh_local_("~"){
 }
 
 void JacoController::updateParams(){
-  //nh_local_.param<double>("jaco_ros_controller/constant", p_constant, 0.01);
+  nh_local_.param<float>("jaco_ros_controller/speed_constant", p_speed_constant, 0.01);
   //nh_local_.param<int>("jaco_ros_controller/iter", p_iter, 20);
 }
 
@@ -46,8 +46,8 @@ void JacoController::keyCallback(const std_msgs::Int8::ConstPtr& msg){
   target_pose = current_pose;
 
   switch(key_input){
-    case 119: target_pose.position.y -= 0.01; break;
-    case 115: target_pose.position.y += 0.01; break;
+    case 119: target_pose.position.y += 0.01; break;
+    case 115: target_pose.position.y -= 0.01; break;
     case 97: target_pose.position.x -= 0.01; break;
     case 100: target_pose.position.x += 0.01; break;
     case 101: target_pose.position.z += 0.01; break;
@@ -58,6 +58,8 @@ void JacoController::keyCallback(const std_msgs::Int8::ConstPtr& msg){
   moveit_msgs::RobotTrajectory trajectory;
   fraction = move_group->computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
   my_plan.trajectory_ = trajectory;
+
+  
 
   bool success = (move_group->execute(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
   ROS_INFO_NAMED("tutorial", "Execution %s", success ? "SUCCESS" : "FAILED");

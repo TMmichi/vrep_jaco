@@ -45,6 +45,7 @@ private:
     const double jump_threshold = 0.0;
     const double eef_step = 0.001;
     double fraction;
+    float p_speed_constant;
 };
 
 }

@@ -53,7 +53,6 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		
 		#Initialize moveit! and rospy node
 		#moveit_commander.roscpp_initializer(sys.argv)
-		#TODO: vrep timestep -> 0.1 or 0.15
 		rospy.init_node("JacoVrepEnv",anonymous=True)
 		self.rate = rospy.Rate(50)
 
