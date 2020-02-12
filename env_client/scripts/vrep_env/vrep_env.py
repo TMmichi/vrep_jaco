@@ -114,7 +114,7 @@ class VrepEnv(gym.Env):
 		self.RAPI_rc(vrep.simxCloseScene(self.cID, vrep.simx_opmode_blocking))
 		self.scene_loaded = False
 	
-	def start_simulation(self,sync=False):
+	def start_simulation(self,sync=False,time_step=0.05):
 		if self.sim_running:
 			raise RuntimeError('Simulation is already running.')
 		
@@ -122,7 +122,7 @@ class VrepEnv(gym.Env):
 		#self.set_integer_parameter(vrep.sim_intparam_dynamic_engine, 0) # 0=Bullet
 		
 		# Optionally override delta time
-		self.set_float_parameter(vrep.sim_floatparam_simulation_time_step, 0.1)
+		self.set_float_parameter(vrep.sim_floatparam_simulation_time_step, time_step)
 		
 		self.RAPI_rc(vrep.simxSynchronous(self.cID,sync))
 		self.RAPI_rc(vrep.simxStartSimulation(self.cID, vrep.simx_opmode_blocking))

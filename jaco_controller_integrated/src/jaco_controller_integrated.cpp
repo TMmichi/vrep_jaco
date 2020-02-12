@@ -8,10 +8,13 @@ JacoController::JacoController() : nh_(""), nh_local_("~"){
   updateParams();
 
   teleop_sub_ = nh_.subscribe("key_input", 10, &JacoController::keyCallback, this);
-  key_check_pub_ = nh_.advertise<std_msgs::Int8>("key_check", 10);
 
   printf(MOVEIT_CONSOLE_COLOR_BLUE "Move_group setup within controller.\n" MOVEIT_CONSOLE_COLOR_RESET);
   move_group = new moveit::planning_interface::MoveGroupInterface(PLANNING_GROUP_);
+  
+  execute_action_client_.reset(new actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>(
+        nh_, "j2n6s300/follow_joint_trajectory", false));
+
   printf(MOVEIT_CONSOLE_COLOR_BLUE "Move_group setup finished.\n" MOVEIT_CONSOLE_COLOR_RESET);
 
   joint_model_group = move_group->getCurrentState()->getJointModelGroup(PLANNING_GROUP_);
@@ -34,24 +37,25 @@ void JacoController::updateParams(){
 }
 
 void JacoController::keyCallback(const std_msgs::Int8::ConstPtr& msg){
-  printf(MOVEIT_CONSOLE_COLOR_BLUE "Key In\n" MOVEIT_CONSOLE_COLOR_RESET);
-  std_msgs::Int8 key_check;
-  key_check.data = msg->data;
-  key_check_pub_.publish(key_check);
   key_input = msg->data;
+  printf(MOVEIT_CONSOLE_COLOR_BLUE "Key In: %c\n",key_input);
+  printf(MOVEIT_CONSOLE_COLOR_RESET);
 
   waypoints.clear();
   current_pose = move_group->getCurrentPose().pose;
+  ROS_INFO("pose_x: %f",current_pose.position.x);
+  ROS_INFO("pose_y: %f",current_pose.position.y);
+  ROS_INFO("pose_z: %f",current_pose.position.z);
   waypoints.push_back(current_pose);
   target_pose = current_pose;
 
   switch(key_input){
-    case 119: target_pose.position.y += 0.01; break;
-    case 115: target_pose.position.y -= 0.01; break;
-    case 97: target_pose.position.x -= 0.01; break;
-    case 100: target_pose.position.x += 0.01; break;
-    case 101: target_pose.position.z += 0.01; break;
-    case 113: target_pose.position.z -= 0.01; break;
+    case 119: target_pose.position.y += 0.04; break;
+    case 115: target_pose.position.y -= 0.04; break;
+    case 97: target_pose.position.x -= 0.04; break;
+    case 100: target_pose.position.x += 0.04; break;
+    case 101: target_pose.position.z += 0.04; break;
+    case 113: target_pose.position.z -= 0.04; break;
   }
   waypoints.push_back(target_pose);
 
@@ -59,10 +63,13 @@ void JacoController::keyCallback(const std_msgs::Int8::ConstPtr& msg){
   fraction = move_group->computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
   my_plan.trajectory_ = trajectory;
 
-  
+  control_msgs::FollowJointTrajectoryGoal goal;
+  goal.trajectory = trajectory.joint_trajectory;
+  execute_action_client_->sendGoal(goal);
 
-  bool success = (move_group->execute(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-  ROS_INFO_NAMED("tutorial", "Execution %s", success ? "SUCCESS" : "FAILED");
+  
+  //bool success = (move_group->execute(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+  //ROS_INFO_NAMED("tutorial", "Execution %s", success ? "SUCCESS" : "FAILED");
 }
 
 

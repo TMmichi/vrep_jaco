@@ -49,12 +49,12 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		self,
 		server_addr='127.0.0.1',
 		server_port=19997,
-		feedbackRate_=50.0):
+		feedbackRate_=100.0):
 		
 		#Initialize moveit! and rospy node
 		#moveit_commander.roscpp_initializer(sys.argv)
 		rospy.init_node("JacoVrepEnv",anonymous=True)
-		self.rate = rospy.Rate(50)
+		self.rate = rospy.Rate(100)
 
 		#jaco = moveit_commander.RobotCommander()
 		#scene = moveit_commander.PlanningSceneInterface()
@@ -121,6 +121,10 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		result = FollowJointTrajectoryResult()
 		points = goal.trajectory.points
 		startTime = rospy.Time.now()
+		position=[]
+		for i_jointhandle in self.jointHandles_:
+			position.append(self.obj_get_joint_angle(i_jointhandle))
+		self.jointState_.position = position
 		startPos = self.jointState_.position
 		i = 0
 		while not rospy.is_shutdown():
@@ -166,13 +170,13 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 			try:
 				for i in range(0,9):
 					self.obj_set_position_target(self.jointHandles_[i],radtoangle(-target[i]))
-					print("for looped: ",target[i])
+					#print("for looped: ",target[i])
 			except Exception:
 				for i in range(0,6):
 					self.obj_set_position_target(self.jointHandles_[i],radtoangle(-target[i]))
-				print("chunck: ",target)
+				#print("chunck: ",target)
 				#map(self.obj_set_position_target,self.jointHandles_,target)
-			print("Moving")
+			#print("Moving")
 			self.rate.sleep()
 
 	def _interpolate(self, last, current, alpha):
@@ -309,14 +313,14 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		if self.sim_running:
 			self.stop_simulation()
 		else:
-			self.start_simulation()
+			self.start_simulation(time_step=0.05)
 			self.stop_simulation()
 		random_init_angle = [sample(range(-180,180),1)[0],110,sample(range(20,130),1)[0],sample(range(50,130),1)[0],sample(range(50,130),1)[0],sample(range(50,130),1)[0]] #angle in degree
 		for i, degree in enumerate(random_init_angle):
 			noise = random.randint(-30,30)
 			self.obj_set_position_inst(self.jointHandles_[i],-degree+noise)
 			self.obj_set_position_target(self.jointHandles_[i],-degree+noise)
-		self.start_simulation(sync)
+		self.start_simulation(sync=sync,time_step=0.05)
 		if sync:
 			self.step_simulation()
 			time.sleep(1)

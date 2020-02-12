@@ -33,6 +33,7 @@ private:
 
     //Variables
     moveit::planning_interface::MoveGroupInterface* move_group;
+    std::unique_ptr<actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> > execute_action_client_;
     const robot_state::JointModelGroup* joint_model_group;
     std::vector<geometry_msgs::Pose> waypoints;
     geometry_msgs::Pose current_pose;
