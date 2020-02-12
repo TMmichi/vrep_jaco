@@ -46,7 +46,7 @@ catkin_make
 
 After building your repo, source `setup.bash` file in your project devel folder to the `.bashrc`.
 ```bash
-echo "source ~YOUR_PROJECT_FOLDER/devl/setup.bash" >> ~/.bashrc
+echo "source ~YOUR_PROJECT_FOLDER/devel/setup.bash" >> ~/.bashrc
 source ~/.bashrc
 ```
 
