@@ -271,7 +271,7 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 	def take_manual_action(self,key):
 		if key == "o":
 			for i in range(6,9):
-					self.obj_set_position_target(self.jointHandles_[i],radtoangle(0))
+					self.obj_set_position_target(self.jointHandles_[i],radtoangle(10))
 		elif key == "c":
 			for i in range(6,9):
 					self.obj_set_position_target(self.jointHandles_[i],radtoangle(-20))

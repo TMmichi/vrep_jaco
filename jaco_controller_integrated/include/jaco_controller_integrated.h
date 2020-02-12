@@ -2,11 +2,13 @@
 #include <chrono>
 #include <algorithm>
 
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include "action_client/VrepInterface.hpp"
 #include <std_msgs/Int8.h>
 #include <actionlib/client/simple_action_client.h>
 #include <actionlib/client/terminal_state.h>
 #include <trajectory_msgs/JointTrajectoryPoint.h>
+
 
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/macros/console_colors.h>
@@ -21,6 +23,7 @@ public:
     JacoController();
 private:
     void updateParams();
+    void reset();
     void keyCallback(const std_msgs::Int8::ConstPtr& msg);
 
     //ROS handles
