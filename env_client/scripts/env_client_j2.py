@@ -49,12 +49,12 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		self,
 		server_addr='127.0.0.1',
 		server_port=19997,
-		feedbackRate_=100.0):
+		feedbackRate_=50.0):
 		
 		#Initialize moveit! and rospy node
 		#moveit_commander.roscpp_initializer(sys.argv)
 		rospy.init_node("JacoVrepEnv",anonymous=True)
-		self.rate = rospy.Rate(100)
+		self.rate = rospy.Rate(50)
 
 		#jaco = moveit_commander.RobotCommander()
 		#scene = moveit_commander.PlanningSceneInterface()
@@ -247,7 +247,7 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 			self.step_simulation()
 		elif self.key_input == "p": #Action from Policy
 			self.action_from_policy = True
-		elif self.key_input == "s": #Action frmo Sample
+		elif self.key_input == "s": #Action from Sample
 			self.action_from_policy = False
 		elif self.key_input in ["o","c","up","down","right","left"]:
 			self.take_manual_action(self.key_input)
@@ -275,15 +275,8 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		elif key == "c":
 			for i in range(6,9):
 					self.obj_set_position_target(self.jointHandles_[i],radtoangle(-20))
-		elif key == "up":
+		else:
 			pass
-		elif key == "down":
-			pass
-		elif key == "left":
-			pass
-		elif key == "right":
-			pass
-
 	
 	def step(self, action):
 		"""Gym environment 'step'
@@ -315,9 +308,9 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		else:
 			self.start_simulation(time_step=0.05)
 			self.stop_simulation()
-		random_init_angle = [sample(range(-180,180),1)[0],110,sample(range(20,130),1)[0],sample(range(50,130),1)[0],sample(range(50,130),1)[0],sample(range(50,130),1)[0]] #angle in degree
+		random_init_angle = [sample(range(-180,180),1)[0],150,sample(range(200,270),1)[0],sample(range(50,130),1)[0],sample(range(50,130),1)[0],sample(range(50,130),1)[0]] #angle in degree
 		for i, degree in enumerate(random_init_angle):
-			noise = random.randint(-30,30)
+			noise = random.randint(-20,20)
 			self.obj_set_position_inst(self.jointHandles_[i],-degree+noise)
 			self.obj_set_position_target(self.jointHandles_[i],-degree+noise)
 		self.start_simulation(sync=sync,time_step=0.05)
