@@ -3,8 +3,6 @@ project(jaco_controller_integrated)
 
 set(CMAKE_CXX_FLAGS "-std=c++0x -fpermissive ${CMAKE_CXX_FLAGS} -Wfatal-errors\ ")
 
-set(LIBRARY_NAME jaco_controller_integrated)
-
 find_package(catkin REQUIRED COMPONENTS
   std_msgs
   geometry_msgs
@@ -33,18 +31,18 @@ include_directories(
   ${EIGEN3_INCLUDE_DIRS}
 )
 
-add_library(${LIBRARY_NAME} SHARED
+add_library(jaco_controller_integrated SHARED
   ## src/jaco_controller_integrated_jog.cpp
   src/jaco_controller_integrated_jog.cpp
   src/low_pass_filter.cpp
 )
-add_dependencies(${LIBRARY_NAME} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(${LIBRARY_NAME}
+add_dependencies(jaco_controller_integrated ${catkin_EXPORTED_TARGETS})
+target_link_libraries(jaco_controller_integrated
   ${catkin_LIBRARIES}
   ${Eigen_LIBRARIES}
 )
 
-add_executable(jaco_controller_integrated
+add_executable(jaco_controller_integrated_jog
   ## src/jaco_controller_integrated.cpp
   src/jaco_controller_integrated_jog.cpp
 )
