@@ -9,20 +9,9 @@ JacoController::JacoController() : nh_(""), nh_local_("~"){
   teleop_sub_ = nh_.subscribe("key_input", 10, &JacoController::keyCallback, this);
   joint_state_sub_ = nh_.subscribe("j2n6s300/joint_states", 10, &JacoController::jointstateCallback, this);
 
-  printf(MOVEIT_CONSOLE_COLOR_BLUE "Move_group setup within controller.\n" MOVEIT_CONSOLE_COLOR_RESET);
-  move_group = new moveit::planning_interface::MoveGroupInterface(PLANNING_GROUP_);
-  
-  execute_action_client_.reset(new actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>(
-        nh_, "j2n6s300/follow_joint_trajectory", false));
-  printf(MOVEIT_CONSOLE_COLOR_BLUE "Move_group setup finished.\n" MOVEIT_CONSOLE_COLOR_RESET);
-
-  joint_model_group = move_group->getCurrentState()->getJointModelGroup(PLANNING_GROUP_);
-  printf(MOVEIT_CONSOLE_COLOR_BLUE "Joint states called\n" MOVEIT_CONSOLE_COLOR_RESET);
-
-
+  printf(MOVEIT_CONSOLE_COLOR_BLUE "Planning Scene Monitor Setup.\n" MOVEIT_CONSOLE_COLOR_RESET);
   planning_scene_monitor_ = std::make_shared<planning_scene_monitor::PlanningSceneMonitor>("robot_description");
-  if (!planning_scene_monitor_->getPlanningScene())
-  {
+  if (!planning_scene_monitor_->getPlanningScene()){
     ROS_ERROR_STREAM_NAMED(LOGNAME, "Error in setting up the PlanningSceneMonitor.");
     exit(EXIT_FAILURE);
   }
@@ -32,15 +21,21 @@ JacoController::JacoController() : nh_(""), nh_local_("~"){
       planning_scene_monitor::PlanningSceneMonitor::DEFAULT_PLANNING_SCENE_WORLD_TOPIC,
       false /* skip octomap monitor */);
   planning_scene_monitor_->startStateMonitor();
+  printf(MOVEIT_CONSOLE_COLOR_BLUE "Planning Scene Monitor Setup Finished.\n" MOVEIT_CONSOLE_COLOR_RESET);
 
-  for (size_t i = 0; i < 6; ++i)
-  {
-    position_filters_.emplace_back(parameters_.low_pass_filter_coeff);
-  }
+  printf(MOVEIT_CONSOLE_COLOR_BLUE "Action Client Setup.\n" MOVEIT_CONSOLE_COLOR_RESET);
+  execute_action_client_.reset(new actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>(
+        nh_, "j2n6s300/follow_joint_trajectory", false));
+  printf(MOVEIT_CONSOLE_COLOR_BLUE "Action Client Setup Finished.\n" MOVEIT_CONSOLE_COLOR_RESET);
 
   const robot_model::RobotModelPtr& kinematic_model = planning_scene_monitor_->getRobotModelLoader();
   kinematic_state_ = std::make_shared<robot_state::RobotState>(kinematic_model);
   kinematic_state_->setToDefaultValues();
+  joint_model_group_ = kinematic_model->getJointModelGroup(PLANNING_GROUP_);
+
+  for (size_t i = 0; i < 6; ++i){
+    position_filters_.emplace_back(low_pass_filter_coeff);
+  }
 }
 
 void JacoController::updateParams(){
@@ -56,19 +51,6 @@ void JacoController::keyCallback(const std_msgs::Int8::ConstPtr& msg){
   key_input = msg->data;
   printf(MOVEIT_CONSOLE_COLOR_BLUE "Key In: %c\n",key_input);
   printf(MOVEIT_CONSOLE_COLOR_RESET);
-
-  current_pose = move_group->getCurrentPose().pose;
-  ROS_INFO("pose_x: %f",current_pose.position.x);
-  ROS_INFO("pose_y: %f",current_pose.position.y);
-  ROS_INFO("pose_z: %f",current_pose.position.z);
-
-  tf2::Quaternion q(current_pose.orientation.x,current_pose.orientation.y,current_pose.orientation.z,current_pose.orientation.w);
-  tf2::Matrix3x3 m(q);
-  double roll,pitch,yaw;
-  m.getRPY(roll,pitch,yaw);
-  ROS_INFO("orientation_r: %f",roll);
-  ROS_INFO("orientation_p: %f",pitch);
-  ROS_INFO("orientation_y: %f",yaw);
 
   geometry_msgs::TwistStamped cmd;
   switch(key_input){
@@ -107,12 +89,12 @@ void JacoController::moveJaco(const geometry_msgs::TwistStamped& cmd, const geom
   angular_vector = tf_moveit_to_cmd_frame_.linear() * angular_vector;
 
   Eigen::VectorXd command(6);
-  command[0] = translation_vector(0) * 0.6 * 0.008;
-  command[1] = translation_vector(1) * 0.6 * 0.008;
-  command[2] = translation_vector(2) * 0.6 * 0.008;
-  command[3] = angular_vector(0) * 0.3 * 0.008;
-  command[4] = angular_vector(1) * 0.3 * 0.008;
-  command[5] = angular_vector(2) * 0.3 * 0.008;
+  command[0] = translation_vector(0) * linear_scale * publish_period;
+  command[1] = translation_vector(1) * linear_scale * publish_period;
+  command[2] = translation_vector(2) * linear_scale * publish_period;
+  command[3] = angular_vector(0) * rotational_scale* publish_period;
+  command[4] = angular_vector(1) * rotational_scale * publish_period;
+  command[5] = angular_vector(2) * rotational_scale * publish_period;
 
   // Convert from cartesian commands to joint commands
   jacobian_ = kinematic_state_->getJacobian(joint_model_group_);
@@ -140,57 +122,44 @@ void JacoController::moveJaco(const geometry_msgs::TwistStamped& cmd, const geom
   execute_action_client_->sendGoal(goal);
 }
 
-bool JacoController::addJointIncrements(sensor_msgs::JointState& output, const Eigen::VectorXd& increments) const
-{
-  for (std::size_t i = 0, size = static_cast<std::size_t>(increments.size()); i < size; ++i)
-  {
-    try
-    {
+bool JacoController::addJointIncrements(sensor_msgs::JointState& output, const Eigen::VectorXd& increments) const {
+  for (std::size_t i = 0, size = static_cast<std::size_t>(increments.size()); i < size; ++i){
+    try{
       output.position[i] += increments[static_cast<long>(i)];
     }
-    catch (const std::out_of_range& e)
-    {
-      ROS_ERROR_STREAM_NAMED(LOGNAME, ros::this_node::getName() << " Lengths of output and "
-                                                                   "increments do not match.");
+    catch (const std::out_of_range& e){
+      ROS_ERROR_STREAM_NAMED(LOGNAME, ros::this_node::getName() << " Lengths of output and increments do not match.");
       return false;
     }
   }
-
   return true;
 }
 
-void JacoController::lowPassFilterPositions(sensor_msgs::JointState& joint_state)
-{
-  for (size_t i = 0; i < position_filters_.size(); ++i)
-  {
+void JacoController::lowPassFilterPositions(sensor_msgs::JointState& joint_state){
+  for (size_t i = 0; i < position_filters_.size(); ++i){
     joint_state.position[i] = position_filters_[i].filter(joint_state.position[i]);
   }
 }
 
-void JacoController::calculateJointVelocities(sensor_msgs::JointState& joint_state, const Eigen::ArrayXd& delta_theta)
-{
-  for (int i = 0; i < delta_theta.size(); ++i)
-  {
-    joint_state.velocity[i] = delta_theta[i] / 0.008;
+void JacoController::calculateJointVelocities(sensor_msgs::JointState& joint_state, const Eigen::ArrayXd& delta_theta){
+  for (int i = 0; i < delta_theta.size(); ++i){
+    joint_state.velocity[i] = delta_theta[i] / publish_period;
   }
 }
 
-trajectory_msgs::JointTrajectory JacoController::composeJointTrajMessage(sensor_msgs::JointState& joint_state) const
-{
+trajectory_msgs::JointTrajectory JacoController::composeJointTrajMessage(sensor_msgs::JointState& joint_state) const {
   trajectory_msgs::JointTrajectory new_joint_traj;
   new_joint_traj.header.frame_id = "world";
   new_joint_traj.header.stamp = ros::Time::now();
   new_joint_traj.joint_names = joint_state.name;
 
   trajectory_msgs::JointTrajectoryPoint point;
-  point.time_from_start = ros::Duration(0.008);
+  point.time_from_start = ros::Duration(publish_period);
   if (true) //position traj
     point.positions = joint_state.position;
   if (false) //velocity traj
     point.velocities = joint_state.velocity;
-
   new_joint_traj.points.push_back(point);
-
   return new_joint_traj;
 }
 

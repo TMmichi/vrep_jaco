@@ -73,6 +73,7 @@
         "forward_list": "cpp",
         "future": "cpp",
         "scoped_allocator": "cpp",
-        "valarray": "cpp"
+        "valarray": "cpp",
+        "core": "cpp"
     }
 }

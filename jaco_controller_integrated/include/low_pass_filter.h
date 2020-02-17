@@ -38,7 +38,7 @@
 
 #pragma once
 
-namespace moveit_jog_arm
+namespace jaco_controller_integrated
 {
 /**
  * Class LowPassFilter - Filter a signal to soften jerks.

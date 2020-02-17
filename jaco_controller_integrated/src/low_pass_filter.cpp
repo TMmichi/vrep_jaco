@@ -42,7 +42,7 @@
 
 static const std::string LOGNAME = "low_pass_filter";
 
-namespace moveit_jog_arm
+namespace jaco_controller_integrated
 {
 LowPassFilter::LowPassFilter(double low_pass_filter_coeff)
 {
