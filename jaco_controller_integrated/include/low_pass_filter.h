@@ -38,7 +38,7 @@
 
 #pragma once
 
-namespace jaco_controller_integrated
+namespace jaco_controller_integrated_jog
 {
 /**
  * Class LowPassFilter - Filter a signal to soften jerks.

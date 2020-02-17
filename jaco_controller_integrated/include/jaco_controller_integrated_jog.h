@@ -17,7 +17,7 @@
 #include <moveit/macros/console_colors.h>
 
 
-namespace jaco_controller_integrated
+namespace jaco_controller_integrated_jog
 {
 class JacoController
 {

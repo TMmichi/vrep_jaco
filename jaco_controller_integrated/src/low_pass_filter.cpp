@@ -42,7 +42,7 @@
 
 static const std::string LOGNAME = "low_pass_filter";
 
-namespace jaco_controller_integrated
+namespace jaco_controller_integrated_jog
 {
 LowPassFilter::LowPassFilter(double low_pass_filter_coeff)
 {
