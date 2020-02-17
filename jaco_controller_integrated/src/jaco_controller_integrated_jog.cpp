@@ -2,7 +2,7 @@
 
 
 using namespace std;
-using namespace jaco_controller_integrated;
+using namespace jaco_controller_integrated_jog;
 
 JacoController::JacoController() : nh_(""), nh_local_("~"){
   updateParams();
