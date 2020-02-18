@@ -13,6 +13,7 @@ find_package(catkin REQUIRED
     moveit_ros_planning_interface
     moveit_ros_perception
     std_msgs
+    control_msgs
     pcl_ros
     pcl_conversions
     rosbag
@@ -38,6 +39,7 @@ catkin_package(
     moveit_ros_planning
     moveit_ros_planning_interface
     std_msgs
+    control_msgs
     tf2_geometry_msgs
     action_client
   DEPENDS
