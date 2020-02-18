@@ -12,7 +12,6 @@ JacoController::JacoController() : nh_(""), nh_local_("~"){
   printf(MOVEIT_CONSOLE_COLOR_BLUE "Planning Scene Monitor Setup.\n" MOVEIT_CONSOLE_COLOR_RESET);
   planning_scene_monitor_ = std::make_shared<planning_scene_monitor::PlanningSceneMonitor>("robot_description");
   if (!planning_scene_monitor_->getPlanningScene()){
-    ROS_ERROR_STREAM_NAMED(LOGNAME, "Error in setting up the PlanningSceneMonitor.");
     exit(EXIT_FAILURE);
   }
   planning_scene_monitor_->startSceneMonitor();
@@ -28,7 +27,7 @@ JacoController::JacoController() : nh_(""), nh_local_("~"){
         nh_, "j2n6s300/follow_joint_trajectory", false));
   printf(MOVEIT_CONSOLE_COLOR_BLUE "Action Client Setup Finished.\n" MOVEIT_CONSOLE_COLOR_RESET);
 
-  const robot_model::RobotModelPtr& kinematic_model = planning_scene_monitor_->getRobotModelLoader();
+  const robot_model::RobotModelPtr& kinematic_model = planning_scene_monitor_->getRobotModelLoader()->getModel();
   kinematic_state_ = std::make_shared<robot_state::RobotState>(kinematic_model);
   kinematic_state_->setToDefaultValues();
   joint_model_group_ = kinematic_model->getJointModelGroup(PLANNING_GROUP_);
@@ -61,12 +60,12 @@ void JacoController::keyCallback(const std_msgs::Int8::ConstPtr& msg){
     case 'e': cmd.twist.linear.z = 0.01; break;
     case 'q': cmd.twist.linear.z = 0.01; break;
 
-    case 'u': cmd.twist.angular.x += 0.1; i=1; break;
-    case 'j': cmd.twist.angular.x -= 0.1; i=1; break;
-    case 'h': cmd.twist.angular.y += 0.1; i=1; break;
-    case 'k': cmd.twist.angular.y -= 0.1; i=1; break;
-    case 'y': cmd.twist.angular.z += 0.1; i=1; break;
-    case 'i': cmd.twist.angular.z -= 0.1; i=1; break;
+    case 'u': cmd.twist.angular.x += 0.1; break;
+    case 'j': cmd.twist.angular.x -= 0.1; break;
+    case 'h': cmd.twist.angular.y += 0.1; break;
+    case 'k': cmd.twist.angular.y -= 0.1; break;
+    case 'y': cmd.twist.angular.z += 0.1; break;
+    case 'i': cmd.twist.angular.z -= 0.1; break;
 
     case 'r': this->reset(); break;
   }
@@ -79,8 +78,8 @@ void JacoController::jointstateCallback(const sensor_msgs::JointState& msg){
 
 void JacoController::moveJaco(const geometry_msgs::TwistStamped& cmd, const geometry_msgs::Pose& current_pose){
   kinematic_state_->setVariableValues(joint_state_);
-  tf_moveit_to_cmd_frame_ = kinematic_state_->getGlobalLinkTransform(parameters_.planning_frame).inverse() *
-                            kinematic_state_->getGlobalLinkTransform(parameters_.robot_link_command_frame);
+  tf_moveit_to_cmd_frame_ = kinematic_state_->getGlobalLinkTransform("world").inverse() *
+                            kinematic_state_->getGlobalLinkTransform("world");
 
   Eigen::Vector3d translation_vector(cmd.twist.linear.x, cmd.twist.linear.y, cmd.twist.linear.z);
   Eigen::Vector3d angular_vector(cmd.twist.angular.x, cmd.twist.angular.y, cmd.twist.angular.z);
@@ -128,7 +127,6 @@ bool JacoController::addJointIncrements(sensor_msgs::JointState& output, const E
       output.position[i] += increments[static_cast<long>(i)];
     }
     catch (const std::out_of_range& e){
-      ROS_ERROR_STREAM_NAMED(LOGNAME, ros::this_node::getName() << " Lengths of output and increments do not match.");
       return false;
     }
   }

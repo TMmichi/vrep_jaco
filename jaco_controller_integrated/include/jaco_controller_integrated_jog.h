@@ -30,7 +30,7 @@ private:
     void reset();
     void keyCallback(const std_msgs::Int8::ConstPtr& msg);
     void jointstateCallback(const sensor_msgs::JointState& msg);
-    void moveJaco(geometry_msgs::TwistStamped& cmd, const geometry_msgs::Pose& current_pose);
+    void moveJaco(const geometry_msgs::TwistStamped& cmd, const geometry_msgs::Pose& current_pose);
     bool addJointIncrements(sensor_msgs::JointState& output, const Eigen::VectorXd& increments) const;
     void lowPassFilterPositions(sensor_msgs::JointState& joint_state);
     void calculateJointVelocities(sensor_msgs::JointState& joint_state, const Eigen::ArrayXd& delta_theta);
@@ -55,7 +55,7 @@ private:
     geometry_msgs::Pose current_pose;    
     moveit::planning_interface::MoveGroupInterface::Plan my_plan;
     
-    Eigen::Isometry3d tf_moveit_to_cmd_frame;
+    Eigen::Isometry3d tf_moveit_to_cmd_frame_;
     Eigen::MatrixXd jacobian_, pseudo_inverse_, matrix_s_;
     Eigen::JacobiSVD<Eigen::MatrixXd> svd_;
     Eigen::ArrayXd delta_theta_;
