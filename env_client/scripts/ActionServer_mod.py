@@ -117,7 +117,7 @@ class SimpleActionServer:
 
             #check if we need to send a preempted message for the goal that we're currently pursuing
             if self.is_active() and self.current_goal.get_goal() and self.current_goal != self.next_goal:
-                self.current_goal.set_canceled(None, "This goal was canceled because another goal was received by the simple action server");
+                self.current_goal.set_canceled(None, "Current goal was canceled because another goal was received by the simple action server");
 
             rospy.logdebug("Accepting a new goal");
 
@@ -244,7 +244,7 @@ class SimpleActionServer:
                   #the goal requested has already been preempted by a different goal, so we're not going to execute it
                   goal.set_canceled(None, "This goal was canceled because another goal was received by the simple action server");
                   self.execute_condition.release();
-          except Exception, e:
+          except Exception as e:
               rospy.logerr("SimpleActionServer.internal_goal_callback - exception %s",str(e))
               self.execute_condition.release();
 
@@ -298,7 +298,7 @@ class SimpleActionServer:
                                         "This is a bug in your ActionServer implementation. Fix your code!  "+
                                         "For now, the ActionServer will set this goal to aborted");
                           self.set_aborted(None, "No terminal state was set.");
-                  except Exception, ex:
+                  except Exception as ex:
                       rospy.logerr("Exception in your execute callback: %s\n%s", str(ex),
                                    traceback.format_exc())
                       self.set_aborted(None, "Exception in execute callback: %s" % str(ex))
