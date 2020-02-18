@@ -121,7 +121,7 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 	def _trajCB(self, goal):
 		result = FollowJointTrajectoryResult()
 		points = goal.trajectory.points
-		velocities = goal.trajectory.velocities
+		velocities = goal.trajectory.velocity
 		startTime = rospy.Time.now()
 		position=[]
 		for i_jointhandle in self.jointHandles_:
