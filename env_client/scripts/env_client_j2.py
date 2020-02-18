@@ -182,7 +182,7 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 
 	def _initJoints(
 		self,
-		vrepArmPrefix,vrepFingerPrefix,vrepFingerTiptrajPrefix,
+		vrepArmPrefix,vrepFingerPrefix,vrepFingerTipPrefix,
 		urdfArmPrefix,urdfFingerPrefix,urdfFingerTipPrefix):
 		"""Initialize joints object handles and joint states
 		"""
@@ -304,11 +304,6 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 	def reset(self,sync=False):
 		"""Gym environment 'reset'
 		"""
-		self.trajAS_.new_goal = False
-		self.trajAS_.preempt_request = False
-		self.trajAS_.new_goal_preempt_request = False
-		self.trajAS_.current_goal = ServerGoalHandle()
-		self.trajAS_.next_goal = ServerGoalHandle()
 
 		if self.sim_running:
 			self.stop_simulation()
