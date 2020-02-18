@@ -19,6 +19,7 @@ import actionlib
 #import moveit_commander
 #from moveit_commander.conversions import pose_to_list
 from actionlib import SimpleActionServer
+from actionlib.server_goal_handle import ServerGoalHandle
 from moveit_msgs.msg import DisplayTrajectory
 from std_msgs.msg import Header
 from std_msgs.msg import Float32MultiArray
@@ -58,7 +59,7 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 
 		#jaco = moveit_commander.RobotCommander()
 		#scene = moveit_commander.PlanningSceneInterface()
-		#group_name = "jaco_arm"
+		#group_name = "arm"
 		#group = moveit_commander.MoveGroupCommander(group_name)
 		#display_trajectory_publisher = rospy.Publisher("/move_group/display_planned_path",DisplayTrajectory,queue_size=20)
 
@@ -120,6 +121,7 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 	def _trajCB(self, goal):
 		result = FollowJointTrajectoryResult()
 		points = goal.trajectory.points
+		velocities = goal.trajectory.velocities
 		startTime = rospy.Time.now()
 		position=[]
 		for i_jointhandle in self.jointHandles_:
@@ -131,6 +133,7 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 			if self.trajAS_.is_preempt_requested():
 				self.trajAS_.set_preempted()
 				break
+			 
 			fromStart = rospy.Time.now() - startTime
 			while i < len(points) - 1 and points[i+1].time_from_start < fromStart:
 				i += 1
@@ -167,16 +170,8 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 					alpha = d.to_sec() / segmentDuration.to_sec()
 					target = self._interpolate(prev, points[i].positions, alpha)
 			print("Ready to be moved")
-			try:
-				for i in range(0,9):
-					self.obj_set_position_target(self.jointHandles_[i],radtoangle(-target[i]))
-					#print("for looped: ",target[i])
-			except Exception:
-				for i in range(0,6):
-					self.obj_set_position_target(self.jointHandles_[i],radtoangle(-target[i]))
-				#print("chunck: ",target)
-				#map(self.obj_set_position_target,self.jointHandles_,target)
-			#print("Moving")
+			for i in range(0,6):
+				self.obj_set_position_target(self.jointHandles_[i],radtoangle(-target[i]))
 			self.rate.sleep()
 
 	def _interpolate(self, last, current, alpha):
@@ -187,7 +182,7 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 
 	def _initJoints(
 		self,
-		vrepArmPrefix,vrepFingerPrefix,vrepFingerTipPrefix,
+		vrepArmPrefix,vrepFingerPrefix,vrepFingerTiptrajPrefix,
 		urdfArmPrefix,urdfFingerPrefix,urdfFingerTipPrefix):
 		"""Initialize joints object handles and joint states
 		"""
@@ -232,7 +227,6 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		self.feedbackPub_.publish(self.feedback_)	
 
 	def _keys(self,msg):
-		#eyuioaslzcn
 		self.key_input = msg.data
 		self.keychk_pub.publish(self.key_input)
 		self.key_input = key_dict[self.key_input]
@@ -269,11 +263,18 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 			self.obj_set_velocity(i_oh, i_a)
 	
 	def take_manual_action(self,key):
+		self.gripper_angle = 0
 		if key == "o":
+			self.gripper_angle += 1
 			for i in range(6,9):
-				self.obj_set_position_target(self.jointHandles_[i],radtoangle(10))
+				if self.gripper_angle > 10:
+					self.gripper_angle = 10
+				self.obj_set_position_target(self.jointHandles_[i],radtoangle(self.gripper_angle))
 		elif key == "c":
+			self.gripper_angle -= 1
 			for i in range(6,9):
+				if self.gripper_angle < -20:
+					self.gripper_angle = -20
 				self.obj_set_position_target(self.jointHandles_[i],radtoangle(-20))
 		else:
 			pass
@@ -303,6 +304,12 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 	def reset(self,sync=False):
 		"""Gym environment 'reset'
 		"""
+		self.trajAS_.new_goal = False
+		self.trajAS_.preempt_request = False
+		self.trajAS_.new_goal_preempt_request = False
+		self.trajAS_.current_goal = ServerGoalHandle()
+		self.trajAS_.next_goal = ServerGoalHandle()
+
 		if self.sim_running:
 			self.stop_simulation()
 		else:
@@ -353,6 +360,7 @@ if __name__ == '__main__':
 	try:
 		vrepenv_class = JacoVrepEnv()
 		rospy.spin()
+		vrepenv_class.trajAS_.set_aborted()
 		vrepenv_class.stop_simulation()
 	except rospy.ROSInitException:
 		vrepenv_class.stop_simulation()
