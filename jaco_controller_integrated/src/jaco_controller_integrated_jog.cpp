@@ -12,7 +12,6 @@ JacoController::JacoController() : nh_(""), nh_local_("~"){
   printf(MOVEIT_CONSOLE_COLOR_BLUE "Planning Scene Monitor Setup.\n" MOVEIT_CONSOLE_COLOR_RESET);
   planning_scene_monitor_ = std::make_shared<planning_scene_monitor::PlanningSceneMonitor>("robot_description");
   if (!planning_scene_monitor_->getPlanningScene()){
-    ROS_ERROR_STREAM_NAMED(LOGNAME, "Error in setting up the PlanningSceneMonitor.");
     exit(EXIT_FAILURE);
   }
   planning_scene_monitor_->startSceneMonitor();
