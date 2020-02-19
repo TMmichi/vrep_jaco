@@ -83,6 +83,7 @@ class SimpleActionServer_mod:
         self.next_goal = ServerGoalHandle();
 
         if self.execute_callback:
+            self.stop_thread = False
             self.execute_thread = threading.Thread(None, self.executeLoop);
             self.execute_thread.start();
         else:
@@ -100,6 +101,7 @@ class SimpleActionServer_mod:
                 self.need_to_terminate = True;
 
             assert(self.execute_thread);
+            self.stop_thread = True
             self.execute_thread.join();
 
 
@@ -214,7 +216,6 @@ class SimpleActionServer_mod:
     ## @brief Callback for when the ActionServer receives a new goal and passes it on
     def internal_goal_callback(self, goal):
           self.execute_condition.acquire();
-
           try:
               rospy.logdebug("A new goal %shas been recieved by the single goal action server",goal.get_goal_id().id);
 
@@ -276,7 +277,7 @@ class SimpleActionServer_mod:
     def executeLoop(self):
           loop_duration = rospy.Duration.from_sec(.1);
 
-          while (not rospy.is_shutdown()):
+          while (not (rospy.is_shutdown() or self.stop_thread)):
               rospy.logdebug("SAS: execute");
 
               with self.terminate_mutex:
