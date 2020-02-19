@@ -49,8 +49,9 @@ catkin_package(
 include_directories(include ${THIS_PACKAGE_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIR} ${EIGEN3_INCLUDE_DIRS})
 
 add_executable(jaco_controller_integrated 
-  src/jaco_controller_integrated_jog.cpp
-  src/low_pass_filter.cpp
+  #src/jaco_controller_integrated_jog.cpp
+  #src/low_pass_filter.cpp
+  src/jaco_controller_integrated.cpp
 )
 target_link_libraries(jaco_controller_integrated ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 

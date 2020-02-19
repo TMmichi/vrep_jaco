@@ -18,7 +18,8 @@ import rospy
 import actionlib
 #import moveit_commander
 #from moveit_commander.conversions import pose_to_list
-from actionlib import SimpleActionServer
+#from actionlib import SimpleActionServer
+from ActionServer_mod import SimpleActionServer_mod
 from actionlib.server_goal_handle import ServerGoalHandle
 from moveit_msgs.msg import DisplayTrajectory
 from std_msgs.msg import Header
@@ -82,7 +83,7 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		### ------  ACTION LIBRARY INITIALIZATION  ------ ###
 		#self._action_name = "j2n6s300/joint_trajectory_action"
 		self._action_name = "j2n6s300/follow_joint_trajectory"
-		self.trajAS_ = SimpleActionServer(self._action_name, FollowJointTrajectoryAction, self._trajCB, False)
+		self.trajAS_ = SimpleActionServer_mod(self._action_name, FollowJointTrajectoryAction, self._trajCB, False)
 		self.trajAS_.start()
 
 		#Joint prefix
@@ -121,7 +122,6 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 	def _trajCB(self, goal):
 		result = FollowJointTrajectoryResult()
 		points = goal.trajectory.points
-		velocities = goal.trajectory.velocity
 		startTime = rospy.Time.now()
 		position=[]
 		for i_jointhandle in self.jointHandles_:
@@ -131,13 +131,14 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		i = 0
 		while not rospy.is_shutdown():
 			if self.trajAS_.is_preempt_requested():
+				print("goal preempted")
 				self.trajAS_.set_preempted()
 				break
-			 
 			fromStart = rospy.Time.now() - startTime
 			while i < len(points) - 1 and points[i+1].time_from_start < fromStart:
 				i += 1
 			if i == len(points)-1:
+				print(self.trajAS_,": Reached", i)
 				reachedGoal = True
 				for j in range(6):
 					tolerance = 0.1
@@ -145,33 +146,41 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 						tolerance = goal.goal_tolerance[j].position
 					if abs(self.jointState_.position[j] - points[i].positions[j]) > tolerance:
 						reachedGoal = False
+						print("Error")
 						break
 				timeTolerance = rospy.Duration(max(goal.goal_time_tolerance.to_sec(),0.1))
 				if reachedGoal:
+					print("succeded")
 					result.error_code = result.SUCCESSFUL
 					self.trajAS_.set_succeeded(result)
 					break
 				elif fromStart > points[i].time_from_start + timeTolerance:
+					print("aborted")
 					result.error_code = result.GOAL_TOLERANCE_VIOLATED
 					self.trajAS_.set_aborted(result)
 					break
 				target = points[i].positions
 			else:
+				print(self.trajAS_,": working..", i)
 				if i==0:
 					segmentDuration = points[i].time_from_start
 					prev = startPos
+					print("a")
 				else:
 					segmentDuration = points[i].time_from_start - points[i-1].time_from_start
 					prev = points[i-1].positions
+					print("b")
 				if segmentDuration.to_sec() <= 0:
 					target = points[i].positions
+					print("c")
 				else:
 					d = fromStart - points[i].time_from_start
 					alpha = d.to_sec() / segmentDuration.to_sec()
 					target = self._interpolate(prev, points[i].positions, alpha)
+					print("d")
 			print("Ready to be moved")
-			for i in range(0,6):
-				self.obj_set_position_target(self.jointHandles_[i],radtoangle(-target[i]))
+			for j in range(0,6):
+				self.obj_set_position_target(self.jointHandles_[j],radtoangle(-target[j]))
 			self.rate.sleep()
 
 	def _interpolate(self, last, current, alpha):
@@ -304,7 +313,7 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 	def reset(self,sync=False):
 		"""Gym environment 'reset'
 		"""
-
+		print("RESETED")
 		if self.sim_running:
 			self.stop_simulation()
 		else:

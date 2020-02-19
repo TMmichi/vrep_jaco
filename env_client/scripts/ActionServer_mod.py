@@ -55,7 +55,7 @@ def nop_cb(goal_handle):
 ## than or equal to the stamp associated with the preempt, accepting a new
 ## goal implies successful preemption of any old goal and the status of the
 ## old goal will be change automatically to reflect this.
-class SimpleActionServer:
+class SimpleActionServer_mod:
     ## @brief Constructor for a SimpleActionServer
     ## @param name A name for the action server
     ## @param execute_cb Optional callback that gets called in a separate thread whenever
@@ -63,6 +63,7 @@ class SimpleActionServer:
     ## Adding an execute callback also deactivates the goalCallback.
     ## @param  auto_start A boolean value that tells the ActionServer wheteher or not to start publishing as soon as it comes up. THIS SHOULD ALWAYS BE SET TO FALSE TO AVOID RACE CONDITIONS and start() should be called after construction of the server.
     def __init__(self, name, ActionSpec, execute_cb = None, auto_start = True):
+        print("AC_mod init")
 
         self.new_goal = False
         self.preempt_request = False
@@ -92,6 +93,8 @@ class SimpleActionServer:
 
 
     def __del__(self):
+        print("simple action server deleted")
+        self.action_server.__del__()
         if hasattr(self, 'execute_callback') and self.execute_callback:
             with self.terminate_mutex:
                 self.need_to_terminate = True;
@@ -218,8 +221,10 @@ class SimpleActionServer:
               #check that the timestamp is past that of the current goal and the next goal
               if((not self.current_goal.get_goal() or goal.get_goal_id().stamp >= self.current_goal.get_goal_id().stamp)
                  and (not self.next_goal.get_goal() or goal.get_goal_id().stamp >= self.next_goal.get_goal_id().stamp)):
+                  print("1.", self)
                   #if next_goal has not been accepted already... its going to get bumped, but we need to let the client know we're preempting
                   if(self.next_goal.get_goal() and (not self.current_goal.get_goal() or self.next_goal != self.current_goal)):
+                      print("1.1")
                       self.next_goal.set_canceled(None, "This goal was canceled because another goal was received by the simple action server");
 
                   self.next_goal = goal;
@@ -242,6 +247,7 @@ class SimpleActionServer:
                   self.execute_condition.release();
               else:
                   #the goal requested has already been preempted by a different goal, so we're not going to execute it
+                  print("2.",self)
                   goal.set_canceled(None, "This goal was canceled because another goal was received by the simple action server");
                   self.execute_condition.release();
           except Exception as e:

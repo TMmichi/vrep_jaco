@@ -27,7 +27,8 @@ void JacoController::updateParams(){
 }
 
 void JacoController::reset(){
-  execute_action_client_->cancelAllGoals();
+  //execute_action_client_.reset(new actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>(
+  //      nh_, "j2n6s300/follow_joint_trajectory", false));
 }
 
 void JacoController::keyCallback(const std_msgs::Int8::ConstPtr& msg){
