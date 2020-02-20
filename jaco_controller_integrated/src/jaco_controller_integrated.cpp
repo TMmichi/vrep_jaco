@@ -95,7 +95,7 @@ void JacoController::keyCallback(const std_msgs::Int8::ConstPtr& msg){
     goal.trajectory = trajectory.joint_trajectory;
     ROS_INFO("Goal Sending");
     execute_action_client_->sendGoal(goal);
-  }else{}
+  }else{} 
 }
 
 
