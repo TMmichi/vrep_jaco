@@ -259,7 +259,6 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		"""Query V-rep to make observation.
 		   The observation is stored in self.observation
 		"""
-		buff = []
 		self.observation = []#self.generate(buff)
 	
 	def _take_action(self, a):
@@ -314,6 +313,7 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		"""Gym environment 'reset'
 		"""
 		print("RESETED")
+		self.trajAS_.reset()
 		if self.sim_running:
 			self.stop_simulation()
 		else:

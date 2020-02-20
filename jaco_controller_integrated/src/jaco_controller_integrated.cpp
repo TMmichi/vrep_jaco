@@ -27,8 +27,7 @@ void JacoController::updateParams(){
 }
 
 void JacoController::reset(){
-  //execute_action_client_.reset(new actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>(
-  //      nh_, "j2n6s300/follow_joint_trajectory", false));
+  execute_action_client_->reset();
 }
 
 void JacoController::keyCallback(const std_msgs::Int8::ConstPtr& msg){
@@ -54,22 +53,23 @@ void JacoController::keyCallback(const std_msgs::Int8::ConstPtr& msg){
   target_pose = current_pose;
 
   int i = 0;
+  int j = 1;
   switch(key_input){
-    case 'w': target_pose.position.y += 0.01; i=1; break;
-    case 's': target_pose.position.y -= 0.01; i=1; break;
-    case 'a': target_pose.position.x -= 0.01; i=1; break;
-    case 'd': target_pose.position.x += 0.01; i=1; break;
-    case 'e': target_pose.position.z += 0.01; i=1; break;
-    case 'q': target_pose.position.z -= 0.01; i=1; break;
+    case 'w': target_pose.position.y += 0.01; break;
+    case 's': target_pose.position.y -= 0.01; break;
+    case 'a': target_pose.position.x -= 0.01; break;
+    case 'd': target_pose.position.x += 0.01; break;
+    case 'e': target_pose.position.z += 0.01; break;
+    case 'q': target_pose.position.z -= 0.01; break;
 
-    case 'u': roll += 0.1; i=1; break;
-    case 'j': roll -= 0.1; i=1; break;
-    case 'h': pitch += 0.1; i=1; break;
-    case 'k': pitch -= 0.1; i=1; break;
-    case 'y': yaw += 0.1; i=1; break;
-    case 'i': yaw -= 0.1; i=1; break;
+    case 'u': roll += 0.1; break;
+    case 'j': roll -= 0.1; break;
+    case 'h': pitch += 0.1; break;
+    case 'k': pitch -= 0.1; break;
+    case 'y': yaw += 0.1; break;
+    case 'i': yaw -= 0.1; break;
 
-    case 'r': this->reset(); break;
+    case 'r': this->reset(); i=0; j=0; break;
   }
   waypoints.push_back(target_pose);
   moveit_msgs::RobotTrajectory trajectory;
@@ -80,18 +80,22 @@ void JacoController::keyCallback(const std_msgs::Int8::ConstPtr& msg){
     target_pose.orientation = tf2::toMsg(orientation);
 
     move_group->setPoseTarget(target_pose); //motion planning to a desired pose of the end-effector
+    ROS_INFO("Planning Goal");
     move_group->plan(my_plan);
-    trajectory = my_plan.trajectory_;
-  }else{
-    fraction = move_group->computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
-  }
-  
-  control_msgs::FollowJointTrajectoryGoal goal;
-  goal.trajectory = trajectory.joint_trajectory;
-  execute_action_client_->sendGoal(goal);
+    ROS_INFO("Planning Finished");
 
-  //bool success = (move_group->execute(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-  //ROS_INFO_NAMED("tutorial", "Execution %s", success ? "SUCCESS" : "FAILED");
+    trajectory = my_plan.trajectory_;
+    control_msgs::FollowJointTrajectoryGoal goal;
+    goal.trajectory = trajectory.joint_trajectory;
+    ROS_INFO("Goal Sending");
+    execute_action_client_->sendGoal(goal);
+  }else if(j){
+    fraction = move_group->computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
+    control_msgs::FollowJointTrajectoryGoal goal;
+    goal.trajectory = trajectory.joint_trajectory;
+    ROS_INFO("Goal Sending");
+    execute_action_client_->sendGoal(goal);
+  }else{}
 }
 
 
