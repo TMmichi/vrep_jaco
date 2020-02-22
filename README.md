@@ -23,7 +23,9 @@ V-rep source can be downloaded from [here](http://www.coppeliarobotics.com/ubunt
 
 ### 1-3. Moveit installation
 Due to some code changes within the moveit package, building from source as following is required.
+
 YOU SHOULD NOT USE OFFICIAL REPO OF MOVEIT.
+
 Within your worspace, (the directory where your `src` folder is at)
 ```bash
 wstool merge -t src https://raw.githubusercontent.com/TMmichi/vrep_jaco/master/moveit.rosinstall
