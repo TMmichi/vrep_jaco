@@ -50,6 +50,7 @@ private:
     const double eef_step = 0.001;
     double fraction;
     float p_speed_constant;
+    bool p_cartesian;
 };
 
 }
