@@ -24,7 +24,6 @@ JacoController::JacoController() : nh_(""), nh_local_("~"){
 void JacoController::updateParams(){
   nh_local_.param<float>("jaco_ros_controller/speed_constant", p_speed_constant, 0.01);
   nh_local_.param<bool>("jaco_ros_controller/cartesian", p_cartesian, false);
-  //nh_local_.param<int>("jaco_ros_controller/iter", p_iter, 20);
 }
 
 void JacoController::reset(){
