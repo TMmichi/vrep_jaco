@@ -15,7 +15,7 @@ from algo.trpotrainer import TRPOTrainer
 import rospy
 from std_msgs.msg import Bool
 from argparser import ArgParser
-from env_vrep import Vrep
+from env_vrep_client import JacoVrepEnv
 from env_real import Real
 
 
@@ -31,7 +31,7 @@ class RL_controller:
         config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
         self.sess = tf.compat.v1.Session(config=config)
         args.sess = self.sess
-        self.env = Vrep(**vars(args)) if self.use_sim else Real(**vars(args))
+        self.env = JacoVrepEnv(**vars(args)) if self.use_sim else Real(**vars(args))
         args.env = self.env
         self.local_brain = TRPO(**vars(args))
 
