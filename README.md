@@ -21,20 +21,17 @@ to create `src` folder with .rosinstall file in it.
 ### 1-2. V-rep installation
 V-rep source can be downloaded from [here](http://www.coppeliarobotics.com/ubuntuVersions.html) and should be installed within the `/opt` folder. Installed location can be varied, but should be matched with the vrep_path argument within the launch file: `vrep_jaco_bringup/launch/bringup.launch: vrep_path`
 
-### 1-3. Moveit installation
+### 1-3. Clone, Build & Source repo / Moveit installation
 Due to some code changes within the moveit package, building from source as following is required.
 
 YOU SHOULD NOT USE THE OFFICIAL REPO OF MOVEIT.
 
 Within your worspace, (the directory where your `src` folder is at)
 ```bash
-wstool merge -t src https://raw.githubusercontent.com/TMmichi/vrep_jaco/master/moveit.rosinstall
+wstool merge -t src https://raw.githubusercontent.com/TMmichi/vrep_jaco/master/vrep_jaco.rosinstall
 wstool update -t src
 rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO}
 catkin config --extend /opt/ros/${ROS_DISTRO} --cmake-args -DCMAKE_BUILD_TYPE=Release
-catkin build
-echo "source ~YOUR_PROJECT_FOLDER/devel/setup.bash" >> ~/.bashrc
-source ~/.bashrc
 ```
 
 ### 1-4. Remaining packages installation
@@ -51,7 +48,7 @@ sudo apt-get install libqt5x11extras5=5.5.1-3build1
 ```
   in order to install ros-<distro>-rviz-visual-tools within the preliminaries: `moveit.rosinstall`.
   
-### 1-5. Clone, Build & Source repo
+### 1-5. 
 Clone vrep_jaco repo into the `src` folder.
 Build your repo with `catkin_make` command in the directory where your `src` folder is located.
 ```bash
