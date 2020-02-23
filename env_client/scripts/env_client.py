@@ -19,7 +19,7 @@ import actionlib
 #import moveit_commander
 #from moveit_commander.conversions import pose_to_list
 #from actionlib import SimpleActionServer
-from ActionServer_mod import SimpleActionServer_mod
+from SimpleActionServer_mod import SimpleActionServer_mod
 from actionlib.server_goal_handle import ServerGoalHandle
 from moveit_msgs.msg import DisplayTrajectory
 from std_msgs.msg import Header
