@@ -16,8 +16,6 @@ from gym.utils import seeding
 
 import rospy
 import actionlib
-#import moveit_commander
-#from moveit_commander.conversions import pose_to_list
 #from actionlib import SimpleActionServer
 from SimpleActionServer_mod import SimpleActionServer_mod
 from actionlib.server_goal_handle import ServerGoalHandle
@@ -41,71 +39,78 @@ def radtoangle(rad):
 
 
 class JacoVrepEnv(vrep_env.VrepEnv):
-	metadata = {'render.modes': []}
 	def __init__(
 		self,
 		server_addr='127.0.0.1',
 		server_port=19997,
-		feedbackRate_=50.0,
         **kwargs):
-		
-		#Initialize rospy node
-		rospy.init_node("JacoVrepEnv",anonymous=True)
-		self.rate = rospy.Rate(50)
 
-		#Key input subscriber
-		self.key_sub = rospy.Subscriber("key_input",Int8,self._keys, queue_size=10)
-		self.key_input = 0
-		
-		#Initialize Vrep API
+		### ------------  V-REP API INITIALIZATION  ------------ ###
 		vrep_env.VrepEnv.__init__(self,server_addr,server_port)
 
-		### ------  PREREQUESITES FOR ACTION LIBRARY  ------ ###
-		self.jointState_ = JointState()
-		self.feedback_ = FollowJointTrajectoryFeedback()
-		self.jointHandles_ = []
+		### ------------  ROS INITIALIZATION  ------------ ###
+		#Initialize rospy node
+		rospy.init_node("JacoVrepEnv",anonymous=True)
+		self.rate = kwargs['rate']
+		#Subscribers / Publishers / Callbacks
+		self.key_sub = rospy.Subscriber("key_input",Int8,self._keys, queue_size=10)
 		self.jointPub_ = rospy.Publisher("j2n6s300/joint_states",JointState,queue_size=1)
 		self.feedbackPub_ = rospy.Publisher("feedback_states",FollowJointTrajectoryFeedback,queue_size=1)
-		self.publishWorkerTimer_ = rospy.Timer(rospy.Duration(1.0/feedbackRate_), self._publishWorker)
-
-		### ------  ACTION LIBRARY INITIALIZATION  ------ ###
-		#self._action_name = "j2n6s300/joint_trajectory_action"
+		self.publishWorkerTimer_ = rospy.Timer(kwargs['period'], self._publishWorker)
+		
+		### ------------  ACTION LIBRARY INITIALIZATION  ------------ ###
 		self._action_name = "j2n6s300/follow_joint_trajectory"
 		self.trajAS_ = SimpleActionServer_mod(self._action_name, FollowJointTrajectoryAction, self._trajCB, False)
 		self.trajAS_.start()
 
-		#Joint prefix
+		### ------------  JOINT HANDLES INITIALIZATION  ------------ ###
+		self.jointState_ = JointState()
+		self.feedback_ = FollowJointTrajectoryFeedback()
+		self.jointHandles_ = []
+		#Joint prefix setup
 		vrepArmPrefix = "jaco_joint_"
 		vrepFingerPrefix = "jaco_joint_finger_"
 		vrepFingerTipPrefix = "jaco_joint_finger_tip_"
 		urdfArmPrefix = "j2n6s300_joint_"
 		urdfFingerPrefix = "j2n6s300_joint_finger_"
 		urdfFingerTipPrefix = "j2n6s300_joint_finger_tip_"
-
-		#Joint initialization
+		#Handle init
 		self.jointHandles_ = self._initJoints(
 			vrepArmPrefix,vrepFingerPrefix,vrepFingerTipPrefix,
 			urdfArmPrefix,urdfFingerPrefix,urdfFingerTipPrefix)
-		
 		#Feedback message initialization
 		for i in range(0,6):
 			self.feedback_.joint_names.append(self.jointState_.name[i])
 			self.feedback_.actual.positions.append(0)
 
+		### ------------  RL SETUP  ------------ ###
 		'''
-		### ------  STATE GENERATION  ------ ###
 		# State Generator
 		self.state_gen = State_generator(**kwargs)
 		'''
-
-		num_act = 9
-		self.joints_max_velocity = 3.0
-		act = np.array( [self.joints_max_velocity] * num_act )
-
-		self.action_space      = spaces.Box(-act,act)
+		self.action_space_max = 3.0
+		act = np.array([self.action_space_max]*9)
+		self.action_space = spaces.Box(-act,act)
 		self.seed()
-		self.reset()
+		self.reset_environment()
 
+
+	def _publishWorker(self, e):
+		self._updateJointState()
+		self._publishJointInfo()
+
+	def _updateJointState(self):
+		self.jointState_.header.stamp = rospy.Time.now()
+		position = []
+		for i_jointhandle in self.jointHandles_:
+			position.append(self.obj_get_joint_angle(i_jointhandle))
+		self.jointState_.position = position
+		
+	def _publishJointInfo(self):
+		self.jointPub_.publish(self.jointState_)
+		self.feedback_.header.stamp = rospy.Time.now()
+		self.feedback_.actual.positions = self.jointState_.position
+		self.feedbackPub_.publish(self.feedback_)	
 
 	def _trajCB(self, goal):
 		result = FollowJointTrajectoryResult()
@@ -206,32 +211,15 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		self.jointState_.position = list(map(self.obj_get_joint_angle,jointHandles_))
 		return jointHandles_
 
-	def _publishWorker(self, e):
-		self._updateJointState()
-		self._publishJointInfo()
-
-	def _updateJointState(self):
-		self.jointState_.header.stamp = rospy.Time.now()
-		position = []
-		for i_jointhandle in self.jointHandles_:
-			position.append(self.obj_get_joint_angle(i_jointhandle))
-		self.jointState_.position = position
-		
-	def _publishJointInfo(self):
-		self.jointPub_.publish(self.jointState_)
-		self.feedback_.header.stamp = rospy.Time.now()
-		self.feedback_.actual.positions = self.jointState_.position
-		self.feedbackPub_.publish(self.feedback_)	
-
 	def _keys(self,msg):
 		self.key_input = msg.data
 		print("input = ",self.key_input)
 		
 		if self.key_input == ord('r'): #Reset environment
-			self.reset()
+			self.reset_environment()
 			self.key_input = ord(1)
 		elif self.key_input == ord('t'): #Reset environment (step-wised)
-			self.reset(True)
+			self.reset_environment(True)
 		elif self.key_input == ord('n'): #Next step
 			self.step_simulation()
 		elif self.key_input == ord('p'): #Action from Policy
@@ -241,61 +229,11 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 		elif self.key_input in [ord('o'),ord('c')]:
 			self.take_manual_action(self.key_input)
 
-	def _make_observation(self):
-		"""Query V-rep to make observation.
-		   The observation is stored in self.observation
-		"""
-		self.observation = []#self.generate(buff)
-	
-	def _take_action(self, a):
-		"""Query V-rep to make action.
-		   no return value
-		"""
-		# #modify
-		# example: set a velocity for each joint
-		for i_oh, i_a in zip(self.oh_joint, a):
-			self.obj_set_velocity(i_oh, i_a)
-	
-	def take_manual_action(self,key):
-		self.gripper_angle = 0
-		if key == "o":
-			self.gripper_angle += 1
-			for i in range(6,9):
-				if self.gripper_angle > 10:
-					self.gripper_angle = 10
-				self.obj_set_position_target(self.jointHandles_[i],radtoangle(self.gripper_angle))
-		elif key == "c":
-			self.gripper_angle -= 1
-			for i in range(6,9):
-				if self.gripper_angle < -20:
-					self.gripper_angle = -20
-				self.obj_set_position_target(self.jointHandles_[i],radtoangle(-20))
-		else:
-			pass
-	
-	def step(self, action):
-		"""Gym environment 'step'
-		"""
-		# #modify Either clip the actions outside the space or assert the space contains them
-		# actions = np.clip(actions,-self.joints_max_velocity, self.joints_max_velocity)
-		assert self.action_space.contains(action), "Action {} ({}) is invalid".format(action, type(action))
-		
-		# Actuate
-		self._take_action(action)
-		# Step
-		self.step_simulation()
-		# Observe
-		self._make_observation()
-		# Reward
-		reward = 0
-		
-		# Early stop
-		tolerable_threshold = 0.20
-		#done = (head_pos_z < tolerable_threshold)
-		done = False
-		return self.observation, reward, done, {}
-	
-	def reset(self,sync=False):
+
+	def create_environment(self):
+		pass
+
+	def reset_environment(self,sync=False):
 		"""Gym environment 'reset'
 		"""
 		print("RESETED")
@@ -318,40 +256,70 @@ class JacoVrepEnv(vrep_env.VrepEnv):
 			pass
 		self._make_observation()
 		return self.observation
+
+	def get_state_shape(self):
+		return self.action_space.shape
+
+	def get_num_action(self):
+        return self.action_space.shape[0]
+
+    def get_action_bound(self):
+        return self.action_space_max
+
+	def step(self, action):
+		"""Gym environment 'step'
+		"""
+		# #modify Either clip the actions outside the space or assert the space contains them
+		# actions = np.clip(actions,-self.action_space_max, self.action_space_max)
+		assert self.action_space.contains(action), "Action {} ({}) is invalid".format(action, type(action))
+		
+		# Actuate
+		self._take_action(action)
+		# Step
+		self.step_simulation()
+		# Observe
+		self._make_observation()
+		# Reward
+		reward = 0
+		
+		# Early stop
+		tolerable_threshold = 0.20
+		#done = (head_pos_z < tolerable_threshold)
+		done = False
+		return self.observation, reward, done, {}
 	
-	def render(self, mode='human', close=False):
+	def _make_observation(self):
+		"""Query V-rep to make observation.
+		   The observation is stored in self.observation
+		"""
+		self.observation = []#self.generate(buff)
+	
+	def _take_action(self, a):
 		pass
+	
+	def take_manual_action(self,key):
+		self.gripper_angle = 0
+		if key == "o":
+			self.gripper_angle += 1
+			for i in range(6,9):
+				if self.gripper_angle > 10:
+					self.gripper_angle = 10
+				self.obj_set_position_target(self.jointHandles_[i],radtoangle(self.gripper_angle))
+		elif key == "c":
+			self.gripper_angle -= 1
+			for i in range(6,9):
+				if self.gripper_angle < -20:
+					self.gripper_angle = -20
+				self.obj_set_position_target(self.jointHandles_[i],radtoangle(-20))
+		else:
+			pass
+	
+
+
+
+
 	
 	def seed(self, seed=None):
 		self.np_random, seed = seeding.np_random(seed)
 		return [seed]
 	
-
-def main(args):
-	"""main function used as test and example.
-	   Agent does random actions with 'action_space.sample()'
-	"""
-	# #modify: the env class name
-	env = JacoVrepEnv()
-	for i_episode in range(8):
-		observation = env.reset()
-		total_reward = 0
-		for t in range(256):
-			action = env.action_space.sample()
-			observation, reward, done, _ = env.step(action)
-			total_reward += reward
-			if done:
-				break
-		print("Episode finished after {} timesteps.\tTotal reward: {}".format(t+1,total_reward))
-	env.close()
-	return 0
-
-if __name__ == '__main__':
-	try:
-		vrepenv_class = JacoVrepEnv()
-		rospy.spin()
-		vrepenv_class.trajAS_.set_aborted()
-		vrepenv_class.stop_simulation()
-	except rospy.ROSInitException:
-		vrepenv_class.stop_simulation()
-		rospy.loginfo("node terminated.")

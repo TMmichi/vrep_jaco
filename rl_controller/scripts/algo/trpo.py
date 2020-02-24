@@ -122,7 +122,8 @@ class TRPO(NeuralNetwork):
 
 
     def sample_action(self, session, inpt):
-        return session.run(self.sampled_action, feed_dict = {self.input_ph: np.reshape(inpt, (-1, self.env.get_state_shape()[0]))})
+        return self.env.action_space.sample()
+        #return session.run(self.sampled_action, feed_dict = {self.input_ph: np.reshape(inpt, (-1, self.env.get_state_shape()[0]))})
 
     def _update_policy(self, session, t, auditor):
         states = t['states']
