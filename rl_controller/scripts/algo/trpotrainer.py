@@ -5,7 +5,6 @@ from algo.trainer import GeneralTrainer
 from algo.trpo import TRPO
 
 
-
 class TRPOTrainer(GeneralTrainer):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
