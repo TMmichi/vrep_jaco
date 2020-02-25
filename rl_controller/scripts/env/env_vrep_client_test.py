@@ -22,10 +22,6 @@ class JacoVrepEnv(JacoVrepEnvUtil):
 		vrep_env.VrepEnv.__init__(self,server_addr,server_port)		
 
 		### ------------  RL SETUP  ------------ ###
-		'''
-		# State Generator
-		self.state_gen = State_generator(**kwargs)
-		'''
 		self.action_space_max = 3.0
 		act = np.array([self.action_space_max]*8) #x,y,z,r,p,y, finger 1/2, finger 3
 		self.action_space = spaces.Box(-act,act)
@@ -46,14 +42,26 @@ class JacoVrepEnv(JacoVrepEnvUtil):
 		return self.action_space_max
 
 	def step(self, action):
+		#TODO: Determine how many time steps should be proceed when called
+		num_step_pass = 14
 		# actions = np.clip(actions,-self.action_space_max, self.action_space_max)
 		assert self.action_space.contains(action), "Action {} ({}) is invalid".format(action, type(action))
 		self.take_action(action)
-		self.step_simulation()
+		for _ in range(num_step_pass):
+			#TODO: wait for step signal
+			self.step_simulation()
 		self.make_observation()
-		reward = 0
-		done = False
-		return self.observation, reward, done, {}
+		reward_val = self.reward()
+		done = self.terminal_inspection()
+		return self.observation, reward_val, done
+	
+	def reward(self):
+		#TODO: Reward from IRL
+		return int
+
+	def terminal_inspection(self):
+		#TODO: terminal state definition
+		return bool
 	
 	def make_observation(self):
 		self.observation = self._get_observation()
@@ -63,4 +71,5 @@ class JacoVrepEnv(JacoVrepEnvUtil):
 		
 	def seed(self, seed=None):
 		self.np_random, seed = seeding.np_random(seed)
+
 	
