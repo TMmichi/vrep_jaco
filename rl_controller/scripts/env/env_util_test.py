@@ -6,12 +6,13 @@ from vrep_env import vrep # vrep.sim_handle_parent
 import time
 from math import pi
 from random import sample, randint
+import numpy as np
+from matplotlib import pyplot as plt
 
 import rospy
 from SimpleActionServer_mod import SimpleActionServer_mod
 from std_msgs.msg import Int8
 from std_msgs.msg import Int8MultiArray
-from std_msgs.msg import Header
 from std_msgs.msg import Float32MultiArray
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import JointState
@@ -32,8 +33,10 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
 
         ### ------------  ROS INITIALIZATION  ------------ ###
         # Subscribers / Publishers / TimerCallback
-        self.key_sub = rospy.Subscriber("key_input",Int8,self._keys, queue_size=10)
+        self.key_sub = rospy.Subscriber("key_input",Int8,self._keys,queue_size=10)
         self.key_pub = rospy.Publisher("rl_key_output",Int8)
+        self.rs_image_sub = rospy.Subscriber("/vrep/depth_image",Image,self._depth_CB, queue_size=1)
+        self.pressure_sub = rospy.Subscriber("/vrep/pressure_data",Float32MultiArray,self._pressure_CB, queue_size=1)
         self.jointPub_ = rospy.Publisher("j2n6s300/joint_states",JointState,queue_size=1)
         self.feedbackPub_ = rospy.Publisher("feedback_states",FollowJointTrajectoryFeedback,queue_size=1)
         self.publishWorkerTimer_ = rospy.Timer(kwargs['period'], self._publishWorker)
@@ -65,6 +68,9 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         self.gripper_angle_1 = 0    #finger 1, 2
         self.gripper_angle_2 = 0    #finger 3
         self.gripper_angle = 0      #finger angle of manual control
+
+        ### ------------  STATE GENERATION  ------------ ###
+		#self.state_gen = State_generator(**kwargs)
 
 
     def _publishWorker(self, e):
@@ -223,7 +229,16 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         return self._get_observation()
 
     def _get_observation(self):
-        return []
+        #TODO: Use multiprocessing to generate state from parallel computation
+        test = True
+        if test:
+            observation=[]
+            for i_jointhandle in self.jointHandles_:
+                observation.append(self.obj_get_joint_angle(i_jointhandle))
+        else:
+            data_from_callback = []
+            observation = self.state_gen.generate(data_from_callback)
+        return observation
 
     def _take_action(self,a):
         #a = [-1,0,1] * 8
@@ -248,5 +263,39 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             if self.gripper_angle > 10:
                 self.gripper_angle = 10
             self.obj_set_position_target(self.jointHandles_[i],radtoangle(self.gripper_angle))
+
+    #TODO: data saving method
+    def _depth_CB(self,msg):
+        self.depth_trigger = True
+        self.pressure_trigger = True
+
+        msg_time = round(msg.header.stamp.to_sec(),2)
+        width = msg.width
+        height = msg.height
+        data = np.fromstring(msg.data,dtype=np.uint16)
+        data = np.reshape(data,(height,width))
+        data = np.flip(data,0)
+        '''
+        fig = plt.figure(frameon=False)
+        ax = fig.add_subplot(1,1,1)
+        plt.axis('off')
+        #fig.savefig('/home/ljh/Documents/Figure_1.png', bbox_inches='tight',pad_inches=0)
+        plt.imshow(data)
+        plt.show()'''
+        print("depth image: ",msg_time)
+        self.image_buff = [data,msg_time]
+        self.data_buff_temp[0] = self.image_buff
+
+    def _pressure_CB(self,msg):
+        if self.pressure_trigger:
+            msg_time = round(msg.data[0],2)
+            self.pressure_state.append([msg.data[1:],msg_time])
+            if len(self.pressure_state) > self.pressure_buffersize:
+                self.pressure_state.pop(0)
+            print("pressure state: ", msg_time)
+            self.data_buff_temp[2] = self.pressure_state[-1]
+            self.pressure_trigger = False
+            if not self.joint_trigger:
+                self.data_buff.append(self.data_buff_temp)
 
         
