@@ -13,9 +13,9 @@ from algo.trpo import TRPO
 from algo.trpotrainer import TRPOTrainer
 
 import rospy
-from std_msgs.msg import Bool
+from std_msgs.msg import Int8
 from argparser import ArgParser
-from env_vrep_client import JacoVrepEnv
+from env_vrep_client_test import JacoVrepEnv
 from env_real import Real
 
 
@@ -23,6 +23,7 @@ class RL_controller:
     def __init__(self,feedbackRate_=50):
         rospy.init_node("RL_controller",anonymous=True)
         self.use_sim = rospy.get_param("/rl_controller/use_sim")
+        self.trigger_sub = rospy.Subscriber("key_input",Int8,self.trigger,queue_size=10)
 
         parser = ArgParser()
         args = parser.parse_args()
@@ -36,17 +37,21 @@ class RL_controller:
         args.rate = self.rate
         args.period = self.period
         self.env = JacoVrepEnv(**vars(args)) if self.use_sim else Real(**vars(args))
-
         args.env = self.env
+
         self.local_brain = TRPO(**vars(args))
         self.trainer = TRPOTrainer(**vars(args))
-        self.agent_trigger = rospy.Subscriber("/agent_on",Bool,self.agent)
-        self.train_trigger = rospy.Subscriber("/train_on",Bool,self.train)
+    
+    def trigger(self,msg):
+        if msg.data == ord('1'):
+            self.agent()
+        elif msg.data == ord('2'):
+            self.train()
 
-    def agent(self, msg):
+    def agent(self):
         pass
 
-    def train(self,msg):
+    def train(self):
         self.sess.run(tf.global_variables_initializer())
         self.sess.run(tf.local_variables_initializer())
         K.set_session(self.sess)
