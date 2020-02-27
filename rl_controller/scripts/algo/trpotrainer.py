@@ -3,6 +3,7 @@ import scipy.signal
 from algo.runningstat import RunningStats
 from algo.trainer import GeneralTrainer
 from algo.trpo import TRPO
+from tqdm import tqdm
 
 
 class TRPOTrainer(GeneralTrainer):
@@ -41,6 +42,7 @@ class TRPOTrainer(GeneralTrainer):
             t_processed_prev = t_processed
 
             while self.episode_count < self.max_episode_count:
+                print(self.episode_count)
                 raw_t = self.gen_trajectories(
                     session, self.local_brain.traj_batch_size)
                 t_processed = self.process_trajectories(session, raw_t)
@@ -116,7 +118,7 @@ class TRPOTrainer(GeneralTrainer):
         raw_t = {'states': [], 'actions': [], 'rewards': [],
                  'disc_rewards': [], 'values': [], 'advantages': []}
         raw_states = []
-        for _ in range(traj_batch_size):
+        for _ in tqdm(range(traj_batch_size),desc="Traj batch generation: "):
             actions, rewards, states, norm_states = self._gen_trajectory(
                 session)
 

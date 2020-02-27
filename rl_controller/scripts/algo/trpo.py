@@ -19,14 +19,14 @@ class TRPO(NeuralNetwork):
 
         ''' loss function and optimize operation'''
         self.neg_policy_loss = self._policy_loss_function()
-        self.optimizer = tf.train.AdamOptimizer(
+        self.optimizer = tf.compat.v1.train.AdamOptimizer(
             learning_rate=self.policy_learning_rate)
         self.optimize_policy_op = self.optimizer.minimize(
             self.neg_policy_loss, var_list=self._mean_model_params.append(self.sigma))
 
         ''' sampling actions operation'''
         self.sampled_action = tf.squeeze(
-            self.mu + self.sigma * tf.random_normal(shape=tf.shape(self.mu)))
+            self.mu + self.sigma * tf.random.normal(shape=tf.shape(self.mu)))
 
     ''' Hyperparameters from Appendix A in https://arxiv.org/abs/1707.06347,
     with some changes while experimenting '''
@@ -55,9 +55,9 @@ class TRPO(NeuralNetwork):
         self.policy_type = 'MLP'
 
     def _init_placeholders(self):
-        self.r = tf.placeholder(
+        self.r = tf.compat.v1.placeholder(
             shape=[None, 1], dtype='float32', name='rewards')
-        self.actions_ph = tf.placeholder(
+        self.actions_ph = tf.compat.v1.placeholder(
             'float32', [None, self.env.get_num_action()], name="actions")
         self.advantages_ph = tf.placeholder(
             'float32', [None, 1], name="GAE_advantages")
@@ -73,6 +73,7 @@ class TRPO(NeuralNetwork):
     ''' note that adding action sigma network had bad performance. thus omitted. '''
 
     def _build_models(self):
+        print("BUILDING MODEL")
         ''' action mean network '''
         mu_model_input = Input(tensor=self.input_ph)
         mu_model = Dense(units=128, activation=self.activation,
@@ -107,7 +108,7 @@ class TRPO(NeuralNetwork):
         ''' model outputs '''
         self.mu = policy_mu_model(self.input_ph)
         self.value = self.value_model(self.input_ph)
-        self.sigma = tf.get_variable('sigma', (1, self.env_action_number),
+        self.sigma = tf.compat.v1.get_variable('sigma', (1, self.env_action_number),
                                      tf.float32,
                                      tf.constant_initializer(0.6))
 

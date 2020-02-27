@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 
-from vrep_env import vrep_env
-from vrep_env import vrep  # vrep.sim_handle_parent
-from env_util_test import JacoVrepEnvUtil, radtoangle
+from env.vrep_env_rl import vrep_env
+from env.vrep_env_rl import vrep  # vrep.sim_handle_parent
+from env.env_util_test import JacoVrepEnvUtil, radtoangle
 
-import gym
 from gym import spaces
 from gym.utils import seeding
 
@@ -17,11 +16,12 @@ class JacoVrepEnv(JacoVrepEnvUtil):
         server_addr='127.0.0.1',
         server_port=19997,
             **kwargs):
+        kwargs['server_addr']=server_addr
+        kwargs['server_port']=server_port
         super().__init__(**kwargs)
-        ### ------------  V-REP API INITIALIZATION  ------------ ###
-        vrep_env.VrepEnv.__init__(self, server_addr, server_port)
 
         ### ------------  RL SETUP  ------------ ###
+        self.current_steps = 0
         self.action_space_max = 3.0
         # x,y,z,r,p,y, finger 1/2, finger 3
         act = np.array([self.action_space_max]*8)
@@ -58,11 +58,12 @@ class JacoVrepEnv(JacoVrepEnvUtil):
 
     def reward(self):
         # TODO: Reward from IRL
-        return int
+        return int(30)
 
     def terminal_inspection(self):
         # TODO: terminal state definition
-        return bool
+        self.current_steps += 1
+        return True if self.current_steps < 200 else False 
 
     def make_observation(self):
         self.observation = self._get_observation()

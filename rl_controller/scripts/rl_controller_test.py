@@ -1,22 +1,21 @@
 #!/usr/bin/env python3
-
-import time
-import random
-import math
-import cv2 as cv
-import numpy as np
-import tensorflow as tf
-from keras import backend as K
-from matplotlib import pyplot as plt
-
-from algo.trpo import TRPO
-from algo.trpotrainer import TRPOTrainer
-
-import rospy
-from std_msgs.msg import Int8
+from env.env_real import Real
+from env.env_vrep_client_test import JacoVrepEnv
 from argparser import ArgParser
-from env_vrep_client_test import JacoVrepEnv
-from env_real import Real
+from std_msgs.msg import Int8
+import rospy
+from algo.trpotrainer import TRPOTrainer
+from algo.trpo import TRPO
+from matplotlib import pyplot as plt
+from keras import backend as K
+import tensorflow as tf
+import numpy as np
+import cv2 as cv
+import math
+import random
+import time
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
 class RL_controller:
@@ -28,10 +27,10 @@ class RL_controller:
 
         parser = ArgParser()
         args = parser.parse_args()
-        tf.reset_default_graph()
+        tf.compat.v1.reset_default_graph()
 
-        config = tf.ConfigProto(allow_soft_placement=True,
-                                log_device_placement=False)
+        config = tf.compat.v1.ConfigProto(allow_soft_placement=True,
+                                          log_device_placement=False)
         self.sess = tf.compat.v1.Session(config=config)
         args.sess = self.sess
         self.rate = rospy.Rate(feedbackRate_)
@@ -41,31 +40,35 @@ class RL_controller:
         self.env = JacoVrepEnv(
             **vars(args)) if self.use_sim else Real(**vars(args))
         args.env = self.env
-
-        self.local_brain = TRPO(**vars(args))
+        self.training = False
         self.trainer = TRPOTrainer(**vars(args))
 
     def trigger(self, msg):
         if msg.data == ord('1'):
             self.agent()
         elif msg.data == ord('2'):
-            self.train()
+            if not self.training:
+                self.train()
+                self.training = True
 
     def agent(self):
         pass
 
     def train(self):
-        self.sess.run(tf.global_variables_initializer())
-        self.sess.run(tf.local_variables_initializer())
-        K.set_session(self.sess)
-        self.trainer.train(session=self.sess)
+        with self.sess as sess:
+            sess.run(tf.compat.v1.global_variables_initializer())
+            sess.run(tf.compat.v1.local_variables_initializer())
+            K.set_session(sess)
+            self.trainer.train(session=sess)
 
 
 if __name__ == "__main__":
     try:
         controller_class = RL_controller()
         rospy.spin()
-        controller_class.env.close()
+        if controller_class.use_sim:
+            print(controller_class.env.close)
+            controller_class.env.close()
     except rospy.ROSInternalException:
         rospy.loginfo("node terminated.")
         controller_class.sess.close()

@@ -20,7 +20,7 @@ class Auditor(object):
         self.log_collection = {}
         self.log_filename = log_dir + '/' + 'log.txt'
 
-        self.summary_writer = tf.summary.FileWriter(logdir=log_dir)
+        self.summary_writer = tf.compat.v1.summary.FileWriter(logdir=log_dir)
 
     ''' write to tensorboard '''
     def _write2tb(self):

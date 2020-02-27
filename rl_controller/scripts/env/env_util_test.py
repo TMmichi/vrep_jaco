@@ -1,16 +1,18 @@
 #!/usr/bin/env python
 
-from vrep_env import vrep_env
-from vrep_env import vrep  # vrep.sim_handle_parent
+from env.vrep_env_rl import vrep_env
+from env.vrep_env_rl import vrep  # vrep.sim_handle_parent
 
 import time
 from math import pi
 from random import sample, randint
+
 import numpy as np
 from matplotlib import pyplot as plt
+from state_gen.state_generator import State_generator
 
 import rospy
-from SimpleActionServer_mod import SimpleActionServer_mod
+from env.SimpleActionServer_mod import SimpleActionServer_mod
 from std_msgs.msg import Int8
 from std_msgs.msg import Int8MultiArray
 from std_msgs.msg import Float32MultiArray
@@ -27,20 +29,22 @@ def radtoangle(rad):
 
 class JacoVrepEnvUtil(vrep_env.VrepEnv):
     def __init__(self, **kwargs):
+        ### ------------  V-REP API INITIALIZATION  ------------ ###
+        vrep_env.VrepEnv.__init__(
+            self, kwargs['server_addr'], kwargs['server_port'])
+
         ### ------------  ROS INITIALIZATION  ------------ ###
-        # Initialize rospy node
-        rospy.init_node("JacoVrepEnv", anonymous=True)
         self.rate = kwargs['rate']
 
         ### ------------  ROS INITIALIZATION  ------------ ###
         # Subscribers / Publishers / TimerCallback
         self.key_sub = rospy.Subscriber(
             "key_input", Int8, self._keys, queue_size=10)
-        self.key_pub = rospy.Publisher("rl_key_output", Int8)
         self.rs_image_sub = rospy.Subscriber(
             "/vrep/depth_image", Image, self._depth_CB, queue_size=1)
         self.pressure_sub = rospy.Subscriber(
             "/vrep/pressure_data", Float32MultiArray, self._pressure_CB, queue_size=1)
+        self.key_pub = rospy.Publisher("rl_key_output", Int8MultiArray, queue_size=1)
         self.jointPub_ = rospy.Publisher(
             "j2n6s300/joint_states", JointState, queue_size=1)
         self.feedbackPub_ = rospy.Publisher(
@@ -78,7 +82,17 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         self.gripper_angle = 0  # finger angle of manual control
 
         ### ------------  STATE GENERATION  ------------ ###
-        #self.state_gen = State_generator(**kwargs)
+        self.state_gen = State_generator(**kwargs)
+        self.image_buffersize = 5
+        self.image_buff = []
+        self.pressure_buffersize = 100
+        self.pressure_state = []
+
+        self.depth_trigger = True
+        self.pressure_trigger = True
+        self.data_buff = []
+        self.data_buff_temp = [0, 0, 0]
+
 
     def _publishWorker(self, e):
         self._updateJointState()
@@ -219,7 +233,6 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             self._take_manual_action(self.key_input)
 
     def _reset(self, sync=False):
-        print("RESETED")
         self.gripper_angle_1 = 0
         self.gripper_angle_2 = 0
         self.gripper_angle = 0
@@ -251,10 +264,10 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         else:
             data_from_callback = []
             observation = self.state_gen.generate(data_from_callback)
-        return observation
+        return np.array(observation)
 
     def _take_action(self, a):
-        #a = [-1,0,1] * 8
+        # a = [-1,0,1] * 8
         key_out = Int8MultiArray()
         key_out.data = a[:6]
         self.key_pub.publish(key_out)
@@ -296,10 +309,10 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         fig = plt.figure(frameon=False)
         ax = fig.add_subplot(1,1,1)
         plt.axis('off')
-        #fig.savefig('/home/ljh/Documents/Figure_1.png', bbox_inches='tight',pad_inches=0)
+        # fig.savefig('/home/ljh/Documents/Figure_1.png', bbox_inches='tight',pad_inches=0)
         plt.imshow(data)
         plt.show()'''
-        print("depth image: ", msg_time)
+        #print("depth image: ", msg_time)
         self.image_buff = [data, msg_time]
         self.data_buff_temp[0] = self.image_buff
 
@@ -309,8 +322,6 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             self.pressure_state.append([msg.data[1:], msg_time])
             if len(self.pressure_state) > self.pressure_buffersize:
                 self.pressure_state.pop(0)
-            print("pressure state: ", msg_time)
+            #print("pressure state: ", msg_time)
             self.data_buff_temp[2] = self.pressure_state[-1]
             self.pressure_trigger = False
-            if not self.joint_trigger:
-                self.data_buff.append(self.data_buff_temp)

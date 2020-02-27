@@ -13,7 +13,7 @@ class NeuralNetwork(Brain):
         super().__init__(**kwargs)
 
         self._set_private_members()
-        self.input_ph = tf.placeholder(
+        self.input_ph = tf.compat.v1.placeholder(
             shape=[None] + list(self.env.get_state_shape()), dtype=tf.float32)
 
     def _set_private_members(self):

@@ -6,7 +6,7 @@ import numpy as np
 import random
 from datetime import datetime as dt
 
-from config import block_setting
+from state_gen.config import block_setting
 
 
 #TODO: Make **kwargs fetch into the blocks
@@ -709,3 +709,6 @@ class Autoencoder(tf.keras.Model):
             probs = self.decoder(z)
         return probs
 
+class dataFusionGraph(tf.keras.Model):
+    def __init__(self):
+        pass
