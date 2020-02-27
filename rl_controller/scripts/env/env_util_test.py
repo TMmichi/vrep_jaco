@@ -259,8 +259,10 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         test = True
         if test:
             observation = []
-            for i_jointhandle in self.jointHandles_:
-                observation.append(self.obj_get_joint_angle(i_jointhandle))
+            for i in range(6):
+                observation.append(self.obj_get_joint_angle(self.jointHandles_[i]))
+            observation.append(0)
+            observation.append(0)
         else:
             data_from_callback = []
             observation = self.state_gen.generate(data_from_callback)

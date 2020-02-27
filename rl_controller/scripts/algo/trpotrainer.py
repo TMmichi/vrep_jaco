@@ -41,8 +41,8 @@ class TRPOTrainer(GeneralTrainer):
             self.update_policy(session, t_processed)
             t_processed_prev = t_processed
 
+            pbar1 = tqdm(total=self.max_episode_count, position=1, desc="Total Episodes: ")
             while self.episode_count < self.max_episode_count:
-                print(self.episode_count)
                 raw_t = self.gen_trajectories(
                     session, self.local_brain.traj_batch_size)
                 t_processed = self.process_trajectories(session, raw_t)
@@ -52,6 +52,8 @@ class TRPOTrainer(GeneralTrainer):
 
                 self.auditor.log()
                 t_processed_prev = t_processed
+                pbar1.update(self.local_brain.traj_batch_size)
+            pbar1.close()
 
     ''' log, print run instance info. and hyper-params '''
 
@@ -118,7 +120,8 @@ class TRPOTrainer(GeneralTrainer):
         raw_t = {'states': [], 'actions': [], 'rewards': [],
                  'disc_rewards': [], 'values': [], 'advantages': []}
         raw_states = []
-        for _ in tqdm(range(traj_batch_size),desc="Traj batch generation: "):
+        pbar2 = tqdm(total=traj_batch_size,position=0, desc="batch generation: ")
+        for _ in range(traj_batch_size):
             actions, rewards, states, norm_states = self._gen_trajectory(
                 session)
 
@@ -131,8 +134,11 @@ class TRPOTrainer(GeneralTrainer):
 
             raw_states += states
             self.episode_count += 1
-
+            pbar2.update(1)
+        
+        pbar2.close()
         # per batch update running statistics
+        print(raw_states)
         self.running_stats.multiple_push(raw_states)
 
         self.auditor.update({'episode_number': self.episode_count,

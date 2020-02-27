@@ -63,7 +63,7 @@ class JacoVrepEnv(JacoVrepEnvUtil):
     def terminal_inspection(self):
         # TODO: terminal state definition
         self.current_steps += 1
-        return True if self.current_steps < 200 else False 
+        return False if self.current_steps < 10 else True 
 
     def make_observation(self):
         self.observation = self._get_observation()
