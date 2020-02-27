@@ -75,5 +75,6 @@
         "scoped_allocator": "cpp",
         "valarray": "cpp",
         "core": "cpp"
-    }
+    },
+    "python.pythonPath": "/Users/jeonghoon/anaconda3/envs/jaco/bin/python"
 }
