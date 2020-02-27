@@ -9,7 +9,6 @@
 #include <actionlib/client/terminal_state.h>
 #include <trajectory_msgs/JointTrajectoryPoint.h>
 
-
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/macros/console_colors.h>
 
@@ -50,6 +49,7 @@ private:
     const double eef_step = 0.001;
     double fraction;
     float p_speed_constant;
+    bool p_cartesian;
 };
 
 }

@@ -23,7 +23,8 @@ JacoController::JacoController() : nh_(""), nh_local_("~"){
 
 void JacoController::updateParams(){
   nh_local_.param<float>("jaco_ros_controller/speed_constant", p_speed_constant, 0.01);
-  //nh_local_.param<int>("jaco_ros_controller/iter", p_iter, 20);
+  nh_local_.param<bool>("jaco_ros_controller/cartesian", p_cartesian, false);
+  cout << p_speed_constant << ", " << p_cartesian << endl;
 }
 
 void JacoController::reset(){
@@ -52,28 +53,26 @@ void JacoController::keyCallback(const std_msgs::Int8::ConstPtr& msg){
   target_pose = current_pose;
 
   int i = 0;
-  int j = 1;
   switch(key_input){
-    case 'w': target_pose.position.y += 0.01; break;
-    case 's': target_pose.position.y -= 0.01; break;
-    case 'a': target_pose.position.x -= 0.01; break;
-    case 'd': target_pose.position.x += 0.01; break;
-    case 'e': target_pose.position.z += 0.01; break;
-    case 'q': target_pose.position.z -= 0.01; break;
+    case 'w': target_pose.position.y += 0.01;
+    case 's': target_pose.position.y -= 0.01;
+    case 'a': target_pose.position.x -= 0.01;
+    case 'd': target_pose.position.x += 0.01;
+    case 'e': target_pose.position.z += 0.01;
+    case 'q': target_pose.position.z -= 0.01;
 
-    case 'u': roll += 0.1; break;
-    case 'j': roll -= 0.1; break;
-    case 'h': pitch += 0.1; break;
-    case 'k': pitch -= 0.1; break;
-    case 'y': yaw += 0.1; break;
-    case 'i': yaw -= 0.1; break;
-
-    case 'r': this->reset(); i=0; j=0; break;
+    case 'u': roll += 0.1; 
+    case 'j': roll -= 0.1; 
+    case 'h': pitch += 0.1;
+    case 'k': pitch -= 0.1;
+    case 'y': yaw += 0.1; 
+    case 'i': yaw -= 0.1; i=1; break;
   }
   waypoints.push_back(target_pose);
   moveit_msgs::RobotTrajectory trajectory;
+  cout << p_cartesian << endl;
 
-  if(i){
+  if(!p_cartesian && i==1){
     tf2::Quaternion orientation;
     orientation.setRPY(roll,pitch,yaw);
     target_pose.orientation = tf2::toMsg(orientation);
@@ -88,7 +87,7 @@ void JacoController::keyCallback(const std_msgs::Int8::ConstPtr& msg){
     goal.trajectory = trajectory.joint_trajectory;
     ROS_INFO("Goal Sending");
     execute_action_client_->sendGoal(goal);
-  }else if(j){
+  }else if(p_cartesian && i==1){
     fraction = move_group->computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
     control_msgs::FollowJointTrajectoryGoal goal;
     goal.trajectory = trajectory.joint_trajectory;
