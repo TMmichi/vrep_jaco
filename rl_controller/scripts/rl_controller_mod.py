@@ -20,29 +20,32 @@ from env_real import Real
 
 
 class RL_controller:
-    def __init__(self,feedbackRate_=50):
-        rospy.init_node("RL_controller",anonymous=True)
+    def __init__(self, feedbackRate_=50):
+        rospy.init_node("RL_controller", anonymous=True)
         self.use_sim = rospy.get_param("/rl_controller/use_sim")
-        self.trigger_sub = rospy.Subscriber("key_input",Int8,self.trigger,queue_size=10)
+        self.trigger_sub = rospy.Subscriber(
+            "key_input", Int8, self.trigger, queue_size=10)
 
         parser = ArgParser()
         args = parser.parse_args()
         tf.reset_default_graph()
 
-        config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
+        config = tf.ConfigProto(allow_soft_placement=True,
+                                log_device_placement=False)
         self.sess = tf.compat.v1.Session(config=config)
         args.sess = self.sess
         self.rate = rospy.Rate(feedbackRate_)
         self.period = rospy.Duration(1.0/feedbackRate_)
         args.rate = self.rate
         args.period = self.period
-        self.env = JacoVrepEnv(**vars(args)) if self.use_sim else Real(**vars(args))
+        self.env = JacoVrepEnv(
+            **vars(args)) if self.use_sim else Real(**vars(args))
         args.env = self.env
 
         self.local_brain = TRPO(**vars(args))
         self.trainer = TRPOTrainer(**vars(args))
-    
-    def trigger(self,msg):
+
+    def trigger(self, msg):
         if msg.data == ord('1'):
             self.agent()
         elif msg.data == ord('2'):
@@ -58,7 +61,7 @@ class RL_controller:
         self.trainer.train(session=self.sess)
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     try:
         controller_class = RL_controller()
         rospy.spin()
