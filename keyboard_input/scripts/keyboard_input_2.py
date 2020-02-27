@@ -94,7 +94,10 @@ class SimpleKeyTeleop():
         self._interface.clear()
         if not keycode == None:
             self.key_now = keycode
-            self._pub_cmd.publish(self.key_now)
+            try:
+                self._pub_cmd.publish(self.key_now)
+            except Exception:
+                print("Wrong key")
         self._interface.write_line(2, 'Pressed: ' + chr(keycode))
         self._interface.write_line(5, 'Use arrow keys to move, z to exit.')
         self._interface.refresh()
