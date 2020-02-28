@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
-from env.env_real import Real
-from env.env_vrep_client_test import JacoVrepEnv
-from argparser import ArgParser
-from std_msgs.msg import Int8
-import rospy
-from algo.trpotrainer import TRPOTrainer
-from algo.trpo import TRPO
-from matplotlib import pyplot as plt
-from keras import backend as K
-import tensorflow as tf
-import numpy as np
-import cv2 as cv
-import math
-import random
-import time
+
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+import math
+import time
+import random
+
+import tensorflow as tf
+from keras import backend as K
+from matplotlib import pyplot as plt
+
+import rospy
+from argparser import ArgParser
+from std_msgs.msg import Int8
+from env.env_real import Real
+from env.env_vrep_client_test import JacoVrepEnv
+from algo.trpotrainer import TRPOTrainer
+from algo.trpo import TRPO
 
 
 class RL_controller:

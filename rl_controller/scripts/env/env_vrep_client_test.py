@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-from env.vrep_env_rl import vrep_env
-from env.vrep_env_rl import vrep  # vrep.sim_handle_parent
 from env.env_util_test import JacoVrepEnvUtil, radtoangle
 
 from gym import spaces
@@ -22,10 +20,9 @@ class JacoVrepEnv(JacoVrepEnvUtil):
 
         ### ------------  RL SETUP  ------------ ###
         self.current_steps = 0
-        self.action_space_max = 3.0
-        # x,y,z,r,p,y, finger 1/2, finger 3
-        act = np.array([self.action_space_max]*8)
-        self.action_space = spaces.Box(-act, act)
+        self.action_space_max = 0.01 				# 0.01 (m/s)
+        act = np.array([self.action_space_max]*8) 	# x,y,z,r,p,y, finger 1/2, finger 3
+        self.action_space = spaces.Box(-act, act)	# Action space: [-0.01, 0.01]
         self.seed()
         self.reset_environment()
 
@@ -58,7 +55,7 @@ class JacoVrepEnv(JacoVrepEnvUtil):
 
     def reward(self):
         # TODO: Reward from IRL
-        return int(30)
+        return 30
 
     def terminal_inspection(self):
         # TODO: terminal state definition

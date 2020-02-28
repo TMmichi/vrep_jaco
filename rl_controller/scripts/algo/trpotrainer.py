@@ -28,7 +28,6 @@ class TRPOTrainer(GeneralTrainer):
         updates policy using current batch of trajectories,
         For details, see https://arxiv.org/pdf/1703.02660.pdf
     '''
-
     def train(self, session):
         self._print_instance_info()
 
@@ -46,17 +45,14 @@ class TRPOTrainer(GeneralTrainer):
                 raw_t = self.gen_trajectories(
                     session, self.local_brain.traj_batch_size)
                 t_processed = self.process_trajectories(session, raw_t)
-
                 self.update_policy(session, t_processed)
                 self.update_value(t_processed_prev)
-
                 self.auditor.log()
                 t_processed_prev = t_processed
                 pbar1.update(self.local_brain.traj_batch_size)
             pbar1.close()
 
     ''' log, print run instance info. and hyper-params '''
-
     def _print_instance_info(self):
         self.auditor.update({'task': self.environ_string,
                              'seed': self.seed,
@@ -81,50 +77,21 @@ class TRPOTrainer(GeneralTrainer):
         return self
 
     ''' Initialize environment dependent parameters, such as running mean + std '''
-
     def intialize_params(self, session, n_episodes):
         self.gen_trajectories(session, n_episodes)
         return self
 
-    ''' generate a single episodic trajectory '''
-
-    def _gen_trajectory(self, session):
-        state = self.local_brain.env.reset_environment()
-        actions, rewards, states, norm_states = [], [], [], []
-        terminal = False
-
-        while terminal is False:
-
-            states.append(state)
-
-            state_normalized = (state - self.running_stats.mean()) / \
-                self.running_stats.standard_deviation()
-            norm_states.append(state_normalized)
-
-            action = self.local_brain.sample_action(session, state_normalized)
-            new_state, reward, terminal = self.env.step(action)
-            actions.append(action)
-            rewards.append(reward * self.rew_scale)
-
-            state = new_state  # recurse and repeat until episode terminates
-        return actions, rewards, states, norm_states
-
-    def _discount(self, x, gamma):
-        return scipy.signal.lfilter([1.0], [1.0, -gamma], x[::-1])[::-1]
-
-    ''' generate trajectories by rolling out the stochastic policy 'pi_theta_k', of iteration k,
+   ''' generate trajectories by rolling out the stochastic policy 'pi_theta_k', of iteration k,
     and no truncation of rolling horizon, unless needed'''
-
     def gen_trajectories(self, session, traj_batch_size):
 
         raw_t = {'states': [], 'actions': [], 'rewards': [],
                  'disc_rewards': [], 'values': [], 'advantages': []}
         raw_states = []
+
         pbar2 = tqdm(total=traj_batch_size,position=0, desc="batch generation: ")
         for _ in range(traj_batch_size):
-            actions, rewards, states, norm_states = self._gen_trajectory(
-                session)
-
+            actions, rewards, states, norm_states = self._gen_trajectory(session)
             raw_t['states'].append(norm_states)
             raw_t['actions'].append(actions)
             raw_t['rewards'].append(rewards)
@@ -140,16 +107,35 @@ class TRPOTrainer(GeneralTrainer):
         # per batch update running statistics
         print(raw_states)
         self.running_stats.multiple_push(raw_states)
-
         self.auditor.update({'episode_number': self.episode_count,
                              'per_episode_mean': int(np.sum(np.concatenate(raw_t['rewards'])) /
                                                      (traj_batch_size * self.rew_scale))
                              })
-
         return raw_t
 
-    ''' estimate value and advantages: gae'''
+    def _discount(self, x, gamma):
+        return scipy.signal.lfilter([1.0], [1.0, -gamma], x[::-1])[::-1]
 
+    ''' generate a single episodic trajectory '''
+    def _gen_trajectory(self, session):
+        state = self.local_brain.env.reset_environment()
+        actions, rewards, states, norm_states = [], [], [], []
+
+        terminal = False
+        while terminal is False:
+            states.append(state)
+            state_normalized = (state - self.running_stats.mean()) / \
+                self.running_stats.standard_deviation()
+            norm_states.append(state_normalized)
+            exploring = False        #TODO: Balance btw Exploration / Exploitation
+            action = self.local_brain.sample_action(session, state_normalized, exploring)
+            new_state, reward, terminal = self.env.step(action)
+            actions.append(action)
+            rewards.append(reward * self.rew_scale)
+            state = new_state  # recurse and repeat until episode terminates
+        return actions, rewards, states, norm_states
+
+    ''' estimate value and advantages: gae'''
     def process_trajectories(self, session, t):
         for i in range(self.local_brain.traj_batch_size):
             feed_dict = {self.local_brain.input_ph: t['states'][i]}
@@ -161,7 +147,6 @@ class TRPOTrainer(GeneralTrainer):
                 self.local_brain.reward_discount * values[1:], 0.0) - list(map(float, values))
             gae = self._discount(
                 temporal_differences, self.local_brain.gae_discount * self.local_brain.reward_discount)
-
             t['advantages'].append(gae)
 
         t['states'] = np.concatenate(t['states'])
@@ -176,21 +161,17 @@ class TRPOTrainer(GeneralTrainer):
                           ) / (concatenated_gae.std() + 1e-6)
         t['advantages'] = normalized_gae
 
-        t['actions'] = np.reshape(
-            t['actions'], (-1, self.local_brain.env_action_number))
+        t['actions'] = np.reshape(t['actions'], (-1, self.local_brain.env_action_number))
         for entity in ['rewards', 'disc_rewards', 'values', 'advantages']:
             t[entity] = np.reshape(t[entity], (-1, 1))
-
         return t
 
     ''' updates policy '''
-
     def update_policy(self, session, t):
         self.local_brain._update_policy(session, t, self.auditor)
         return self
 
     ''' updates value '''
-
     def update_value(self, t):
         self.local_brain._update_value(t, self.auditor)
         return self

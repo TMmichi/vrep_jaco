@@ -142,9 +142,11 @@ class TRPO(NeuralNetwork):
             tf.maximum(0.0, self.kl_divergence - 2 * self.kl_target)))
         return negloss
 
-    def sample_action(self, session, inpt):
-        return self.env.action_space.sample()
-        # return session.run(self.sampled_action, feed_dict = {self.input_ph: np.reshape(inpt, (-1, self.env.get_state_shape()[0]))})
+    def sample_action(self, session, inpt, exploring):
+        if exploring:
+            return self.env.action_space.sample()
+        else:
+            return session.run(self.sampled_action, feed_dict = {self.input_ph: np.reshape(inpt, (-1, self.env.get_state_shape()[0]))})
 
     def _update_policy(self, session, t, auditor):
         states = t['states']

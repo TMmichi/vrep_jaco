@@ -35,8 +35,6 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
 
         ### ------------  ROS INITIALIZATION  ------------ ###
         self.rate = kwargs['rate']
-
-        ### ------------  ROS INITIALIZATION  ------------ ###
         # Subscribers / Publishers / TimerCallback
         self.key_sub = rospy.Subscriber(
             "key_input", Int8, self._keys, queue_size=10)
@@ -77,9 +75,9 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         for i in range(0, 6):
             self.feedback_.joint_names.append(self.jointState_.name[i])
             self.feedback_.actual.positions.append(0)
-        self.gripper_angle_1 = 0  # finger 1, 2
-        self.gripper_angle_2 = 0  # finger 3
-        self.gripper_angle = 0  # finger angle of manual control
+        self.gripper_angle_1 = 0    # finger 1, 2
+        self.gripper_angle_2 = 0    # finger 3
+        self.gripper_angle = 0      # finger angle of manual control
 
         ### ------------  STATE GENERATION  ------------ ###
         self.state_gen = State_generator(**kwargs)
@@ -218,16 +216,16 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
     def _keys(self, msg):
         self.key_input = msg.data
         print("input = ", self.key_input)
-        if self.key_input == ord('r'):  # Reset environment
+        if self.key_input == ord('r'):      # Reset environment
             self._reset()
             self.key_input = ord(1)
-        elif self.key_input == ord('t'):  # Reset environment (step-wised)
+        elif self.key_input == ord('t'):    # Reset environment (step-wised)
             self._reset(True)
-        elif self.key_input == ord('n'):  # Next step
+        elif self.key_input == ord('n'):    # Next step
             self.step_simulation()
-        elif self.key_input == ord('p'):  # Action from Policy
+        elif self.key_input == ord('p'):    # Action from Policy
             self.action_from_policy = True
-        elif self.key_input == ord('s'):  # Action from Sample
+        elif self.key_input == ord('s'):    # Action from Sample
             self.action_from_policy = False
         elif self.key_input in [ord('o'), ord('c')]:
             self._take_manual_action(self.key_input)
