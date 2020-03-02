@@ -20,13 +20,14 @@ class JacoVrepEnv(JacoVrepEnvUtil):
 
         ### ------------  RL SETUP  ------------ ###
         self.current_steps = 0
-        self.action_space_max = 0.01 				# 0.01 (m/s)
+        self.action_space_max = 3    				# 0.01 (m/s)
         act = np.array([self.action_space_max]*8) 	# x,y,z,r,p,y, finger 1/2, finger 3
         self.action_space = spaces.Box(-act, act)	# Action space: [-0.01, 0.01]
         self.seed()
         self.reset_environment()
 
     def reset_environment(self, sync=False):
+        self.current_steps = 0
         return self._reset()
 
     def get_state_shape(self):
