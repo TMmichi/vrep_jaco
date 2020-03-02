@@ -80,12 +80,12 @@ class TRPO(NeuralNetwork):
                          kernel_initializer=RandomNormal(0, 0.1))(mu_model_input)
         mu_model = Dense(units=128, activation=self.activation,
                          kernel_initializer=RandomNormal(0, 0.1))(mu_model)
-        mean = Dense(units=self.env.get_num_action(), activation=None,
+        mean = Dense(units=self.env_action_number, activation=None,
                      kernel_initializer=RandomNormal())(mu_model)
 
         ''' state value network '''
         value_model_input = Input(batch_shape=(
-            None, self.env.get_state_shape()[0]))
+            None, self.env_state_shape[0]))
         value_model = Dense(units=128,
                             activation=self.activation,
                             kernel_regularizer=l2(0.01))(value_model_input)
@@ -116,7 +116,9 @@ class TRPO(NeuralNetwork):
         self._mean_model_params = policy_mu_model.trainable_weights
         self._value_model_params = self.value_model.trainable_weights
 
+        print('\033[92m'+"POLICY MODEL STRUCTURE"+'\033[0m')
         policy_mu_model.summary()
+        print('\033[92m'+"VALUE MODEL STRUCTURE"+'\033[0m')
         self.value_model.summary()
 
         return self
@@ -146,7 +148,7 @@ class TRPO(NeuralNetwork):
         if exploring:
             return self.env.action_space.sample()
         else:
-            return session.run(self.sampled_action, feed_dict = {self.input_ph: np.reshape(inpt, (-1, self.env.get_state_shape()[0]))})
+            return session.run(self.sampled_action, feed_dict = {self.input_ph: np.reshape(inpt, (-1, self.env_state_shape[0]))})
 
     def _update_policy(self, session, t, auditor):
         states = t['states']
