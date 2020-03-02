@@ -314,7 +314,10 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         plt.show()'''
         #print("depth image: ", msg_time)
         self.image_buff = [data, msg_time]
-        self.data_buff_temp[0] = self.image_buff
+        try:
+            self.data_buff_temp[0] = self.image_buff
+        except Exception:
+            pass
 
     def _pressure_CB(self, msg):
         if self.pressure_trigger:
