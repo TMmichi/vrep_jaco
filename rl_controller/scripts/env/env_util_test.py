@@ -319,9 +319,12 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
     def _pressure_CB(self, msg):
         if self.pressure_trigger:
             msg_time = round(msg.data[0], 2)
-            self.pressure_state.append([msg.data[1:], msg_time])
-            if len(self.pressure_state) > self.pressure_buffersize:
-                self.pressure_state.pop(0)
-            #print("pressure state: ", msg_time)
-            self.data_buff_temp[2] = self.pressure_state[-1]
-            self.pressure_trigger = False
+            try:
+                self.pressure_state.append([msg.data[1:], msg_time])
+                if len(self.pressure_state) > self.pressure_buffersize:
+                    self.pressure_state.pop(0)
+                #print("pressure state: ", msg_time)
+                self.data_buff_temp[2] = self.pressure_state[-1]
+                self.pressure_trigger = False
+            except Exception:
+                pass
