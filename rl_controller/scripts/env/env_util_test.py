@@ -237,9 +237,6 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         self.trajAS_.reset()
         if self.sim_running:
             self.stop_simulation()
-        else:
-            self.start_simulation(time_step=0.05)
-            self.stop_simulation()
         random_init_angle = [sample(range(-180, 180), 1)[0], 150, sample(range(200, 270), 1)[0], sample(
             range(50, 130), 1)[0], sample(range(50, 130), 1)[0], sample(range(50, 130), 1)[0]]  # angle in degree
         for i, degree in enumerate(random_init_angle):
