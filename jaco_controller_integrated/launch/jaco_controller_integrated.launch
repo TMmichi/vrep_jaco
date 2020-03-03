@@ -28,11 +28,8 @@
 
   <node name="jaco_ros_controller" pkg="jaco_controller_integrated" type="jaco_controller_integrated" respawn="false" output="screen">
     <param name="speed_constant" value="0.03"/>
-<<<<<<< HEAD
-    <param name="cartesian" value="true"/>
-=======
     <param name="cartesian" value="false"/>
->>>>>>> b60e3fc4ed1aa00a24fe989089bfc41942e385f0
+
     <param name="/use_sim_time" value="true"/>
   </node>
 

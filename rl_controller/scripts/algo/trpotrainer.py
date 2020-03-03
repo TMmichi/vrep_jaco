@@ -81,7 +81,7 @@ class TRPOTrainer(GeneralTrainer):
         self.gen_trajectories(session, n_episodes)
         return self
 
-   ''' generate trajectories by rolling out the stochastic policy 'pi_theta_k', of iteration k,
+    ''' generate trajectories by rolling out the stochastic policy 'pi_theta_k', of iteration k,
     and no truncation of rolling horizon, unless needed'''
     def gen_trajectories(self, session, traj_batch_size):
 
@@ -127,7 +127,7 @@ class TRPOTrainer(GeneralTrainer):
             state_normalized = (state - self.running_stats.mean()) / \
                 self.running_stats.standard_deviation()
             norm_states.append(state_normalized)
-            exploring = False        #TODO: Balance btw Exploration / Exploitation
+            exploring = True        #TODO: Balance btw Exploration / Exploitation
             action = self.local_brain.sample_action(session, state_normalized, exploring)
             new_state, reward, terminal = self.env.step(action)
             actions.append(action)
