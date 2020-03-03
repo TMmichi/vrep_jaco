@@ -5,6 +5,7 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include "action_client/VrepInterface.hpp"
 #include <std_msgs/Int8.h>
+#include <std_msgs/Int8MultiArray.h>
 #include <actionlib/client/simple_action_client.h>
 #include <actionlib/client/terminal_state.h>
 #include <trajectory_msgs/JointTrajectoryPoint.h>
@@ -24,7 +25,7 @@ private:
     void updateParams();
     void reset();
     void teleopCallback(const std_msgs::Int8::ConstPtr& msg);
-    void actionCallback(const std_msgs::Int8MultiArray::ConstPt& msg);
+    void actionCallback(const std_msgs::Int8MultiArray& msg);
 
     //ROS handles
     ros::NodeHandle nh_;
@@ -32,6 +33,7 @@ private:
 
     //Subscribers, Publishers
     ros::Subscriber teleop_sub_;
+    ros::Subscriber key_sub_;
     ros::Publisher key_check_pub_;
 
     //Variables

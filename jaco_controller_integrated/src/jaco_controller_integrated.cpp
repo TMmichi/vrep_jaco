@@ -99,8 +99,8 @@ void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr& msg){
   }else{} 
 }
 
-void JacoController::actionCallback(const std_msgs::Int8MultiArray::ConstPt& msg){
-  action_input = msg->data;
+void JacoController::actionCallback(const std_msgs::Int8MultiArray& msg){
+  action_input = msg.data;
   printf(MOVEIT_CONSOLE_COLOR_BLUE "Action In: %c\n",action_input);
   printf(MOVEIT_CONSOLE_COLOR_RESET);
 
