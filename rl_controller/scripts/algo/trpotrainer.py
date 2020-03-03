@@ -34,13 +34,14 @@ class TRPOTrainer(GeneralTrainer):
         with session.as_default(), session.graph.as_default():
             self.intialize_params(session=session, n_episodes=3)
 
+            pbar1 = tqdm(total=self.max_episode_count, position=1, desc="Total Episodes: ")
             raw_t = self.gen_trajectories(
                 session, self.local_brain.traj_batch_size)
             t_processed = self.process_trajectories(session, raw_t)
             self.update_policy(session, t_processed)
             t_processed_prev = t_processed
-
-            pbar1 = tqdm(total=self.max_episode_count, position=1, desc="Total Episodes: ")
+            pbar1.update(self.local_brain.traj_batch_size)
+            
             while self.episode_count < self.max_episode_count:
                 raw_t = self.gen_trajectories(
                     session, self.local_brain.traj_batch_size)
