@@ -48,7 +48,6 @@ private:
     //Parameters
     const std::string PLANNING_GROUP_ = "arm";
     int key_input;
-    std::vector<int> action_input;
     const double jump_threshold = 0.0;
     const double eef_step = 0.001;
     double fraction;

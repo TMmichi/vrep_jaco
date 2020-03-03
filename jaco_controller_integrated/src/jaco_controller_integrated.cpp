@@ -100,8 +100,11 @@ void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr& msg){
 }
 
 void JacoController::actionCallback(const std_msgs::Int8MultiArray& msg){
-  action_input = msg.data;
-  printf(MOVEIT_CONSOLE_COLOR_BLUE "Action In: %c\n",action_input);
+  printf(MOVEIT_CONSOLE_COLOR_BLUE "Action In: [");
+  for(auto it = msg.data.begin(); it!= msg.data.end(); it++){
+    printf("%d, ",*it);
+  }
+  printf("]\n");
   printf(MOVEIT_CONSOLE_COLOR_RESET);
 
   waypoints.clear();
@@ -123,16 +126,16 @@ void JacoController::actionCallback(const std_msgs::Int8MultiArray& msg){
 
 
   bool command = false;
-  target_pose.position.x += action_input[0];
-  target_pose.position.y += action_input[1];
-  target_pose.position.z += action_input[2];
+  target_pose.position.x += msg.data[0]/100.0;
+  target_pose.position.y += msg.data[1]/100.0;
+  target_pose.position.z += msg.data[2/100.0];
   
-  roll += action_input[3];
-  pitch += action_input[4];
-  yaw += action_input[5];
+  roll += msg.data[3]/100.0;
+  pitch += msg.data[4]/100.0;
+  yaw += msg.data[5]/100.0;
 
   moveit_msgs::RobotTrajectory trajectory;
-  if(!p_cartesian && command){
+  if(!p_cartesian){
     tf2::Quaternion orientation;
     orientation.setRPY(roll,pitch,yaw);
     target_pose.orientation = tf2::toMsg(orientation);
@@ -148,7 +151,7 @@ void JacoController::actionCallback(const std_msgs::Int8MultiArray& msg){
     ROS_INFO("Goal Sending");
     execute_action_client_->sendGoal(goal);
 
-  }else if(p_cartesian && command){
+  }else if(p_cartesian){
     waypoints.push_back(target_pose);
     fraction = move_group->computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
     control_msgs::FollowJointTrajectoryGoal goal;

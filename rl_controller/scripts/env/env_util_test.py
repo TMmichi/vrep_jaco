@@ -128,7 +128,6 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             while i < len(points) - 1 and points[i+1].time_from_start < fromStart:
                 i += 1
             if i == len(points)-1:
-                print(self.trajAS_, ": Reached", i)
                 reachedGoal = True
                 for j in range(6):
                     tolerance = 0.1
@@ -152,26 +151,23 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
                     break
                 target = points[i].positions
             else:
-                print(self.trajAS_, ": working..", i)
-                if i == 0:
-                    segmentDuration = points[i].time_from_start
-                    prev = startPos
-                    print("a")
-                else:
-                    segmentDuration = points[i].time_from_start - \
-                        points[i-1].time_from_start
-                    prev = points[i-1].positions
-                    print("b")
-                if segmentDuration.to_sec() <= 0:
-                    target = points[i].positions
-                    print("c")
-                else:
-                    d = fromStart - points[i].time_from_start
-                    alpha = d.to_sec() / segmentDuration.to_sec()
-                    target = self._interpolate(
-                        prev, points[i].positions, alpha)
-                    print("d")
-            print("Ready to be moved")
+                try:
+                    if i == 0:
+                        segmentDuration = points[i].time_from_start
+                        prev = startPos
+                    else:
+                        segmentDuration = points[i].time_from_start - \
+                            points[i-1].time_from_start
+                        prev = points[i-1].positions
+                    if segmentDuration.to_sec() <= 0:
+                        target = points[i].positions
+                    else:
+                        d = fromStart - points[i].time_from_start
+                        alpha = d.to_sec() / segmentDuration.to_sec()
+                        target = self._interpolate(
+                            prev, points[i].positions, alpha)
+                except Exception as e:
+                        print("Error: ",e)
             for j in range(0, 6):
                 self.obj_set_position_target(
                     self.jointHandles_[j], radtoangle(-target[j]))
@@ -264,9 +260,8 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         return np.array(observation)
 
     def _take_action(self, a):
-        # a = [-1,0,1] * 8
-        key_out = Int8MultiArray()
-        key_out.data = a[:6]
+        key_out = Int8MultiArray()  # a = [-1,0,1] * 8
+        key_out.data = np.array(a[:6],dtype=np.int8)
         self.key_pub.publish(key_out)
         self.gripper_angle_1 = max(min(self.gripper_angle_1 + a[6], 10), -10)
         self.gripper_angle_2 = max(min(self.gripper_angle_2 + a[7], 10), -10)
@@ -317,14 +312,14 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             pass
 
     def _pressure_CB(self, msg):
-        if self.pressure_trigger:
-            msg_time = round(msg.data[0], 2)
-            try:
+        try:
+            if self.pressure_trigger:
+                msg_time = round(msg.data[0], 2)
                 self.pressure_state.append([msg.data[1:], msg_time])
                 if len(self.pressure_state) > self.pressure_buffersize:
                     self.pressure_state.pop(0)
                 #print("pressure state: ", msg_time)
                 self.data_buff_temp[2] = self.pressure_state[-1]
                 self.pressure_trigger = False
-            except Exception:
-                pass
+        except Exception:
+            pass

@@ -231,10 +231,8 @@ class SimpleActionServer_mod:
               #check that the timestamp is past that of the current goal and the next goal
               if((not self.current_goal.get_goal() or goal.get_goal_id().stamp >= self.current_goal.get_goal_id().stamp)
                  and (not self.next_goal.get_goal() or goal.get_goal_id().stamp >= self.next_goal.get_goal_id().stamp)):
-                  print("1.", self)
                   #if next_goal has not been accepted already... its going to get bumped, but we need to let the client know we're preempting
                   if(self.next_goal.get_goal() and (not self.current_goal.get_goal() or self.next_goal != self.current_goal)):
-                      print("1.1")
                       self.next_goal.set_canceled(None, "This goal was canceled because another goal was received by the simple action server")
 
                   self.next_goal = goal
@@ -257,7 +255,6 @@ class SimpleActionServer_mod:
                   self.execute_condition.release()
               else:
                   #the goal requested has already been preempted by a different goal, so we're not going to execute it
-                  print("2.",self)
                   goal.set_canceled(None, "This goal was canceled because another goal was received by the simple action server")
                   self.execute_condition.release()
           except Exception as e:
