@@ -23,7 +23,8 @@ public:
 private:
     void updateParams();
     void reset();
-    void keyCallback(const std_msgs::Int8::ConstPtr& msg);
+    void teleopCallback(const std_msgs::Int8::ConstPtr& msg);
+    void actionCallback(const std_msgs::Int8MultiArray::ConstPt& msg);
 
     //ROS handles
     ros::NodeHandle nh_;
@@ -45,6 +46,7 @@ private:
     //Parameters
     const std::string PLANNING_GROUP_ = "arm";
     int key_input;
+    std::vector<int> action_input;
     const double jump_threshold = 0.0;
     const double eef_step = 0.001;
     double fraction;
