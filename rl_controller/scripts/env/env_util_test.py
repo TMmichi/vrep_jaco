@@ -167,7 +167,8 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
                         target = self._interpolate(
                             prev, points[i].positions, alpha)
                 except Exception as e:
-                        print("Error: ",e)
+                    target = [0,0,0,0,0,0]
+                    print("Error: ",e)
             for j in range(0, 6):
                 self.obj_set_position_target(
                     self.jointHandles_[j], radtoangle(-target[j]))
@@ -262,6 +263,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
     def _take_action(self, a):
         key_out = Int8MultiArray()  # a = [-1,0,1] * 8
         key_out.data = np.array(a[:6],dtype=np.int8)
+        print(key_out.data)
         self.key_pub.publish(key_out)
         self.gripper_angle_1 = max(min(self.gripper_angle_1 + a[6], 10), -10)
         self.gripper_angle_2 = max(min(self.gripper_angle_2 + a[7], 10), -10)
