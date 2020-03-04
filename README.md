@@ -38,9 +38,10 @@ catkin config --extend /opt/ros/${ROS_DISTRO} --cmake-args -DCMAKE_BUILD_TYPE=Re
 catkin build
 ```
 Clone and build the main repository of vrep_jaco at your worspace
-```
+```bash
+cd src
 git clone https://github.com/TMmichi/vrep_jaco.git
-catkin_make
+cd .. && catkin build
 ```
 After building your repo, source `setup.bash` file in your project devel folder to the `.bashrc`.
 ```bash
