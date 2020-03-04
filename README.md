@@ -31,7 +31,7 @@ YOU SHOULD NOT USE THE OFFICIAL REPO OF MOVEIT.
 
 Within your worspace, (the directory where your `src` folder is at)
 ```bash
-wstool merge -t src https://raw.githubusercontent.com/TMmichi/vrep_jaco/master/vrep_jaco.rosinstall
+wstool merge -t src https://raw.githubusercontent.com/TMmichi/moveit/master/vrep_jaco_moveit.rosinstall
 wstool update -t src
 rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO}
 catkin config --extend /opt/ros/${ROS_DISTRO} --cmake-args -DCMAKE_BUILD_TYPE=Release
