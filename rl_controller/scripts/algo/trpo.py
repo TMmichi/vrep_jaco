@@ -25,12 +25,15 @@ class TRPO(NeuralNetwork):
             self.neg_policy_loss, var_list=self._mean_model_params.append(self.sigma))
 
         ''' sampling actions operation'''
-        self.sampled_action = tf.squeeze(
-            self.mu + self.sigma * tf.random.normal(shape=tf.shape(self.mu)))
+        if self.policy_action_type == 'Continous':
+            self.sampled_action = tf.squeeze(
+                self.mu + self.sigma * tf.random.normal(shape=tf.shape(self.mu)))
+        elif self.policy_action_type == 'Discrete':
+            #TODO
+            pass
 
     ''' Hyperparameters from Appendix A in https://arxiv.org/abs/1707.06347,
     with some changes while experimenting '''
-
     def _define_params(self):
         self.policy_learning_rate = 1 * 1e-04
         self.value_learning_rate = 1.5 * 1e-03
@@ -51,8 +54,8 @@ class TRPO(NeuralNetwork):
         MLP for fully-connected policy
         RBF for RBF policy. For details, see https://arxiv.org/pdf/1703.02660.pdf
         '''
-        # RBF policy will be uploaded soon. Please check again later.
-        self.policy_type = 'MLP'
+        self.policy_type = 'MLP'  # {'RBF','MLP'} #TODO: Add RBF policy
+        self.policy_action_type = 'Discrete'  # {'discrete','Continous'}
 
     def _init_placeholders(self):
         self.r = tf.compat.v1.placeholder(
@@ -71,17 +74,20 @@ class TRPO(NeuralNetwork):
             shape=[], dtype='float32', name='eta_3rd_loss')
 
     ''' note that adding action sigma network had bad performance. thus omitted. '''
-
     def _build_models(self):
         print("BUILDING MODEL")
-        ''' action mean network '''
-        mu_model_input = Input(tensor=self.input_ph)
-        mu_model = Dense(units=128, activation=self.activation,
-                         kernel_initializer=RandomNormal(0, 0.1))(mu_model_input)
-        mu_model = Dense(units=128, activation=self.activation,
-                         kernel_initializer=RandomNormal(0, 0.1))(mu_model)
-        mean = Dense(units=self.env_action_number, activation=None,
-                     kernel_initializer=RandomNormal())(mu_model)
+        if self.policy_action_type == 'Continous':
+            ''' action mean network '''
+            mu_model_input = Input(tensor=self.input_ph)
+            mu_model = Dense(units=128, activation=self.activation,
+                            kernel_initializer=RandomNormal(0, 0.1))(mu_model_input)
+            mu_model = Dense(units=128, activation=self.activation,
+                            kernel_initializer=RandomNormal(0, 0.1))(mu_model)
+            mean = Dense(units=self.env_action_number, activation=None,
+                        kernel_initializer=RandomNormal())(mu_model)
+        elif self.policy_action_type == 'Discrete':
+            #TODO: Build policy model
+            pass
 
         ''' state value network '''
         value_model_input = Input(batch_shape=(
@@ -109,8 +115,8 @@ class TRPO(NeuralNetwork):
         self.mu = policy_mu_model(self.input_ph)
         self.value = self.value_model(self.input_ph)
         self.sigma = tf.compat.v1.get_variable('sigma', (1, self.env_action_number),
-                                     tf.float32,
-                                     tf.constant_initializer(0.6))
+                                               tf.float32,
+                                               tf.constant_initializer(0.6))
 
         ''' trainable weights; defined here since no direct use required'''
         self._mean_model_params = policy_mu_model.trainable_weights
@@ -148,7 +154,7 @@ class TRPO(NeuralNetwork):
         if exploring:
             return self.env.action_space.sample()
         else:
-            return session.run(self.sampled_action, feed_dict = {self.input_ph: np.reshape(inpt, (-1, self.env_state_shape[0]))})
+            return session.run(self.sampled_action, feed_dict={self.input_ph: np.reshape(inpt, (-1, self.env_state_shape[0]))})
 
     def _update_policy(self, session, t, auditor):
         states = t['states']
@@ -159,9 +165,7 @@ class TRPO(NeuralNetwork):
                      self.actions_ph: actions,
                      self.advantages_ph: advantages,
                      self.beta_ph: self.beta,
-                     self.ksi_ph: self.ksi
-                     }
-
+                     self.ksi_ph: self.ksi}
         prev_mu, prev_sigma = session.run([self.mu, self.sigma], feed_dict)
         feed_dict[self.prev_mu_ph] = np.reshape(
             prev_mu, (-1, self.env.get_num_action()))
@@ -182,8 +186,7 @@ class TRPO(NeuralNetwork):
         auditor.update({'policy_loss': float("%.5f" % -neg_policy_loss),
                         'kl_divergence': float("%.4f" % kl_divergence),
                         'beta': self.beta,
-                        'entropy': float("%.5f" % entropy)
-                        })
+                        'entropy': float("%.5f" % entropy)})
 
         ''' p.4 in https://arxiv.org/pdf/1707.06347.pdf '''
         if kl_divergence < self.kl_target / 1.5:
@@ -202,6 +205,11 @@ class TRPO(NeuralNetwork):
 
         value_loss = self.value_model.evaluate(
             x=states, y=target_values, verbose=0)
-        auditor.update({'value_loss': float("%.7f" % value_loss)
-                        })
+        auditor.update({'value_loss': float("%.7f" % value_loss)})
         return self
+
+    def save_network(self, sess, path):
+        pass
+
+    def load_network(self, sess, path):
+        pass
