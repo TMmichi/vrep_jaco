@@ -50,11 +50,11 @@ class JacoVrepEnv(JacoVrepEnvUtil):
             # TODO: wait for step signal
             self.step_simulation()
         self.make_observation()
-        reward_val = self.reward()
+        reward_val = self._reward()
         done = self.terminal_inspection()
         return self.observation, reward_val, done
 
-    def reward(self):
+    def _reward(self):
         # TODO: Reward from IRL
         return 30
 
