@@ -40,7 +40,7 @@ class TextWindow():
             raise ValueError('lineno out of bounds')
         height, width = self._screen.getmaxyx()
         y = int((height / self._num_lines) * lineno)
-        x = 10
+        x = 3
         for text in message.split('\n'):
             text = text.ljust(width)
             self._screen.addstr(y, x, text)
@@ -71,7 +71,8 @@ class SimpleKeyTeleop():
         rate = rospy.Rate(self._hz)
         self._running = True
         self._interface.write_line(2, 'Pressed: None')
-        self._interface.write_line(5, 'Use arrow keys to move, z to exit.')
+        self._interface.write_line(5, 'Use w,a,s,d keys to move, z to exit.')
+        self._interface.write_line(7, '1: Agent action, 2: Train')
         while self._running:
             while True:
                 keycode = self._interface.read_key()
@@ -100,7 +101,7 @@ class SimpleKeyTeleop():
                 print("Wrong key")
         self._interface.write_line(2, 'Pressed: ' + chr(keycode))
         self._interface.write_line(5, 'Use w,a,s,d keys to move, z to exit.')
-        self._interface.write_line(6, '1: Agent action, 2: Train.')
+        self._interface.write_line(7, '1: Agent action, 2: Train.')
         self._interface.refresh()
         
 
