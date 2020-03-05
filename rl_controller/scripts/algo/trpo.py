@@ -55,7 +55,7 @@ class TRPO(NeuralNetwork):
         RBF for RBF policy. For details, see https://arxiv.org/pdf/1703.02660.pdf
         '''
         self.policy_type = 'MLP'  # {'RBF','MLP'} #TODO: Add RBF policy
-        self.policy_action_type = 'Discrete'  # {'discrete','Continous'}
+        self.policy_action_type = 'Continous'  # {'discrete','Continous'}
 
     def _init_placeholders(self):
         self.r = tf.compat.v1.placeholder(
