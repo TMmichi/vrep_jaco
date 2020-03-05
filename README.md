@@ -15,21 +15,24 @@ Installation in Ubuntu 18.04 with ROS melodic is recommended (since other versio
 #### 1-1-1. V-rep installation
 V-rep source can be downloaded from [here](http://www.coppeliarobotics.com/ubuntuVersions.html) and should be installed within the `/opt` folder. Installed location can be varied, but should be matched with the vrep_path argument within the launch file: `vrep_jaco_bringup/launch/bringup.launch: vrep_path`
 
-#### 1-1-2. src folder init with wstool
-Prior to clone vrep_jaco git repo, it is recommended to make a folder named `src` in your workspace. This folder will be later used to store the repo of moveit source and the vrep_jaco repo along side.
-Within your workspace,
+#### 1-1-2. Create workspace with individual folders for vrep_jaco and moveit
+Since we are not using official repo of moveit, it is required to create and build moveit from the modified source of our repo.
+```bash
+mkdir -p ~/name_of_your_workspace/moveit ~/name_of_your_workspace/vrep_jaco
 ```
+
+#### 1-1-3. Create src folder in moveit directory with wstool
+Because vrep_jaco package requires moveit package to be overlayed, building and sourcing prior to making vrep_jaco is required. This folder will be later used to store the repo of moveit source and the vrep_jaco repo along side.
+Within your moveit folder in workspace,
+```bash
+cd ~/name_of_your_workspace/moveit
 wstool init src
 ```
 to create `src` folder with .rosinstall file in it.
 
 
-### 1-2. Clone, Build & Source repo / Moveit installation
-Due to some code changes within the moveit package, building from source as following is required.
-
-YOU SHOULD NOT USE THE OFFICIAL REPO OF MOVEIT.
-
-Within your workspace, (the directory where your `src` folder is at)
+### 1-2. Clone dependencies, build & source repo for Moveit installation
+Within your moveit folder, (the directory where your `src` folder is at)
 ```bash
 wstool merge -t src https://raw.githubusercontent.com/TMmichi/moveit/master/vrep_jaco_moveit.rosinstall
 wstool update -t src
@@ -37,12 +40,10 @@ rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO}
 catkin config --extend /opt/ros/${ROS_DISTRO} --cmake-args -DCMAKE_BUILD_TYPE=Release
 catkin build
 ```
-After building your repo, source `setup.bash` file in your project devel folder to the `.bashrc`.
+Source `setup.bash` file in your project devel folder to the `.bashrc`.
 ```bash
-echo "source ~YOUR_PROJECT_FOLDER/devel/setup.bash" >> ~/.bashrc
-source ~/.bashrc
+source ~/name_of_your_workspace/moveit/devel/setup.bash
 ```
-
 
 ### 1-3. Remaining packages installation
 Within the moveit package, ompl package and ik algorithm from TRAC is used, and hence should be installed properly.
@@ -56,9 +57,25 @@ sudo apt-get install ros-${ROS_DISTRO}-trac-ik-kinematics-plugin
 sudo apt-get install libqt5x11extras5=5.5.1-3build1
 ```
   in order to install ros-<distro>-rviz-visual-tools within the preliminaries: `moveit.rosinstall`.
-  
 
-## 2. Usage
+### 1-4. Clone vrep_jaco, build & source
+(MANDATOROY: YOU MUST SOURCE `setup.bash` IN MOVEIT DEVEL FOLDER)
+After sourcing the `setup.bash` file within moveit to overlay, go to your vrep_jaco folder in your workspace, and clone package.
+```bash
+cd ~/name_of_your_workspace/vrep_jaco
+git clone https://github.com/TMmichi/vrep_jaco.git
+mv vrep_jaco src
+```
+It is required to have all of your sources in a folder name `src`, so please change `vrep_jaco` folder with the command above.
+
+Build your repo and source it. With the following command, sourcing will done automatically within the terminal at launching.
+```bash
+catkin_make
+echo "source ~/name_of_your_workspace/vrep_jaco/devel/setup.bash" >> ~/.bashrc
+source ~/.bashrc
+```
+
+## 2. Usage (WIP)
 
 Manipulation of a real machine and one in the simulation are much alike from each other. 
 
