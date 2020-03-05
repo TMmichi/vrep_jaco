@@ -275,16 +275,14 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             self.jointHandles_[8], radtoangle(self.gripper_angle_2))
 
     def _take_manual_action(self, key):
-        if key == "o":
-            inc = 1
-        elif key == "c":
-            inc = -1
+        if key == ord("o"):
+            inc = 0.05
+        elif key == ord("c"):
+            inc = -0.05
         else:
             pass
-        self.gripper_angle = max(min(self.gripper_angle+inc, 10), -10)
+        self.gripper_angle = max(min(self.gripper_angle+inc, 0), -0.7)
         for i in range(6, 9):
-            if self.gripper_angle > 10:
-                self.gripper_angle = 10
             self.obj_set_position_target(
                 self.jointHandles_[i], radtoangle(self.gripper_angle))
 
