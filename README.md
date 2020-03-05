@@ -68,15 +68,14 @@ mv vrep_jaco src
 ```
 It is required to have all of your sources in a folder name `src`, so please change `vrep_jaco` folder with the command above.
 
-Build your repo and source it.
+Build your repo and source it. With the following command, sourcing will done automatically within the terminal at launching.
 ```bash
 catkin_make
-echo
+echo "source ~/name_of_your_workspace/vrep_jaco/devel/setup.bash" >> ~/.bashrc
+source ~/.bashrc
 ```
 
-  
-
-## 2. Usage
+## 2. Usage (WIP)
 
 Manipulation of a real machine and one in the simulation are much alike from each other. 
 
