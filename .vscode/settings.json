@@ -76,5 +76,5 @@
         "valarray": "cpp",
         "core": "cpp"
     },
-    "python.pythonPath": "/home/ljh/anaconda3/envs/jaco/bin/python"
+    "python.pythonPath": "/Users/jeonghoon/anaconda3/envs/jaco/bin/python"
 }
