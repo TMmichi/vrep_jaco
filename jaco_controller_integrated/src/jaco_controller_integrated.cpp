@@ -28,12 +28,17 @@ void JacoController::updateParams(){
 }
 
 void JacoController::reset(){
+  move_group->clientReset();
 }
 
 void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr& msg){
   key_input = msg->data;
   printf(MOVEIT_CONSOLE_COLOR_BLUE "Key In: %c\n",key_input);
   printf(MOVEIT_CONSOLE_COLOR_RESET);
+  if (key_input == 'r'){
+    this->reset(); 
+    return;
+  } 
 
   waypoints.clear();
   current_pose = move_group->getCurrentPose().pose;
