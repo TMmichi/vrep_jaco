@@ -215,7 +215,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         print("input = ", self.key_input)
         if self.key_input == ord('r'):      # Reset environment
             self._reset()
-            self.key_input = ord(1)
+            self.key_input = ord('1')
         elif self.key_input == ord('t'):    # Reset environment (step-wised)
             self._reset(True)
         elif self.key_input == ord('n'):    # Next step
