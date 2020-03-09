@@ -119,6 +119,13 @@ void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
     break;
   }
 
+  ROS_INFO("target pose_x: %f", target_pose.position.x);
+  ROS_INFO("target pose_y: %f", target_pose.position.y);
+  ROS_INFO("target pose_z: %f", target_pose.position.z);
+  ROS_INFO("target orientation_r: %f", roll);
+  ROS_INFO("target orientation_p: %f", pitch);
+  ROS_INFO("target orientation_y: %f", yaw);
+
   moveit_msgs::RobotTrajectory trajectory;
   if (!p_cartesian && command)
   {
@@ -179,10 +186,10 @@ void JacoController::actionCallback(const std_msgs::Int8MultiArray &msg)
   target_pose = current_pose;
   target_pose.position.x += msg.data[0] / 100.0;
   target_pose.position.y += msg.data[1] / 100.0;
-  target_pose.position.z += msg.data[2 / 100.0];
-  roll += msg.data[3] / 100.0;
-  pitch += msg.data[4] / 100.0;
-  yaw += msg.data[5] / 100.0;
+  target_pose.position.z += msg.data[2] / 100.0;
+  roll += msg.data[3] / 20.0;
+  pitch += msg.data[4] / 20.0;
+  yaw += msg.data[5] / 20.0;
 
   ROS_INFO("target pose_x: %f", target_pose.position.x);
   ROS_INFO("target pose_y: %f", target_pose.position.y);
@@ -194,7 +201,7 @@ void JacoController::actionCallback(const std_msgs::Int8MultiArray &msg)
   moveit_msgs::RobotTrajectory trajectory;
   if (!p_cartesian)
   {
-    printf("Pose planning");
+    printf("Pose planning\n");
     tf2::Quaternion orientation;
     orientation.setRPY(roll, pitch, yaw);
     target_pose.orientation = tf2::toMsg(orientation);
@@ -212,7 +219,7 @@ void JacoController::actionCallback(const std_msgs::Int8MultiArray &msg)
   }
   else if (p_cartesian)
   {
-    printf("Cartesian planning");
+    printf("Cartesian planning\n");
     waypoints.push_back(target_pose);
     fraction = move_group->computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
     control_msgs::FollowJointTrajectoryGoal goal;

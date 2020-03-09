@@ -1,3 +1,4 @@
+import time
 import numpy as np
 import scipy.signal
 from algo.runningstat import RunningStats
@@ -120,6 +121,7 @@ class TRPOTrainer(GeneralTrainer):
     ''' generate a single episodic trajectory '''
     def _gen_trajectory(self, session):
         state = self.local_brain.env.reset_environment()
+        time.sleep(1.2)
         actions, rewards, states, norm_states = [], [], [], []
 
         terminal = False
@@ -134,6 +136,9 @@ class TRPOTrainer(GeneralTrainer):
             actions.append(action)
             rewards.append(reward * self.rew_scale)
             state = new_state  # recurse and repeat until episode terminates
+        then = time.time()
+        while time.time() - then < 1.8:
+            self.env.step_simulation()
         return actions, rewards, states, norm_states
 
     ''' estimate value and advantages: gae'''

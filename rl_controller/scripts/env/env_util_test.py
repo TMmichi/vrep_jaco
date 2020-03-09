@@ -42,6 +42,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             "/vrep/depth_image", Image, self._depth_CB, queue_size=1)
         self.pressure_sub = rospy.Subscriber(
             "/vrep/pressure_data", Float32MultiArray, self._pressure_CB, queue_size=1)
+        self.reset_pub = rospy.Publisher("reset_key", Int8, queue_size=1)
         self.key_pub = rospy.Publisher("rl_key_output", Int8MultiArray, queue_size=1)
         self.jointPub_ = rospy.Publisher(
             "j2n6s300/joint_states", JointState, queue_size=1)
@@ -121,36 +122,44 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         i = 0
         while not rospy.is_shutdown():
             if self.trajAS_.is_preempt_requested():
-                print("goal preempted")
+                #print("goal preempted")
                 self.trajAS_.set_preempted()
                 break
             fromStart = rospy.Time.now() - startTime
             while i < len(points) - 1 and points[i+1].time_from_start < fromStart:
                 i += 1
             if i == len(points)-1:
-                reachedGoal = True
+                self.reachedGoal = True
                 for j in range(6):
                     tolerance = 0.1
                     if len(goal.goal_tolerance) > 0:
                         tolerance = goal.goal_tolerance[j].position
                     if abs(self.jointState_.position[j] - points[i].positions[j]) > tolerance:
-                        reachedGoal = False
-                        print("Error")
+                        self.reachedGoal = False
                         break
                 timeTolerance = rospy.Duration(
                     max(goal.goal_time_tolerance.to_sec(), 0.1))
-                if reachedGoal:
-                    print("succeded")
+                if self.reachedGoal:
+                    #print("succeded")
                     result.error_code = result.SUCCESSFUL
                     self.trajAS_.set_succeeded(result)
                     break
                 elif fromStart > points[i].time_from_start + timeTolerance:
-                    print("aborted")
+                    #print("aborted")
                     result.error_code = result.GOAL_TOLERANCE_VIOLATED
                     self.trajAS_.set_aborted(result)
                     break
                 target = points[i].positions
             else:
+                fromStart = rospy.Time.now() - startTime
+                #print(fromStart)
+                timeTolerance = rospy.Duration(
+                    max(goal.goal_time_tolerance.to_sec(), 0.7))
+                if fromStart > points[i].time_from_start + timeTolerance or fromStart < rospy.Duration(0):
+                    #print("aborted")
+                    result.error_code = result.GOAL_TOLERANCE_VIOLATED
+                    self.trajAS_.set_aborted(result)
+                    break
                 try:
                     if i == 0:
                         segmentDuration = points[i].time_from_start
@@ -228,6 +237,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             self._take_manual_action(self.key_input)
 
     def _reset(self, sync=False):
+        self.reset_pub.publish(Int8(data=ord('r')))
         self.gripper_angle_1 = 0
         self.gripper_angle_2 = 0
         self.gripper_angle = 0
