@@ -56,7 +56,7 @@ sudo apt-get install ros-${ROS_DISTRO}-trac-ik-kinematics-plugin
 ```
 sudo apt-get install libqt5x11extras5=5.5.1-3build1
 ```
-  in order to install ros-<distro>-rviz-visual-tools within the preliminaries: `moveit.rosinstall`.
+  in order to install ros-<distro>-rviz-visual-tools within the preliminaries: `vrep_jaco_moveit.rosinstall`.
 
 ### 1-4. Clone vrep_jaco, build & source
 (MANDATOROY: YOU MUST SOURCE `setup.bash` IN MOVEIT DEVEL FOLDER)
