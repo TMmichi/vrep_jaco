@@ -14,7 +14,7 @@ Installation in Ubuntu 18.04 with ROS melodic is recommended (since other versio
 ### 1-1. Preliminary
 #### 1-1-1. V-rep (Coppelia) installation
 V-rep source can be downloaded from [here](http://www.coppeliarobotics.com/ubuntuVersions.html) and should be installed within the `/opt` folder. Installed location can be varied, but should be matched with the vrep_path argument within the launch file: `vrep_jaco_bringup/launch/bringup.launch: vrep_path`
-If have you install Coppelia(v4.0.0) instead of V-rep(v3.6.n), you need to move file:`libsimExtROSInterface.so` from folder:`compiledRosPlugins` to the source folder.
+If have you install Coppelia (v4.0.0) instead of V-rep (v3.6.n), you need to move file:`libsimExtROSInterface.so` from folder:`compiledRosPlugins` to the source folder.
 
 #### 1-1-2. Create workspace with individual folders for vrep_jaco and moveit
 Since we are not using official repo of moveit, it is required to create and build moveit from the modified source of our repo.
