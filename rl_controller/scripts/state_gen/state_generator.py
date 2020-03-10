@@ -56,4 +56,8 @@ class State_generator:
         state = dataFusionGraph()
 
         return input_placeholder, keep_prob, state
-        
+    
+    def get_state_shape(self):
+        self.stateSize = 8
+        stateShape = (self.stateSize,)
+        return stateShape

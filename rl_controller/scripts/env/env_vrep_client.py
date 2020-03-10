@@ -31,7 +31,7 @@ class JacoVrepEnv(JacoVrepEnvUtil):
         return self._reset()
 
     def get_state_shape(self):
-        return self.action_space.shape
+        return kwargs['stateGen'].get_state_shape()
 
     def get_num_action(self):
         return self.action_space.shape[0]

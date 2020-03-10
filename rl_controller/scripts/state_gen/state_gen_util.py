@@ -594,7 +594,6 @@ class CNN_Decoder(tf.keras.Model):
         block = DeConvBlock(**setting)
         self._blocks.append([block,False,block_id])'''
 
-     
     def call(self,
             z,
             gammas=None,

@@ -14,6 +14,7 @@ import rospy
 from argparser import ArgParser
 from std_msgs.msg import Int8
 from env.env_real import Real
+from state_gen.state_generator import State_generator
 from env.env_vrep_client import JacoVrepEnv
 from algo.trpotrainer import TRPOTrainer
 from algo.trpo import TRPO
@@ -34,6 +35,11 @@ class RL_controller:
                                           log_device_placement=False)
         self.sess = tf.compat.v1.Session(config=config)
         args.sess = self.sess
+
+        #State Generation Module defined here
+        self.stateGen = State_generator(**kwargs)
+        args.stateGen = self.stateGen
+
         self.rate = rospy.Rate(feedbackRate_)
         self.period = rospy.Duration(1.0/feedbackRate_)
         args.rate = self.rate
@@ -41,21 +47,25 @@ class RL_controller:
         self.env = JacoVrepEnv(
             **vars(args)) if self.use_sim else Real(**vars(args))
         args.env = self.env
-        self.training = False
+        self.trainingTrigger = False
         self.trainer = TRPOTrainer(**vars(args))
 
     def trigger(self, msg):
         if msg.data == ord('1'):
-            self.agent()
+            self._agent()
         elif msg.data == ord('2'):
-            if not self.training:
-                self.train()
-                self.training = True
+            if not self.trainingTrigger:
+                self._train()
+                self.trainingTrigger = True
 
-    def agent(self):
-        pass
+    def _agent(self):
+        with self.sess as sess:
+            sess.run(tf.compat.v1.global_variables_initializer())
+            sess.run(tf.compat.v1.local_variables_initializer())
+            K.set_session(sess)
 
-    def train(self):
+
+    def _train(self):
         with self.sess as sess:
             sess.run(tf.compat.v1.global_variables_initializer())
             sess.run(tf.compat.v1.local_variables_initializer())

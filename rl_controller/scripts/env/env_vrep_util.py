@@ -9,7 +9,6 @@ from random import sample, randint
 
 import numpy as np
 from matplotlib import pyplot as plt
-from state_gen.state_generator import State_generator
 
 import rospy
 from env.SimpleActionServer_mod import SimpleActionServer_mod
@@ -81,7 +80,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         self.gripper_angle = 0      # finger angle of manual control
 
         ### ------------  STATE GENERATION  ------------ ###
-        self.state_gen = State_generator(**kwargs)
+        self.state_gen = kwargs['stateGen']
         self.image_buffersize = 5
         self.image_buff = []
         self.pressure_buffersize = 100
