@@ -29,6 +29,8 @@ def radtoangle(rad):
 class JacoVrepEnvUtil(vrep_env.VrepEnv):
     def __init__(self, **kwargs):
         ### ------------  V-REP API INITIALIZATION  ------------ ###
+        self.debug = kwargs['debug']
+
         vrep_env.VrepEnv.__init__(
             self, kwargs['server_addr'], kwargs['server_port'])
 
@@ -42,7 +44,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         self.pressure_sub = rospy.Subscriber(
             "/vrep/pressure_data", Float32MultiArray, self._pressure_CB, queue_size=1)
         self.reset_pub = rospy.Publisher("reset_key", Int8, queue_size=1)
-        self.key_pub = rospy.Publisher("rl_key_output", Int8MultiArray, queue_size=1)
+        self.key_pub = rospy.Publisher("rl_key_output", Float32MultiArray, queue_size=1)
         self.jointPub_ = rospy.Publisher(
             "j2n6s300/joint_states", JointState, queue_size=1)
         self.feedbackPub_ = rospy.Publisher(
@@ -75,9 +77,9 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         for i in range(0, 6):
             self.feedback_.joint_names.append(self.jointState_.name[i])
             self.feedback_.actual.positions.append(0)
-        self.gripper_angle_1 = 0    # finger 1, 2
-        self.gripper_angle_2 = 0    # finger 3
-        self.gripper_angle = 0      # finger angle of manual control
+        self.gripper_angle_1 = 0.35    # finger 1, 2
+        self.gripper_angle_2 = 0.35    # finger 3
+        self.gripper_angle = 0.35      # finger angle of manual control
 
         ### ------------  STATE GENERATION  ------------ ###
         self.state_gen = kwargs['stateGen']
@@ -90,6 +92,10 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         self.pressure_trigger = True
         self.data_buff = []
         self.data_buff_temp = [0, 0, 0]
+
+        ### ------------  REWARD  ------------ ###
+        self.reward_method = kwargs['reward_method']
+        self.reward_module = kwargs['reward_module']
 
 
     def _publishWorker(self, e):
@@ -259,23 +265,43 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         # TODO: Use multiprocessing to generate state from parallel computation
         test = True
         if test:
-            observation = []
+            observation = self.obj_get_position(self.jointHandles_[5]) + self.obj_get_orientation(self.jointHandles_[5])
+            '''
             for i in range(6):
-                observation.append(self.obj_get_joint_angle(self.jointHandles_[i]))
+                observation.append(self.obj_get_joint_angle(self.jointHandles_[i]))'''
             observation.append(0)
             observation.append(0)
+
         else:
             data_from_callback = []
             observation = self.state_gen.generate(data_from_callback)
         return np.array(observation)
 
+    def _get_reward(self,target_pose):
+        # TODO: Reward from IRL
+        gripper_pose = self._get_observation()
+        if self.reward_method == "l2":
+            dist_diff = np.array(gripper_pose[:3]) - np.array(target_pose[:3])
+            reward = 2 - np.linalg.norm(dist_diff)
+            if self.debug:
+                print("L2 reward = ",reward)
+            return reward
+        elif self.reward_method == "":
+            return self.reward_module(gripper_pose,target_pose)
+        else:
+            print("Constant Reward. SHOULD BE FIXED")
+            return 30
+            #raise NameError("Wrong reward type")
+
+
     def _take_action(self, a):
-        key_out = Int8MultiArray()  # a = [-1,0,1] * 8
-        key_out.data = np.array(a[:6],dtype=np.int8)
-        print(key_out.data)
+        key_out = Float32MultiArray()  # a = [-1,0,1] * 8
+        key_out.data = np.array(a[:6],dtype=np.float32)
+        if self.debug:
+            print(a)
         self.key_pub.publish(key_out)
-        self.gripper_angle_1 = max(min(self.gripper_angle_1 + a[6], 10), -10)
-        self.gripper_angle_2 = max(min(self.gripper_angle_2 + a[7], 10), -10)
+        self.gripper_angle_1 = max(min(self.gripper_angle_1 + a[6]/20.0, 0), -0.7)
+        self.gripper_angle_2 = max(min(self.gripper_angle_2 + a[7]/20.0, 0), -0.7)
         self.obj_set_position_target(
             self.jointHandles_[6], radtoangle(self.gripper_angle_1))
         self.obj_set_position_target(

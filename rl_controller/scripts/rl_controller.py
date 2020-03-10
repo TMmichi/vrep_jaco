@@ -13,9 +13,9 @@ from matplotlib import pyplot as plt
 import rospy
 from argparser import ArgParser
 from std_msgs.msg import Int8
-from env.env_real import Real
 from state_gen.state_generator import State_generator
 from env.env_vrep_client import JacoVrepEnv
+from env.env_real import Real
 from algo.trpotrainer import TRPOTrainer
 from algo.trpo import TRPO
 
@@ -29,6 +29,10 @@ class RL_controller:
 
         parser = ArgParser()
         args = parser.parse_args()
+
+        args.debug = True
+        print("DEBUG = ", args.debug)
+
         tf.compat.v1.reset_default_graph()
 
         config = tf.compat.v1.ConfigProto(allow_soft_placement=True,
@@ -37,8 +41,14 @@ class RL_controller:
         args.sess = self.sess
 
         #State Generation Module defined here
-        self.stateGen = State_generator(**kwargs)
+        self.stateGen = State_generator(**vars(args))
         args.stateGen = self.stateGen
+
+        #Reward Generation
+        self.reward_method = "l2"
+        self.reward_module = ""
+        args.reward_method = self.reward_method
+        args.reward_module = self.reward_module
 
         self.rate = rospy.Rate(feedbackRate_)
         self.period = rospy.Duration(1.0/feedbackRate_)

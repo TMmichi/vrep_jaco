@@ -14,6 +14,7 @@ class JacoVrepEnv(JacoVrepEnvUtil):
         server_addr='127.0.0.1',
         server_port=19997,
             **kwargs):
+        self.debug = kwargs['debug']
         kwargs['server_addr']=server_addr
         kwargs['server_port']=server_port
         super().__init__(**kwargs)
@@ -23,6 +24,7 @@ class JacoVrepEnv(JacoVrepEnvUtil):
         self.action_space_max = 3    				# 0.01 (m/s)
         act = np.array([self.action_space_max]*8) 	# x,y,z,r,p,y, finger 1/2, finger 3
         self.action_space = spaces.Box(-act, act)	# Action space: [-0.01, 0.01]
+        self.state_shape = kwargs['stateGen'].get_state_shape()
         self.seed()
         self.reset_environment()
 
@@ -31,7 +33,7 @@ class JacoVrepEnv(JacoVrepEnvUtil):
         return self._reset()
 
     def get_state_shape(self):
-        return kwargs['stateGen'].get_state_shape()
+        return self.state_shape
 
     def get_num_action(self):
         return self.action_space.shape[0]
@@ -50,13 +52,14 @@ class JacoVrepEnv(JacoVrepEnvUtil):
             # TODO: wait for step signal
             self.step_simulation()
         self.make_observation()
-        reward_val = self._reward()
+        
+        target_pose = [0.6,0.125,0.75]
+        reward_val = self._reward(target_pose)
         done = self.terminal_inspection()
         return self.observation, reward_val, done
 
-    def _reward(self):
-        # TODO: Reward from IRL
-        return 30
+    def _reward(self,target_pose):
+        return self._get_reward(target_pose)
 
     def terminal_inspection(self):
         # TODO: terminal state definition
@@ -65,6 +68,8 @@ class JacoVrepEnv(JacoVrepEnvUtil):
 
     def make_observation(self):
         self.observation = self._get_observation()
+        assert self.state_shape[0] == self.observation.shape[0], \
+            "State shape from state generator and observations differs. Possible test code error. You should fix it."
 
     def take_action(self, a):
         self._take_action(a)

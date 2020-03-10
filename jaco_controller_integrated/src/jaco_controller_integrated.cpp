@@ -158,12 +158,12 @@ void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
   }
 }
 
-void JacoController::actionCallback(const std_msgs::Int8MultiArray &msg)
+void JacoController::actionCallback(const std_msgs::Float32MultiArray &msg)
 {
   printf(MOVEIT_CONSOLE_COLOR_BLUE "Action In: [");
   for (auto it = msg.data.begin(); it != msg.data.end(); it++)
   {
-    printf("%d, ", *it);
+    printf("%.2f, ", *it);
   }
   printf("]\n");
   printf(MOVEIT_CONSOLE_COLOR_RESET);

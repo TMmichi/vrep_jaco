@@ -6,6 +6,7 @@
 #include "action_client/VrepInterface.hpp"
 #include <std_msgs/Int8.h>
 #include <std_msgs/Int8MultiArray.h>
+#include <std_msgs/Float32MultiArray.h>
 #include <actionlib/client/simple_action_client.h>
 #include <actionlib/client/terminal_state.h>
 #include <trajectory_msgs/JointTrajectoryPoint.h>
@@ -25,7 +26,7 @@ private:
     void updateParams();
     void reset();
     void teleopCallback(const std_msgs::Int8::ConstPtr& msg);
-    void actionCallback(const std_msgs::Int8MultiArray& msg);
+    void actionCallback(const std_msgs::Float32MultiArray& msg);
 
     //ROS handles
     ros::NodeHandle nh_;
