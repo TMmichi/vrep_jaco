@@ -1,0 +1,5 @@
+.DS_Store
+.circleci
+.vscode
+**/.vscode
+**/__pycache__
