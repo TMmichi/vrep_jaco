@@ -7,6 +7,9 @@ import numpy as np
 from matplotlib import pyplot as plt
 import cv2 as cv
 from tqdm import tqdm
+import rospkg
+
+ros_path = rospkg.RosPack()
 
 fig = plt.figure()
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
@@ -17,7 +20,7 @@ tf.enable_eager_execution(config=config)
 
 # train
 """ Image data """
-data = np.load("./dummy_data.npy",allow_pickle=True)
+data = np.load(ros_path.get_path('vrep_jaco_data')+"/data/dummy_data.npy",allow_pickle=True)
 train_dataset_list = []
 test_dataset_list = []
 
@@ -27,8 +30,9 @@ for i in range(len(data)):
         img = data[i][0][0]/5000
         img = np.reshape(img,[img.shape[0],img.shape[1],1])
         img = np.tile(img,(1,1,3))
-        plt.imshow(img)
-        plt.show()
+        # plt.imshow(img)
+        # plt.show()
+        # plt.close()
         test_dataset.append(img)
         joint = data[i][1][0][:6]
         test_dataset.append(np.array(joint,dtype=np.float32))
@@ -56,14 +60,15 @@ epochs = 100
 pic_data = []
 
 train = True
+
 if train:
     """ build graph """
     autoencoder = state_gen_util.Autoencoder(debug=False,isfushion=True)
     optimizer = tf.keras.optimizers.Adam(1e-4)
     autoencoder.compile(optimizer=optimizer,
-                        loss = autoencoder.compute_loss)
-    autoencoder.fit(train_dataset_list,train_dataset_list,batch_size=20,epochs=100)
-    autoencoder.save_weights('weights/fushion_autoencoder_weights')
+                        loss = autoencoder.compute_loss)             
+    autoencoder.fit(train_dataset_list,train_dataset_list,batch_size=20,epochs=100,verbose=True)
+    # autoencoder.save_weights('weights/fushion_autoencoder_weights')
 else:
     autoencoder_load = state_gen_util.Autoencoder(debug=False,isfushion=True)
     optimizer = tf.keras.optimizers.Adam(1e-4)

@@ -624,7 +624,6 @@ class Autoencoder(tf.keras.Model):
         kwargs['num_defc_blocks'] = kwargs.get('num_fc_blocks',2)
         self.isfushion = kwargs.get('isfushion') #Raise Error if not defined
         self.debug = kwargs.get('debug',False)
-        
         self._build(**kwargs)
 
     def _build(self,**kwargs):

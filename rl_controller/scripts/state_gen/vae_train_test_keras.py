@@ -7,6 +7,9 @@ import numpy as np
 from matplotlib import pyplot as plt
 import cv2 as cv
 from tqdm import tqdm
+import rospkg
+
+ros_path = rospkg.RosPack()
 
 fig = plt.figure()
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
@@ -18,7 +21,8 @@ tf.enable_eager_execution(config=config)
 use_fit = True
 
 """ Image data """
-data = np.load("./dummy_data.npy",allow_pickle=True)
+# data = np.load("./dummy_data.npy",allow_pickle=True)
+data = np.load(ros_path.get_path('vrep_jaco_data')+"/data/dummy_data.npy",allow_pickle=True)
 train_dataset_list = []
 if not use_fit:
     for j in range(20):
