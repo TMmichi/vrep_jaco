@@ -46,7 +46,7 @@ class TRPOTrainer(GeneralTrainer):
             
             while self.episode_count < self.max_episode_count:
                 #TODO: Balance btw Exploration / Exploitation
-                exploring = not ((self.episode_count/traj_batch_size) > 0.4)
+                exploring = not ((self.episode_count/self.max_episode_count) > 0.3)
                 if self.debug:
                     print("Exploring = ",exploring)
                 raw_t = self.gen_trajectories(
@@ -143,7 +143,7 @@ class TRPOTrainer(GeneralTrainer):
             rewards.append(reward * self.rew_scale)
             state = new_state  # recurse and repeat until episode terminates
         then = time.time()
-        while time.time() - then < 2.2:
+        while time.time() - then < 2.5:
             self.env.step_simulation()
         return actions, rewards, states, norm_states
 
