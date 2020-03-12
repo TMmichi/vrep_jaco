@@ -43,10 +43,11 @@ class JacoVrepEnv(JacoVrepEnvUtil):
 
     def step(self, action):
         # TODO: Determine how many time steps should be proceed when called
-        num_step_pass = 14
+        num_step_pass = 12
         # actions = np.clip(actions,-self.action_space_max, self.action_space_max)
         assert self.action_space.contains(
             action), "Action {} ({}) is invalid".format(action, type(action))
+        action = [1,0,0,0,0,1,0,0]
         self.take_action(action)
         for _ in range(num_step_pass):
             # TODO: wait for step signal
