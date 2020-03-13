@@ -15,6 +15,8 @@ from sensor_msgs.msg import Image
 from sensor_msgs.msg import JointState
 # from PIL import Image
 
+import yolo
+
 
 class Vrep_jaco_data:
     def __init__(self):
@@ -22,16 +24,19 @@ class Vrep_jaco_data:
         self.rs_image_sub = rospy.Subscriber("/vrep/depth_image",Image,self.depth_CB, queue_size=1)
         self.jointstate_sub = rospy.Subscriber("/vrep/joint_states",JointState,self.jointstate_CB, queue_size=1)
         self.pressure_sub = rospy.Subscriber("/vrep/pressure_data",Float32MultiArray,self.pressure_CB, queue_size=1)
-        
+        self.rgb_rs_image_sub = rospy.Subscriber("/vrep/rgb_image",Image,self.rgb_CB, queue_size=1)
+
         self.image_buffersize = 5
         self.image_buff = []
         self.joint_buffersize = 100
         self.joint_state = []
         self.pressure_buffersize = 100
         self.pressure_state = []
+        self.rgb_image_buffersize = 5
+        self.rgb_image_buff = []
 
         self.data_buff = []
-        self.data_buff_temp = [[0,0],0,0]
+        self.data_buff_temp = [[0,0],0,0,0]
 
         # self.depth_trigger = False
         # self.joint_trigger = False
@@ -49,6 +54,10 @@ class Vrep_jaco_data:
         self.num = 0
 
         self.stop = False
+
+        # self.net = yolo.load_net("/home/kimtaehan/Desktop/vrep_jaco_2/src/vrep_jaco_data/scripts/darknet/cfg/yolov3.cfg", "/home/kimtaehan/Desktop/vrep_jaco_2/src/vrep_jaco_data/scripts/darknet/yolov3.weights", 0)
+        # self.meta = yolo.load_meta("/home/kimtaehan/Desktop/vrep_jaco_2/src/vrep_jaco_data/scripts/darknet/cfg/coco.data")
+    
         
     
     def spin(self, rate):
@@ -136,6 +145,39 @@ class Vrep_jaco_data:
 
     ###################################################################
     ###################################################################    
+    def rgb_CB(self,msg):
+        # self.depth_trigger = True
+        # self.joint_trigger = True
+        # self.pressure_trigger = True
+
+        msg_time = round(msg.header.stamp.to_sec(),2)
+        width = msg.width
+        height = msg.height
+        data = np.fromstring(msg.data,dtype=np.uint16)
+        print(data)
+        # data = np.reshape(data,(height,width))
+        # data = np.flip(data,0)
+        # plt.imshow(data)
+        # plt.show()
+        '''
+        fig = plt.figure(frameon=False)
+        ax = fig.add_subplot(1,1,1)
+        plt.axis('off')
+        #fig.savefig('/home/ljh/Documents/Figure_1.png', bbox_inches='tight',pad_inches=0)
+        plt.imshow(data)
+        plt.show()'''
+        # output = []
+        # # print("depth image: ",msg_time)
+        # r = yolo.detect(self.net, self.meta, data)
+        # for i in len(r):
+        #     if r[i][0]=='cup':
+        #         output.append([r[i][2][0],r[i][2][1]])
+        # self.rgb_image_buff = [output,msg_time]
+        # self.data_buff_temp[3] = self.rgb_image_buff
+
+
+
+
 
     def jointstate_CB(self,msg):
         if self.stop == False:
@@ -154,12 +196,12 @@ class Vrep_jaco_data:
                     # print("joint_check_time : ",self.data_time_check())
                     # print(self.pressure_start == True and self.data_time_check())
                     if self.pressure_start == True and self.data_time_check():
-                        self.data_buff.append(self.data_buff_temp.copy())
-                        print("joint data_buff : ",self.data_buff[-1][1][1])
+                        # self.data_buff.append(self.data_buff_temp.copy())
+                        # print("joint data_buff : ",self.data_buff[-1][1][1])
                         plt.imsave(self.rospack.get_path('vrep_jaco_data')+'/image/figure'+str(self.num)+'.png',self.image_buff[0],cmap='gray')
                         self.num+=1
                         plt.close()
-                    if msg_time > 10:
+                    if msg_time > 0: #10:
                         self.data_record()
 
     def pressure_CB(self,msg):
@@ -179,12 +221,12 @@ class Vrep_jaco_data:
                     # print("pressure_check_time : ",self.data_time_check())
                     # print(self.joint_start == True and self.data_time_check())
                     if self.joint_start == True and self.data_time_check():
-                        self.data_buff.append(self.data_buff_temp.copy())
-                        print("pressure data_buff : ",self.data_buff[0][2][1])
+                        # self.data_buff.append(self.data_buff_temp.copy())
+                        # print("pressure data_buff : ",self.data_buff[0][2][1])
                         plt.imsave(self.rospack.get_path('vrep_jaco_data')+'/image/figure'+str(self.num)+'.png',self.image_buff[0],cmap='gray')
                         self.num+=1
                         plt.close()
-                    if msg_time > 10:
+                    if msg_time > 0: #10:
                         self.data_record()
 
     def data_time_check(self):
@@ -213,3 +255,7 @@ if __name__=="__main__":
         vjd.spin(10)
     except rospy.ROSInternalException:
         rospy.loginfo("node terminated.")
+    # net = yolo.load_net("/home/kimtaehan/Desktop/yolo_darknet/darknet/cfg/yolov3.cfg", "/home/kimtaehan/Desktop/yolo_darknet/darknet/yolov3.weights", 0)
+    # meta = yolo.load_meta("/home/kimtaehan/Desktop/yolo_darknet/darknet/cfg/coco.data")
+    # r = yolo.detect(net, meta, "/home/kimtaehan/Desktop/yolo_darknet/darknet/data/dog.jpg")
+    # print r[0][2][0], r[0][2][1]
