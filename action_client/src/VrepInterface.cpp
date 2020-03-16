@@ -144,7 +144,7 @@ void VrepInterface::trajCB(
     const auto& points = goal->trajectory.points;
     ros::Time startTime = ros::Time::now();
     std::vector<double> startPos = jointState_.position;
-    int i = points.size() - 3;
+    int i = points.size() - 2;
     while (ros::ok()) {
         // Check that preempt has not been requested by the client
         if (trajAS_->isPreemptRequested()) {

@@ -126,8 +126,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         startPos = self.jointState_.position
         i = len(points)-2
         while not rospy.is_shutdown():
-            if self.trajAS_.is_preempt_requested():
-                #print("goal preempted")
+            if self.trajAS_.is_preempt_requested():                
                 self.trajAS_.set_preempted()
                 break
             fromStart = rospy.Time.now() - startTime
@@ -176,10 +175,11 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
                     if segmentDuration.to_sec() <= 0:
                         target = points[i].positions
                     else:
-                        d = fromStart - points[i].time_from_start
-                        alpha = d.to_sec() / segmentDuration.to_sec()
-                        target = self._interpolate(
-                            prev, points[i].positions, alpha)
+                        #d = fromStart - points[i].time_from_start
+                        #alpha = d.to_sec() / segmentDuration.to_sec()
+                        #target = self._interpolate(
+                        #    prev, points[i].positions, alpha)
+                        target = points[i].positions
                 except Exception as e:
                     target = [0,0,0,0,0,0]
                     print("Error: ",e)
@@ -226,7 +226,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
 
     def _keys(self, msg):
         self.key_input = msg.data
-        print("input = ", self.key_input)
+        #print("input = ", self.key_input)
         if self.key_input == ord('r'):      # Reset environment
             self._reset()
             self.key_input = ord('1')
