@@ -27,9 +27,9 @@ VrepInterface::VrepInterface(ros::NodeHandle& n) :
     std::string vrepArmPrefix = "jaco_joint_";
     std::string vrepFingerPrefix = "jaco_joint_finger_";
     std::string vrepFingerTipPrefix = "jaco_joint_finger_tip_";
-    std::string urdfArmPrefix = "jaco_joint_";
-    std::string urdfFingerPrefix = "jaco_joint_finger_";
-    std::string urdfFingerTipPrefix = "jaco_joint_finger_tip_";
+    std::string urdfArmPrefix = "j2n6s300_joint_";
+    std::string urdfFingerPrefix = "j2n6s300_joint_finger_";
+    std::string urdfFingerTipPrefix = "j2n6s300_joint_finger_tip_";
 
     // Connect to V-REP via remote api
     ROS_INFO("Waiting for valid time. Is V-REP running?");
@@ -79,7 +79,7 @@ VrepInterface::VrepInterface(ros::NodeHandle& n) :
     }
 
     // Initialise ROS subscribers & publishers
-    jointPub_ = n.advertise<sensor_msgs::JointState>("jaco/joint_states", 1);
+    jointPub_ = n.advertise<sensor_msgs::JointState>("j2n6s300/joint_states", 1);
     feedbackPub_ = n.advertise<control_msgs::FollowJointTrajectoryFeedback>(
             "feedback_states", 1);
     if (torqueMode_) {
@@ -93,7 +93,7 @@ VrepInterface::VrepInterface(ros::NodeHandle& n) :
 
     // Start action servers
     trajAS_.reset(new actionlib::SimpleActionServer<control_msgs::FollowJointTrajectoryAction>(
-            n, "jaco/joint_trajectory_action", boost::bind(&VrepInterface::trajCB, this, _1), false));
+            n, "j2n6s300/follow_joint_trajectory", boost::bind(&VrepInterface::trajCB, this, _1), false));
     trajAS_->start();
 }
 
