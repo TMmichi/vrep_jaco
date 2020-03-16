@@ -124,7 +124,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             position.append(self.obj_get_joint_angle(i_jointhandle))
         self.jointState_.position = position
         startPos = self.jointState_.position
-        i = 0
+        i = len(points)-2
         while not rospy.is_shutdown():
             if self.trajAS_.is_preempt_requested():
                 #print("goal preempted")

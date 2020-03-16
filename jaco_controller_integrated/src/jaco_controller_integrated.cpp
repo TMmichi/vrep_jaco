@@ -54,9 +54,9 @@ void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
   tf2::Matrix3x3 m(q);
   double roll, pitch, yaw;
   m.getRPY(roll, pitch, yaw);
-  ROS_INFO("orientation_r: %f", roll);
-  ROS_INFO("orientation_p: %f", pitch);
-  ROS_INFO("orientation_y: %f", yaw);
+  //ROS_INFO("orientation_r: %f", roll);
+  //ROS_INFO("orientation_p: %f", pitch);
+  //ROS_INFO("orientation_y: %f", yaw);
 
   waypoints.push_back(current_pose);
   target_pose = current_pose;
@@ -122,9 +122,9 @@ void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
   ROS_INFO("target pose_x: %f", target_pose.position.x);
   ROS_INFO("target pose_y: %f", target_pose.position.y);
   ROS_INFO("target pose_z: %f", target_pose.position.z);
-  ROS_INFO("target orientation_r: %f", roll);
-  ROS_INFO("target orientation_p: %f", pitch);
-  ROS_INFO("target orientation_y: %f", yaw);
+  //ROS_INFO("target orientation_r: %f", roll);
+  //ROS_INFO("target orientation_p: %f", pitch);
+  //ROS_INFO("target orientation_y: %f", yaw);
 
   moveit_msgs::RobotTrajectory trajectory;
   if (!p_cartesian && command)
@@ -134,14 +134,14 @@ void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
     target_pose.orientation = tf2::toMsg(orientation);
 
     move_group->setPoseTarget(target_pose); //motion planning to a desired pose of the end-effector
-    ROS_INFO("Planning Goal");
+    //ROS_INFO("Planning Goal");
     move_group->plan(my_plan);
-    ROS_INFO("Planning Finished");
+    //ROS_INFO("Planning Finished");
 
     trajectory = my_plan.trajectory_;
     control_msgs::FollowJointTrajectoryGoal goal;
     goal.trajectory = trajectory.joint_trajectory;
-    ROS_INFO("Goal Sending");
+    //ROS_INFO("Goal Sending");
     execute_action_client_->sendGoal(goal);
   }
   else if (p_cartesian && command)
@@ -150,7 +150,7 @@ void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
     fraction = move_group->computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
     control_msgs::FollowJointTrajectoryGoal goal;
     goal.trajectory = trajectory.joint_trajectory;
-    ROS_INFO("Goal Sending");
+    //ROS_INFO("Goal Sending");
     execute_action_client_->sendGoal(goal);
   }
   else

@@ -82,6 +82,7 @@ VrepInterface::VrepInterface(ros::NodeHandle& n) :
     jointPub_ = n.advertise<sensor_msgs::JointState>("j2n6s300/joint_states", 1);
     feedbackPub_ = n.advertise<control_msgs::FollowJointTrajectoryFeedback>(
             "feedback_states", 1);
+    keySub_ = n.subscribe("key_input",1,&VrepInterface::teleopCallback, this);
     if (torqueMode_) {
         torqueSub_ = n.subscribe("target_torques", 1,
                 &VrepInterface::torqueCallback, this);
@@ -95,6 +96,30 @@ VrepInterface::VrepInterface(ros::NodeHandle& n) :
     trajAS_.reset(new actionlib::SimpleActionServer<control_msgs::FollowJointTrajectoryAction>(
             n, "j2n6s300/follow_joint_trajectory", boost::bind(&VrepInterface::trajCB, this, _1), false));
     trajAS_->start();
+}
+
+void VrepInterface::teleopCallback(const std_msgs::Int8::ConstPtr &msg){
+    if (msg->data == 'r')
+  {
+    envReset();
+    return;
+  }
+}
+
+void VrepInterface::envReset(){
+}
+
+void VrepInterface::printPos(){
+    std::vector<double> pos = getVrepPosition();
+    printf("[");
+    auto it = pos.begin();
+    printf("%.4f", *it);
+    it++;
+    for (it ; it != pos.end(); it++)
+    {
+        printf(", %.4f", *it);
+    }
+    printf("]\n");
 }
 
 void VrepInterface::publishWorker(const ros::WallTimerEvent& e) {
@@ -119,11 +144,13 @@ void VrepInterface::trajCB(
     const auto& points = goal->trajectory.points;
     ros::Time startTime = ros::Time::now();
     std::vector<double> startPos = jointState_.position;
-    int i = 0;
+    int i = points.size() - 3;
     while (ros::ok()) {
         // Check that preempt has not been requested by the client
         if (trajAS_->isPreemptRequested()) {
             trajAS_->setPreempted();
+            ROS_INFO_STREAM("Preemted");
+            printPos();
             break;
         }
 
@@ -131,6 +158,9 @@ void VrepInterface::trajCB(
         while (i < points.size() - 1 && points[i + 1].time_from_start < fromStart) {
             i++;
         }
+        ROS_INFO_STREAM("Value_i: " << i);
+        ROS_INFO_STREAM("Ros time: " << ros::Time::now().toSec());
+        printPos();
 
         std::vector<double> target;
         if (i == points.size() - 1) {
@@ -171,9 +201,10 @@ void VrepInterface::trajCB(
             if (segmentDuration.toSec() <= 0) {
                 target = points[i].positions;
             } else {
-                ros::Duration d = fromStart - points[i].time_from_start;
-                double alpha = d.toSec() / segmentDuration.toSec();
-                target = interpolate(prev, points[i].positions, alpha);
+                //ros::Duration d = fromStart - points[i].time_from_start;
+                //double alpha = d.toSec() / segmentDuration.toSec();
+                //target = interpolate(prev, points[i].positions, alpha);
+                target = points[i].positions;
             }
         }
         setVrepPosition(target);
@@ -284,6 +315,7 @@ std::vector<double> VrepInterface::interpolate(const std::vector<double>& last,
     }
     return intermediate;
 }
+
 int main(int argc, char **argv) {
     ros::init(argc, argv, "vrep_interface");
     ros::NodeHandle n;
