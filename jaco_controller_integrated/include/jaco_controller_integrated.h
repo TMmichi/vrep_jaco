@@ -54,6 +54,7 @@ private:
     double fraction;
     float p_speed_constant;
     bool p_cartesian;
+    bool debug;
 };
 
 }

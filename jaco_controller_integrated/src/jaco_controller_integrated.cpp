@@ -20,6 +20,7 @@ JacoController::JacoController() : nh_(""), nh_local_("~")
 
   joint_model_group = move_group->getCurrentState()->getJointModelGroup(PLANNING_GROUP_);
   printf(MOVEIT_CONSOLE_COLOR_BLUE "Joint states called\n" MOVEIT_CONSOLE_COLOR_RESET);
+  debug = false;
 }
 
 void JacoController::updateParams()
@@ -46,17 +47,21 @@ void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
 
   waypoints.clear();
   current_pose = move_group->getCurrentPose().pose;
-  ROS_INFO("pose_x: %f", current_pose.position.x);
-  ROS_INFO("pose_y: %f", current_pose.position.y);
-  ROS_INFO("pose_z: %f", current_pose.position.z);
-
   tf2::Quaternion q(current_pose.orientation.x, current_pose.orientation.y, current_pose.orientation.z, current_pose.orientation.w);
   tf2::Matrix3x3 m(q);
   double roll, pitch, yaw;
   m.getRPY(roll, pitch, yaw);
-  //ROS_INFO("orientation_r: %f", roll);
-  //ROS_INFO("orientation_p: %f", pitch);
-  //ROS_INFO("orientation_y: %f", yaw);
+
+  if (debug)
+  {
+    ROS_INFO("pose_x: %f", current_pose.position.x);
+    ROS_INFO("pose_y: %f", current_pose.position.y);
+    ROS_INFO("pose_z: %f", current_pose.position.z);
+    ROS_INFO("orientation_r: %f", roll);
+    ROS_INFO("orientation_p: %f", pitch);
+    ROS_INFO("orientation_y: %f", yaw);
+  }
+
 
   waypoints.push_back(current_pose);
   target_pose = current_pose;
@@ -119,13 +124,16 @@ void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
     break;
   }
 
-  ROS_INFO("target pose_x: %f", target_pose.position.x);
-  ROS_INFO("target pose_y: %f", target_pose.position.y);
-  ROS_INFO("target pose_z: %f", target_pose.position.z);
-  //ROS_INFO("target orientation_r: %f", roll);
-  //ROS_INFO("target orientation_p: %f", pitch);
-  //ROS_INFO("target orientation_y: %f", yaw);
-
+  if (debug)
+  {
+    ROS_INFO("target pose_x: %f", target_pose.position.x);
+    ROS_INFO("target pose_y: %f", target_pose.position.y);
+    ROS_INFO("target pose_z: %f", target_pose.position.z);
+    ROS_INFO("target orientation_r: %f", roll);
+    ROS_INFO("target orientation_p: %f", pitch);
+    ROS_INFO("target orientation_y: %f", yaw);
+  }
+  
   moveit_msgs::RobotTrajectory trajectory;
   if (!p_cartesian && command)
   {
@@ -134,14 +142,14 @@ void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
     target_pose.orientation = tf2::toMsg(orientation);
 
     move_group->setPoseTarget(target_pose); //motion planning to a desired pose of the end-effector
-    //ROS_INFO("Planning Goal");
+    ROS_DEBUG_NAMED("","Planning Goal");
     move_group->plan(my_plan);
-    //ROS_INFO("Planning Finished");
+    ROS_DEBUG_NAMED("","Planning Finished");
 
     trajectory = my_plan.trajectory_;
     control_msgs::FollowJointTrajectoryGoal goal;
     goal.trajectory = trajectory.joint_trajectory;
-    //ROS_INFO("Goal Sending");
+    ROS_DEBUG_NAMED("","Goal Sending");
     execute_action_client_->sendGoal(goal);
   }
   else if (p_cartesian && command)
@@ -150,7 +158,7 @@ void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
     fraction = move_group->computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
     control_msgs::FollowJointTrajectoryGoal goal;
     goal.trajectory = trajectory.joint_trajectory;
-    //ROS_INFO("Goal Sending");
+    ROS_DEBUG_NAMED("","Goal Sending");
     execute_action_client_->sendGoal(goal);
   }
   else
@@ -170,17 +178,20 @@ void JacoController::actionCallback(const std_msgs::Float32MultiArray &msg)
 
   waypoints.clear();
   current_pose = move_group->getCurrentPose().pose;
-  ROS_INFO("pose_x: %f", current_pose.position.x);
-  ROS_INFO("pose_y: %f", current_pose.position.y);
-  ROS_INFO("pose_z: %f", current_pose.position.z);
-
   tf2::Quaternion q(current_pose.orientation.x, current_pose.orientation.y, current_pose.orientation.z, current_pose.orientation.w);
   tf2::Matrix3x3 m(q);
   double roll, pitch, yaw;
   m.getRPY(roll, pitch, yaw);
-  ROS_INFO("orientation_r: %f", roll);
-  ROS_INFO("orientation_p: %f", pitch);
-  ROS_INFO("orientation_y: %f", yaw);
+
+  if (debug)
+  {
+    ROS_INFO("pose_x: %f", current_pose.position.x);
+    ROS_INFO("pose_y: %f", current_pose.position.y);
+    ROS_INFO("pose_z: %f", current_pose.position.z);
+    ROS_INFO("orientation_r: %f", roll);
+    ROS_INFO("orientation_p: %f", pitch);
+    ROS_INFO("orientation_y: %f", yaw);
+  }
 
   waypoints.push_back(current_pose);
   target_pose = current_pose;
@@ -191,40 +202,43 @@ void JacoController::actionCallback(const std_msgs::Float32MultiArray &msg)
   pitch += msg.data[4] / 20.0;
   yaw += msg.data[5] / 20.0;
 
-  ROS_INFO("target pose_x: %f", target_pose.position.x);
-  ROS_INFO("target pose_y: %f", target_pose.position.y);
-  ROS_INFO("target pose_z: %f", target_pose.position.z);
-  ROS_INFO("target orientation_r: %f", roll);
-  ROS_INFO("target orientation_p: %f", pitch);
-  ROS_INFO("target orientation_y: %f", yaw);
+  if (debug)
+  {
+    ROS_INFO("target pose_x: %f", target_pose.position.x);
+    ROS_INFO("target pose_y: %f", target_pose.position.y);
+    ROS_INFO("target pose_z: %f", target_pose.position.z);
+    ROS_INFO("target orientation_r: %f", roll);
+    ROS_INFO("target orientation_p: %f", pitch);
+    ROS_INFO("target orientation_y: %f", yaw);
+  }
 
   moveit_msgs::RobotTrajectory trajectory;
   if (!p_cartesian)
   {
-    printf("Pose planning\n");
+    ROS_DEBUG_NAMED("","Pose planning");
     tf2::Quaternion orientation;
     orientation.setRPY(roll, pitch, yaw);
     target_pose.orientation = tf2::toMsg(orientation);
 
     move_group->setPoseTarget(target_pose); //motion planning to a desired pose of the end-effector
-    ROS_INFO("Planning Goal");
+    ROS_DEBUG_NAMED("","Planning Goal");
     move_group->plan(my_plan);
-    ROS_INFO("Planning Finished");
+    ROS_DEBUG_NAMED("","Planning Finished");
 
     trajectory = my_plan.trajectory_;
     control_msgs::FollowJointTrajectoryGoal goal;
     goal.trajectory = trajectory.joint_trajectory;
-    ROS_INFO("Goal Sending");
+    ROS_DEBUG_NAMED("","Goal Sending");
     execute_action_client_->sendGoal(goal);
   }
   else if (p_cartesian)
   {
-    printf("Cartesian planning\n");
+    ROS_DEBUG_NAMED("","Cartesian planning\n");
     waypoints.push_back(target_pose);
     fraction = move_group->computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
     control_msgs::FollowJointTrajectoryGoal goal;
     goal.trajectory = trajectory.joint_trajectory;
-    ROS_INFO("Goal Sending");
+    ROS_DEBUG_NAMED("","Goal Sending");
     execute_action_client_->sendGoal(goal);
   }
   else
