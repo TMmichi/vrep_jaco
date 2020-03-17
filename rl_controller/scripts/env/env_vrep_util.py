@@ -115,8 +115,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         self.feedback_.actual.positions = self.jointState_.position
         self.feedbackPub_.publish(self.feedback_)
 
-    def _trajCB(self, goal):
-        print("Goal called")
+    def _trajCB(self, goal):        
         result = FollowJointTrajectoryResult()
         points = goal.trajectory.points
         startTime = rospy.Time.now()
