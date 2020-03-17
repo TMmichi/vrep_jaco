@@ -19,6 +19,7 @@ JacoController::JacoController() : nh_(""), nh_local_("~")
   printf(MOVEIT_CONSOLE_COLOR_BLUE "Move_group setup finished.\n" MOVEIT_CONSOLE_COLOR_RESET);
 
   joint_model_group = move_group->getCurrentState()->getJointModelGroup(PLANNING_GROUP_);
+  move_group->setPlanningTime(0.2);
   printf(MOVEIT_CONSOLE_COLOR_BLUE "Joint states called\n" MOVEIT_CONSOLE_COLOR_RESET);
   debug = false;
 }
