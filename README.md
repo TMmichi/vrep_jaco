@@ -49,6 +49,7 @@ source ~/name_of_your_workspace/moveit/devel/setup.bash
 ### 1-3. Remaining packages installation
 Within the moveit package, ompl package and ik algorithm from TRAC is used, and hence should be installed properly.
 ```
+sudo apt-get install libusb-dev
 sudo apt-get install ros-${ROS_DISTRO}-ompl
 sudo apt-get install ros-${ROS_DISTRO}-trac-ik-kinematics-plugin
 ```
