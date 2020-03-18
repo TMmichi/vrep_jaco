@@ -115,7 +115,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         self.feedback_.actual.positions = self.jointState_.position
         self.feedbackPub_.publish(self.feedback_)
 
-    def _trajCB(self, goal):        
+    def _trajCB(self, goal):
         result = FollowJointTrajectoryResult()
         points = goal.trajectory.points
         startTime = rospy.Time.now()
@@ -125,7 +125,8 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         self.jointState_.position = position
         startPos = self.jointState_.position
         i = len(points)-2
-        if not np.linalg.norm(np.array(points[i].positions[:6])-np.array(position[:6])) > 1:
+        move_diff = np.linalg.norm(np.array(points[i].positions[:6])-np.array(position[:6]))
+        if (not move_diff > 1) or (not move_diff < 6):
             while not rospy.is_shutdown():
                 if self.trajAS_.is_preempt_requested():
                     self.trajAS_.set_preempted()
@@ -145,23 +146,19 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
                     timeTolerance = rospy.Duration(
                         max(goal.goal_time_tolerance.to_sec(), 0.1))
                     if self.reachedGoal:
-                        # print("succeded")
                         result.error_code = result.SUCCESSFUL
                         self.trajAS_.set_succeeded(result)
                         break
                     elif fromStart > points[i].time_from_start + timeTolerance:
-                        # print("aborted")
                         result.error_code = result.GOAL_TOLERANCE_VIOLATED
                         self.trajAS_.set_aborted(result)
                         break
                     target = points[i].positions
                 else:
                     fromStart = rospy.Time.now() - startTime
-                    # print(fromStart)
                     timeTolerance = rospy.Duration(
                         max(goal.goal_time_tolerance.to_sec(), 0.7))
                     if fromStart > points[i].time_from_start + timeTolerance or fromStart < rospy.Duration(0):
-                        # print("aborted")
                         result.error_code = result.GOAL_TOLERANCE_VIOLATED
                         self.trajAS_.set_aborted(result)
                         break
