@@ -22,7 +22,9 @@
   <build_depend>moveit_ros_perception</build_depend>
   <build_depend>moveit_visual_tools</build_depend> <!---->
   <build_depend>std_msgs</build_depend>
+  <build_depend>sensor_msgs</build_depend>
   <build_depend>control_msgs</build_depend>
+  <build_depend>spacenav_node</build_depend>
   <build_depend>pcl_ros</build_depend>
   <build_depend>pcl_conversions</build_depend>
   <build_depend>rosbag</build_depend>
@@ -40,7 +42,9 @@
   <run_depend>moveit_visual_tools</run_depend>
   <run_depend>joy</run_depend>
   <run_depend>std_msgs</run_depend>
+  <run_depend>sensor_msgs</run_depend>
   <run_depend>control_msgs</run_depend>
+  <run_depend>spacenav_node</run_depend>
   <run_depend>pcl_ros</run_depend>
   <run_depend>pcl_conversions</run_depend>
   <run_depend>rosbag</run_depend>
