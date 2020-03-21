@@ -30,7 +30,8 @@ void JacoController::updateParams()
 
 void JacoController::reset()
 {
-  move_group->clientReset();
+  // move_group->clientReset();
+  // bug
 }
 
 void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
