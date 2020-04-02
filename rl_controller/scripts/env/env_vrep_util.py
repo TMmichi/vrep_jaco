@@ -4,6 +4,9 @@ from env.vrep_env_rl import vrep_env
 from env.vrep_env_rl import vrep  # vrep.sim_handle_parent
 
 import time
+import psutil, signal
+import os
+import subprocess
 from math import pi
 from random import sample, randint
 
@@ -29,10 +32,16 @@ def radtoangle(rad):
 class JacoVrepEnvUtil(vrep_env.VrepEnv):
     def __init__(self, **kwargs):
         ### ------------  V-REP API INITIALIZATION  ------------ ###
+        vrep_exec = rospy.get_param("/vrep_jaco_bringup_simulator/vrep_path")+"coppeliaSim.sh -s "
+        scene = rospy.get_param("/vrep_jaco_bringup_simulator/scene_file")
+        self.exec_string = vrep_exec+scene+" &"
+
         self.debug = kwargs['debug']
+        self.addr = kwargs['server_addr']
+        self.port = kwargs['server_port']
 
         vrep_env.VrepEnv.__init__(
-            self, kwargs['server_addr'], kwargs['server_port'])
+            self, self.addr, self.port)
 
         ### ------------  ROS INITIALIZATION  ------------ ###
         self.rate = kwargs['rate']
@@ -241,6 +250,8 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             self.action_from_policy = False
         elif self.key_input in [ord('o'), ord('c')]:
             self._take_manual_action(self.key_input)
+        elif self.key_input == ord('3'):
+            self._test_reconnect()
 
     def _reset(self, sync=False):
         self.reset_pub.publish(Int8(data=ord('r')))
@@ -250,6 +261,10 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         self.trajAS_.reset()
         if self.sim_running:
             self.stop_simulation()
+
+        (proc_reset, vrep_pid) = self._memory_check()
+        self._vrep_process_reset(vrep_pid) if proc_reset else None
+
         random_init_angle = [sample(range(-180, 180), 1)[0], 150, sample(range(200, 270), 1)[0], sample(
             range(50, 130), 1)[0], sample(range(50, 130), 1)[0], sample(range(50, 130), 1)[0]]  # angle in degree
         for i, degree in enumerate(random_init_angle):
@@ -261,6 +276,27 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             self.step_simulation()
             time.sleep(0.5)
         return self._get_observation()
+    
+    def _memory_check(self):
+        total = psutil.virtual_memory().total
+        used = total - psutil.virtual_memory().available
+        for proc in psutil.process_iter():
+            try:
+                processName = proc.name()
+                if processName in ['coppeliaSim','vrep']:
+                    vrep_pid = proc.pid
+            except(psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                pass
+        return (True, vrep_pid) if (used/total*100)>90 else (False,None)
+
+    def _vrep_process_reset(self, vrep_pid):
+        print("Restarting Vrep")
+        self.disconnect()
+        os.kill(vrep_pid, signal.SIGKILL)
+        subprocess.call(self.exec_string, shell=True)
+        time.sleep(5)
+        self.connect(self.addr, self.port)
+        time.sleep(3)
 
     def _get_observation(self):
         # TODO: Use multiprocessing to generate state from parallel computation
@@ -367,3 +403,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
                 self.pressure_trigger = False
         except Exception:
             pass
+    
+    def _test_reconnect(self):
+        self.disconnect()
+        self.connect(self.addr, self.port)
