@@ -32,7 +32,7 @@ def radtoangle(rad):
 class JacoVrepEnvUtil(vrep_env.VrepEnv):
     def __init__(self, **kwargs):
         ### ------------  V-REP API INITIALIZATION  ------------ ###
-        vrep_exec = rospy.get_param("/vrep_jaco_bringup_simulator/vrep_path")+"coppeliaSim.sh -s "
+        vrep_exec = rospy.get_param("/vrep_jaco_bringup_simulator/vrep_path")+"/coppeliaSim.sh -s "
         scene = rospy.get_param("/vrep_jaco_bringup_simulator/scene_file")
         self.exec_string = vrep_exec+scene+" &"
 
@@ -53,6 +53,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         self.pressure_sub = rospy.Subscriber(
             "/vrep/pressure_data", Float32MultiArray, self._pressure_CB, queue_size=1)
         self.reset_pub = rospy.Publisher("reset_key", Int8, queue_size=1)
+        self.quit_pub = rospy.Publisher("quit_key", Int8, queue_size=1)
         self.key_pub = rospy.Publisher(
             "rl_key_output", Float32MultiArray, queue_size=1)
         self.jointPub_ = rospy.Publisher(
@@ -61,6 +62,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             "feedback_states", FollowJointTrajectoryFeedback, queue_size=1)
         self.publishWorkerTimer_ = rospy.Timer(
             kwargs['period'], self._publishWorker)
+        self.worker_reset = False
 
         ### ------------  ACTION LIBRARY INITIALIZATION  ------------ ###
         self._action_name = "j2n6s300/follow_joint_trajectory"
@@ -108,8 +110,9 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         self.reward_module = kwargs['reward_module']
 
     def _publishWorker(self, e):
-        self._updateJointState()
-        self._publishJointInfo()
+        if not self.worker_reset:
+            self._updateJointState()
+            self._publishJointInfo()
 
     def _updateJointState(self):
         self.jointState_.header.stamp = rospy.Time.now()
@@ -259,11 +262,12 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         self.gripper_angle_2 = 0
         self.gripper_angle = 0
         self.trajAS_.reset()
+
+        proc_reset = self._memory_check()
+        self._vrep_process_reset() if proc_reset else None
+
         if self.sim_running:
             self.stop_simulation()
-
-        (proc_reset, vrep_pid) = self._memory_check()
-        self._vrep_process_reset(vrep_pid) if proc_reset else None
 
         random_init_angle = [sample(range(-180, 180), 1)[0], 150, sample(range(200, 270), 1)[0], sample(
             range(50, 130), 1)[0], sample(range(50, 130), 1)[0], sample(range(50, 130), 1)[0]]  # angle in degree
@@ -280,23 +284,31 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
     def _memory_check(self):
         total = psutil.virtual_memory().total
         used = total - psutil.virtual_memory().available
+        '''
         for proc in psutil.process_iter():
             try:
                 processName = proc.name()
                 if processName in ['coppeliaSim','vrep']:
-                    vrep_pid = proc.pid
+                    print("vrep found")
             except(psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                 pass
-        return (True, vrep_pid) if (used/total*100)>90 else (False,None)
+        '''
+        return True if (used/total*100)>80 else False
 
-    def _vrep_process_reset(self, vrep_pid):
+    def _vrep_process_reset(self):
         print("Restarting Vrep")
+        self.worker_reset = True
         self.disconnect()
-        os.kill(vrep_pid, signal.SIGKILL)
+        #os.kill(vrep_pid, signal.SIGKILL)
+        quit_signal = Int8()
+        quit_signal.data = 1
+        self.quit_pub.publish(quit_signal)
+        time.sleep(7)
         subprocess.call(self.exec_string, shell=True)
-        time.sleep(5)
-        self.connect(self.addr, self.port)
         time.sleep(3)
+        self.connect(self.addr, self.port)
+        time.sleep(2)
+        self.worker_reset = False
 
     def _get_observation(self):
         # TODO: Use multiprocessing to generate state from parallel computation
