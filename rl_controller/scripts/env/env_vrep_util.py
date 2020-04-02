@@ -253,8 +253,6 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             self.action_from_policy = False
         elif self.key_input in [ord('o'), ord('c')]:
             self._take_manual_action(self.key_input)
-        elif self.key_input == ord('3'):
-            self._test_reconnect()
 
     def _reset(self, sync=False):
         self.reset_pub.publish(Int8(data=ord('r')))
@@ -303,11 +301,11 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         quit_signal = Int8()
         quit_signal.data = 1
         self.quit_pub.publish(quit_signal)
-        time.sleep(7)
+        time.sleep(8)
         subprocess.call(self.exec_string, shell=True)
         time.sleep(3)
         self.connect(self.addr, self.port)
-        time.sleep(2)
+        time.sleep(1)
         self.worker_pause = False
 
     def _get_observation(self):
@@ -319,9 +317,9 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             '''
             for i in range(6):
                 observation.append(self.obj_get_joint_angle(self.jointHandles_[i]))'''
-            observation.append(0)
-            observation.append(0)
-
+            observation.append(0.6)
+            observation.append(0.125)
+            observation.append(0.75)    #Target Pose = [0.6,0.125,0.75]
         else:
             data_from_callback = []
             observation = self.state_gen.generate(data_from_callback)
@@ -415,7 +413,3 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
                 self.pressure_trigger = False
         except Exception:
             pass
-    
-    def _test_reconnect(self):
-        self.disconnect()
-        self.connect(self.addr, self.port)
