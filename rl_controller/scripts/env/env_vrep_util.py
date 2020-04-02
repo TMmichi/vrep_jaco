@@ -62,7 +62,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             "feedback_states", FollowJointTrajectoryFeedback, queue_size=1)
         self.publishWorkerTimer_ = rospy.Timer(
             kwargs['period'], self._publishWorker)
-        self.worker_reset = False
+        self.worker_pause = False
 
         ### ------------  ACTION LIBRARY INITIALIZATION  ------------ ###
         self._action_name = "j2n6s300/follow_joint_trajectory"
@@ -110,7 +110,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         self.reward_module = kwargs['reward_module']
 
     def _publishWorker(self, e):
-        if not self.worker_reset:
+        if not self.worker_pause:
             self._updateJointState()
             self._publishJointInfo()
 
@@ -293,11 +293,11 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             except(psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                 pass
         '''
-        return True if (used/total*100)>80 else False
+        return True if (used/total*100)>85 else False
 
     def _vrep_process_reset(self):
         print("Restarting Vrep")
-        self.worker_reset = True
+        self.worker_pause = True
         self.disconnect()
         #os.kill(vrep_pid, signal.SIGKILL)
         quit_signal = Int8()
@@ -308,7 +308,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         time.sleep(3)
         self.connect(self.addr, self.port)
         time.sleep(2)
-        self.worker_reset = False
+        self.worker_pause = False
 
     def _get_observation(self):
         # TODO: Use multiprocessing to generate state from parallel computation
