@@ -98,7 +98,7 @@ source ~/.bashrc
 
 ### 1-5 ROS package modification
 
-Since we are teaking ROS timer with sim_time, it is required to modify `timer.py` in ROS package. Comment line 163, where it says `raise rospy.exceptions.ROSTimeMobedBackwardsException(time_jump)`. This is necessary because we are constantly reseting our ROS timer at the reset call of the each episode. You can find `timer.py` file with the following command below.
+Since we are teaking ROS timer with sim_time, it is required to modify `timer.py` in ROS package. Comment line 163, where it says `raise rospy.exceptions.ROSTimeMobedBackwardsException(time_jump)`. This is necessary because we are constantly reseting our ROS timer at the reset call of each episodes. You can find `timer.py` file with the following command below.
 
 ```bash
 cd /opt/ros/${ROS_DISTRO}/lib/python2.7/dist-packages/rospy
