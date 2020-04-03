@@ -60,8 +60,14 @@ class RL_controller:
         self.env = JacoVrepEnv(
             **vars(args)) if self.use_sim else Real(**vars(args))
         args.env = self.env
+
+        #Training session
         self.trainingTrigger = False
+        #If resume training on pre-trained models with episodes, else None
+        args.model_path = "/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/models/"
+        args.training_index = 83
         self.trainer = TRPOTrainer(**vars(args))
+
 
     def trigger(self, msg):
         if msg.data == ord('1'):
@@ -76,7 +82,6 @@ class RL_controller:
             sess.run(tf.compat.v1.global_variables_initializer())
             sess.run(tf.compat.v1.local_variables_initializer())
             K.set_session(sess)
-
 
     def _train(self):
         with self.sess as sess:

@@ -5,7 +5,8 @@ from keras.layers import Input, Dense
 from keras.optimizers import Adam
 from keras.initializers import RandomNormal
 from keras.regularizers import l2
-from keras.models import model_from_json
+from keras.models import model_from_json, load_model
+import json
 from algo.brain import NeuralNetwork
 
 
@@ -15,8 +16,13 @@ class TRPO(NeuralNetwork):
         self._define_params()
 
         ''' build graph '''
+        self.model_path = kwargs['model_path']
+        self.training_index = kwargs['training_index']
         self._init_placeholders()
-        self._build_models()
+        if self.training_index == None:
+            self._build_models()
+        else:
+            self.load_network(self.training_index)
 
         ''' loss function and optimize operation'''
         self.neg_policy_loss = self._policy_loss_function()
@@ -209,17 +215,44 @@ class TRPO(NeuralNetwork):
         auditor.update({'value_loss': float("%.7f" % value_loss)})
         return self
 
-    def save_network(self, sess, model_path, index):
+    def save_network(self, index):
         policy_json = self.policy_mu_model.to_json()
         value_json = self.value_model.to_json()
 
-        with open(model_path+"policy_mu_model_"+str(index)+".json","w") as policy_file:
+        with open(self.model_path+"policy_mu_model_"+str(index)+".json","w") as policy_file:
             policy_file.write(policy_json)
-        self.policy_mu_model.save_weights(model_path+"policy_mu_model_"+str(index)+".h5")
+        self.policy_mu_model.save_weights(self.model_path+"policy_mu_model_"+str(index)+".h5")
 
-        with open(model_path+"value_model_"+str(index)+".json","w") as value_file:
+        with open(self.model_path+"value_model_"+str(index)+".json","w") as value_file:
             value_file.write(value_json)
-        self.value_model.save_weights(model_path+"value_model_"+str(index)+".h5")
+        self.value_model.save_weights(self.model_path+"value_model_"+str(index)+".h5")
 
-    def load_network(self, sess, model_path):
-        pass
+    def load_network(self, index):
+        ''' load model '''
+        with open(self.model_path+"policy_mu_model_"+str(index)+".json") as policy_json:
+            self.policy_mu_model = model_from_json(policy_json.read())
+        with open(self.model_path+"value_model_"+str(index)+".json") as value_json:
+            self.value_model = model_from_json(value_json.read())
+        self.policy_mu_model.load_weights(self.model_path+"policy_mu_model_"+str(index)+".h5")
+        self.value_model.load_weights(self.model_path+"value_model_"+str(index)+".h5")
+
+        adam_optimizer = Adam(lr=self.value_learning_rate,
+                              beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
+        self.value_model.compile(
+            loss='mean_squared_error', optimizer=adam_optimizer)
+
+        ''' model outputs '''
+        self.mu = self.policy_mu_model(self.input_ph)
+        self.value = self.value_model(self.input_ph)
+        self.sigma = tf.compat.v1.get_variable('sigma', (1, self.env_action_number),
+                                               tf.float32,
+                                               tf.constant_initializer(0.6))
+
+        ''' trainable weights '''
+        self._mean_model_params = self.policy_mu_model.trainable_weights
+        self._value_model_params = self.value_model.trainable_weights 
+        
+        print('\033[92m'+"POLICY MODEL STRUCTURE"+'\033[0m')
+        self.policy_mu_model.summary()
+        print('\033[92m'+"VALUE MODEL STRUCTURE"+'\033[0m')
+        self.value_model.summary()

@@ -13,8 +13,8 @@ class TRPOTrainer(GeneralTrainer):
         super().__init__(**kwargs)
 
         self.local_brain = TRPO(**kwargs)
-        self.model_path = "/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/models/"
         self.episode_count = 0
+        self.training_index = kwargs['training_index']
         '''
         Running Statistics.
         normalize observations using running mean and std over the course of the entire experiment,
@@ -35,16 +35,19 @@ class TRPOTrainer(GeneralTrainer):
         self._print_instance_info()
 
         with session.as_default(), session.graph.as_default():
-            self.intialize_params(session=session, n_episodes=3)
-
             pbar1 = tqdm(total=self.max_episode_count, position=1, desc="Total Episodes: ", leave=False)
-            raw_t = self.gen_trajectories(
-                session, self.local_brain.traj_batch_size)
-            self.local_brain.save_network(session, self.model_path,self.episode_count) #test
-            t_processed = self.process_trajectories(session, raw_t)
-            self.update_policy(session, t_processed)
-            t_processed_prev = t_processed
-            pbar1.update(self.local_brain.traj_batch_size)
+            if self.training_index == None:
+                self.intialize_params(session=session, n_episodes=3)
+                raw_t = self.gen_trajectories(
+                    session, self.local_brain.traj_batch_size)
+                self.local_brain.save_network(self.episode_count) #test
+                t_processed = self.process_trajectories(session, raw_t)
+                self.update_policy(session, t_processed)
+                t_processed_prev = t_processed
+                pbar1.update(self.local_brain.traj_batch_size)
+            else:
+                self.episode_count = self.training_index
+                pbar1.update(self.episode_count)
             
             while self.episode_count < self.max_episode_count:
                 #TODO: Balance btw Exploration / Exploitation
@@ -55,10 +58,13 @@ class TRPOTrainer(GeneralTrainer):
                     session, self.local_brain.traj_batch_size, exploring)
                 t_processed = self.process_trajectories(session, raw_t)
                 self.update_policy(session, t_processed)
-                self.update_value(t_processed_prev)
+                try:
+                    self.update_value(t_processed_prev)
+                except Exception:
+                    self.update_value(t_processed)
                 self.auditor.log()
                 t_processed_prev = t_processed
-                self.local_brain.save_network(session, self.model_path, self.episode_count)
+                self.local_brain.save_network(self.episode_count)
                 pbar1.update(self.local_brain.traj_batch_size)
             pbar1.close()
 
