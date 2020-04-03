@@ -5,6 +5,7 @@ from keras.layers import Input, Dense
 from keras.optimizers import Adam
 from keras.initializers import RandomNormal
 from keras.regularizers import l2
+from keras.models import model_from_json
 from algo.brain import NeuralNetwork
 
 
@@ -102,7 +103,7 @@ class TRPO(NeuralNetwork):
             0, 0.1), kernel_regularizer=l2(0.01))(value_model)
 
         ''' policy models '''
-        policy_mu_model = Model(inputs=[mu_model_input], outputs=[mean])
+        self.policy_mu_model = Model(inputs=[mu_model_input], outputs=[mean])
 
         ''' value model, updated using keras routine'''
         self.value_model = Model(inputs=[value_model_input], outputs=[val])
@@ -112,18 +113,18 @@ class TRPO(NeuralNetwork):
             loss='mean_squared_error', optimizer=adam_optimizer)
 
         ''' model outputs '''
-        self.mu = policy_mu_model(self.input_ph)
+        self.mu = self.policy_mu_model(self.input_ph)
         self.value = self.value_model(self.input_ph)
         self.sigma = tf.compat.v1.get_variable('sigma', (1, self.env_action_number),
                                                tf.float32,
                                                tf.constant_initializer(0.6))
 
         ''' trainable weights; defined here since no direct use required'''
-        self._mean_model_params = policy_mu_model.trainable_weights
+        self._mean_model_params = self.policy_mu_model.trainable_weights
         self._value_model_params = self.value_model.trainable_weights
 
         print('\033[92m'+"POLICY MODEL STRUCTURE"+'\033[0m')
-        policy_mu_model.summary()
+        self.policy_mu_model.summary()
         print('\033[92m'+"VALUE MODEL STRUCTURE"+'\033[0m')
         self.value_model.summary()
 
@@ -208,8 +209,17 @@ class TRPO(NeuralNetwork):
         auditor.update({'value_loss': float("%.7f" % value_loss)})
         return self
 
-    def save_network(self, sess, path):
-        pass
+    def save_network(self, sess, path, index):
+        policy_json = self.policy_mu_model.to_json()
+        value_json = self.value_model.to_json()
+
+        with open(path+"policy_mu_model_"+str(index)+".json","w") as policy_file:
+            policy_file.write(policy_json)
+        self.policy_mu_model.save_weights(path+"policy_mu_model_"+str(index)+".h5")
+
+        with open(path+"value_model_"+str(index)+".json","w") as value_file:
+            value_file.write(value_json)
+        self.value_model.save_weights(path+"value_model_"+str(index)+".h5")
 
     def load_network(self, sess, path):
         pass

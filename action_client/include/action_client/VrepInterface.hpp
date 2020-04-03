@@ -14,6 +14,7 @@
 #include <ros/ros.h>
 #include <ros/console.h>
 #include <std_msgs/Float64.h>
+#include <std_msgs/Int8.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <sensor_msgs/JointState.h>
 #include <actionlib/server/simple_action_server.h>
@@ -33,6 +34,13 @@ public:
     void trajCB(const control_msgs::FollowJointTrajectoryGoalConstPtr &goal);
 
 private:
+
+    void teleopCallback(const std_msgs::Int8::ConstPtr &msg);
+
+    void envReset();
+
+    void printPos();
+
     /** Initialises jointStates and jointHandles. Return true if success.
      *  Part of the process is getting V-REP handles. The suffixCode can be
      *  given, which should match the number after # if used.
@@ -74,7 +82,7 @@ private:
     ros::Publisher feedbackPub_;
     /** Subscriber to target torques */
     ros::Subscriber torqueSub_;
-    ros::Publisher tempPub_;
+    ros::Subscriber keySub_;
 
     /** Stores joint state */
     sensor_msgs::JointState jointState_;

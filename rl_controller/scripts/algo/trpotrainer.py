@@ -9,10 +9,12 @@ from tqdm import tqdm
 
 class TRPOTrainer(GeneralTrainer):
     def __init__(self, **kwargs):
+        self.debug = kwargs['debug']
         super().__init__(**kwargs)
 
         self.local_brain = TRPO(**kwargs)
-
+        self.path = "/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/models/"
+        self.episode_count = 0
         '''
         Running Statistics.
         normalize observations using running mean and std over the course of the entire experiment,
@@ -21,7 +23,7 @@ class TRPOTrainer(GeneralTrainer):
         '''
         self.running_stats = RunningStats(
             self.local_brain.env.get_state_shape()[0])
-        self.rew_scale = 0.0025
+        self.rew_scale = 0.25 #TODO: Learn more about it
 
     ''' 
     core training routine.
@@ -35,22 +37,28 @@ class TRPOTrainer(GeneralTrainer):
         with session.as_default(), session.graph.as_default():
             self.intialize_params(session=session, n_episodes=3)
 
-            pbar1 = tqdm(total=self.max_episode_count, position=1, desc="Total Episodes: ")
+            pbar1 = tqdm(total=self.max_episode_count, position=1, desc="Total Episodes: ", leave=False)
             raw_t = self.gen_trajectories(
                 session, self.local_brain.traj_batch_size)
+            self.local_brain.save_network(session, self.path,self.episode_count) #test
             t_processed = self.process_trajectories(session, raw_t)
             self.update_policy(session, t_processed)
             t_processed_prev = t_processed
             pbar1.update(self.local_brain.traj_batch_size)
             
             while self.episode_count < self.max_episode_count:
+                #TODO: Balance btw Exploration / Exploitation
+                exploring = not ((self.episode_count/self.max_episode_count) > 0.3)
+                if self.debug:
+                    pbar1.write(f"Exploring = {exploring}")
                 raw_t = self.gen_trajectories(
-                    session, self.local_brain.traj_batch_size)
+                    session, self.local_brain.traj_batch_size, exploring)
                 t_processed = self.process_trajectories(session, raw_t)
                 self.update_policy(session, t_processed)
                 self.update_value(t_processed_prev)
                 self.auditor.log()
                 t_processed_prev = t_processed
+                self.local_brain.save_network(session, self.path, self.episode_count)
                 pbar1.update(self.local_brain.traj_batch_size)
             pbar1.close()
 
@@ -85,29 +93,27 @@ class TRPOTrainer(GeneralTrainer):
 
     ''' generate trajectories by rolling out the stochastic policy 'pi_theta_k', of iteration k,
     and no truncation of rolling horizon, unless needed'''
-    def gen_trajectories(self, session, traj_batch_size):
+    def gen_trajectories(self, session, traj_batch_size, exploring=True):
 
         raw_t = {'states': [], 'actions': [], 'rewards': [],
                  'disc_rewards': [], 'values': [], 'advantages': []}
         raw_states = []
 
-        pbar2 = tqdm(total=traj_batch_size,position=0, desc="batch generation: ")
-        for _ in range(traj_batch_size):
-            actions, rewards, states, norm_states = self._gen_trajectory(session)
+        pbar2 = tqdm(total=traj_batch_size, position=0, desc="batch generation: ", leave=False)
+        for i in range(traj_batch_size):
+            actions, rewards, states, norm_states = self._gen_trajectory(session, exploring, pbar2)
             raw_t['states'].append(norm_states)
             raw_t['actions'].append(actions)
             raw_t['rewards'].append(rewards)
             ''' discounted sum of rewards until the end of episode for value update'''
             raw_t['disc_rewards'].append(self._discount(
                 rewards, gamma=self.local_brain.reward_discount))
-
             raw_states += states
             self.episode_count += 1
             pbar2.update(1)
-        
+
         pbar2.close()
         # per batch update running statistics
-        print(raw_states)
         self.running_stats.multiple_push(raw_states)
         self.auditor.update({'episode_number': self.episode_count,
                              'per_episode_mean': int(np.sum(np.concatenate(raw_t['rewards'])) /
@@ -119,9 +125,11 @@ class TRPOTrainer(GeneralTrainer):
         return scipy.signal.lfilter([1.0], [1.0, -gamma], x[::-1])[::-1]
 
     ''' generate a single episodic trajectory '''
-    def _gen_trajectory(self, session):
+    def _gen_trajectory(self, session, exploring=True, pbar=None):
         state = self.local_brain.env.reset_environment()
-        time.sleep(1.2)
+        then = time.time()
+        while time.time() - then < 1.2:
+            self.env.step_simulation()
         actions, rewards, states, norm_states = [], [], [], []
 
         terminal = False
@@ -130,11 +138,14 @@ class TRPOTrainer(GeneralTrainer):
             state_normalized = (state - self.running_stats.mean()) / \
                 self.running_stats.standard_deviation()
             norm_states.append(state_normalized)
-            exploring = True        #TODO: Balance btw Exploration / Exploitation
             action = self.local_brain.sample_action(session, state_normalized, exploring)
             new_state, reward, terminal = self.env.step(action)
             actions.append(action)
-            rewards.append(reward * self.rew_scale)
+            reward = rewards[-1] if np.isnan(reward) else reward * self.rew_scale
+            rewards.append(reward)
+            if pbar is not None:
+                pbar.write(f'Action = ' + ''.join(f'{a:.2f} ' for a in action))
+                pbar.write(f'Reward = {reward:.3f}')
             state = new_state  # recurse and repeat until episode terminates
         then = time.time()
         while time.time() - then < 1.8:
