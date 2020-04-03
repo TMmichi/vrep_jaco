@@ -96,6 +96,14 @@ echo "source ~/name_of_your_workspace/vrep_jaco/devel/setup.bash" >> ~/.bashrc
 source ~/.bashrc
 ```
 
+### 1-5 ROS package modification
+
+Since we are teaking ROS timer with sim_time, it is required to modify `timer.py` in ROS package. Comment line 163, where it says `raise rospy.exceptions.ROSTimeMobedBackwardsException(time_jump)`. This is necessary because we are constantly reseting our ROS timer at the reset call of each episodes. You can find `timer.py` file with the following command below.
+
+```bash
+cd /opt/ros/${ROS_DISTRO}/lib/python2.7/dist-packages/rospy
+```
+
 ## 2. Usage (WIP)
 
 Manipulation of a real machine and one in the simulation are much alike from each other.
