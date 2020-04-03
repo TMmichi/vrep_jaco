@@ -14,7 +14,7 @@ import rospy
 from argparser import ArgParser
 from std_msgs.msg import Int8
 from state_gen.state_generator import State_generator
-from env.env_vrep_client import JacoVrepEnv
+from env.env_vrep import JacoVrepEnv
 from env.env_real import Real
 from algo.trpotrainer import TRPOTrainer
 from algo.trpo import TRPO
@@ -27,14 +27,16 @@ class RL_controller:
         self.trigger_sub = rospy.Subscriber(
             "key_input", Int8, self.trigger, queue_size=10)
 
+        #Arguments
         parser = ArgParser()
         args = parser.parse_args()
 
+        #Debug
         args.debug = True
         print("DEBUG = ", args.debug)
 
+        #TensorFlow Setting
         tf.compat.v1.reset_default_graph()
-
         config = tf.compat.v1.ConfigProto(allow_soft_placement=True,
                                           log_device_placement=False)
         self.sess = tf.compat.v1.Session(config=config)
@@ -50,6 +52,7 @@ class RL_controller:
         args.reward_method = self.reward_method
         args.reward_module = self.reward_module
 
+        #ROS settings
         self.rate = rospy.Rate(feedbackRate_)
         self.period = rospy.Duration(1.0/feedbackRate_)
         args.rate = self.rate

@@ -209,17 +209,17 @@ class TRPO(NeuralNetwork):
         auditor.update({'value_loss': float("%.7f" % value_loss)})
         return self
 
-    def save_network(self, sess, path, index):
+    def save_network(self, sess, model_path, index):
         policy_json = self.policy_mu_model.to_json()
         value_json = self.value_model.to_json()
 
-        with open(path+"policy_mu_model_"+str(index)+".json","w") as policy_file:
+        with open(model_path+"policy_mu_model_"+str(index)+".json","w") as policy_file:
             policy_file.write(policy_json)
-        self.policy_mu_model.save_weights(path+"policy_mu_model_"+str(index)+".h5")
+        self.policy_mu_model.save_weights(model_path+"policy_mu_model_"+str(index)+".h5")
 
-        with open(path+"value_model_"+str(index)+".json","w") as value_file:
+        with open(model_path+"value_model_"+str(index)+".json","w") as value_file:
             value_file.write(value_json)
-        self.value_model.save_weights(path+"value_model_"+str(index)+".h5")
+        self.value_model.save_weights(model_path+"value_model_"+str(index)+".h5")
 
-    def load_network(self, sess, path):
+    def load_network(self, sess, model_path):
         pass

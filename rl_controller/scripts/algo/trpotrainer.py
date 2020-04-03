@@ -13,7 +13,7 @@ class TRPOTrainer(GeneralTrainer):
         super().__init__(**kwargs)
 
         self.local_brain = TRPO(**kwargs)
-        self.path = "/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/models/"
+        self.model_path = "/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/models/"
         self.episode_count = 0
         '''
         Running Statistics.
@@ -40,7 +40,7 @@ class TRPOTrainer(GeneralTrainer):
             pbar1 = tqdm(total=self.max_episode_count, position=1, desc="Total Episodes: ", leave=False)
             raw_t = self.gen_trajectories(
                 session, self.local_brain.traj_batch_size)
-            self.local_brain.save_network(session, self.path,self.episode_count) #test
+            self.local_brain.save_network(session, self.model_path,self.episode_count) #test
             t_processed = self.process_trajectories(session, raw_t)
             self.update_policy(session, t_processed)
             t_processed_prev = t_processed
@@ -58,7 +58,7 @@ class TRPOTrainer(GeneralTrainer):
                 self.update_value(t_processed_prev)
                 self.auditor.log()
                 t_processed_prev = t_processed
-                self.local_brain.save_network(session, self.path, self.episode_count)
+                self.local_brain.save_network(session, self.model_path, self.episode_count)
                 pbar1.update(self.local_brain.traj_batch_size)
             pbar1.close()
 
@@ -141,7 +141,10 @@ class TRPOTrainer(GeneralTrainer):
             action = self.local_brain.sample_action(session, state_normalized, exploring)
             new_state, reward, terminal = self.env.step(action)
             actions.append(action)
-            reward = rewards[-1] if np.isnan(reward) else reward * self.rew_scale
+            try:
+                reward = rewards[-1] if np.isnan(reward) else reward * self.rew_scale
+            except Exception:
+                reward = 0
             rewards.append(reward)
             if pbar is not None:
                 pbar.write(f'Action = ' + ''.join(f'{a:.2f} ' for a in action))
