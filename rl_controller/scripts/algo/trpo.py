@@ -87,11 +87,11 @@ class TRPO(NeuralNetwork):
             ''' action mean network '''
             mu_model_input = Input(tensor=self.input_ph)
             mu_model = Dense(units=256, activation=self.activation,
-                            kernel_initializer=RandomNormal(0, 0.1))(mu_model_input)
+                            kernel_initializer=RandomNormal(0, 0.01))(mu_model_input)
             mu_model = Dense(units=128, activation=self.activation,
-                            kernel_initializer=RandomNormal(0, 0.1))(mu_model)
+                            kernel_initializer=RandomNormal(0, 0.01))(mu_model)
             mu_model = Dense(units=128, activation=self.activation,
-                            kernel_initializer=RandomNormal(0, 0.1))(mu_model)
+                            kernel_initializer=RandomNormal(0, 0.01))(mu_model)
             mean = Dense(units=self.env_action_number, activation=None,
                         kernel_initializer=RandomNormal())(mu_model)
         elif self.policy_action_type == 'Discrete':
