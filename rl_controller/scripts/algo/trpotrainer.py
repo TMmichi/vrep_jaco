@@ -1,4 +1,5 @@
 import time
+from random import uniform
 import numpy as np
 import scipy.signal
 from algo.runningstat import RunningStats
@@ -51,7 +52,7 @@ class TRPOTrainer(GeneralTrainer):
             
             while self.episode_count < self.max_episode_count:
                 #TODO: Balance btw Exploration / Exploitation
-                exploring = not ((self.episode_count/self.max_episode_count) > 0.3)
+                exploring =  random.randint(0,1) if ((self.episode_count/self.max_episode_count) <= 0.3) else False
                 if self.debug:
                     pbar1.write(f"Exploring = {exploring}")
                 raw_t = self.gen_trajectories(
@@ -138,6 +139,11 @@ class TRPOTrainer(GeneralTrainer):
             self.env.step_simulation()
         actions, rewards, states, norm_states = [], [], [], []
 
+        test = True                     #TODO: Remove test
+        if test:
+            target_pose = [uniform(0.2,0.6) for i in range(3)]
+        if pbar is not None:
+            pbar.write(f'\033[92m'+'target_pose = '+'\033[0m'+''.join(f'{p:.2f} ' for p in target_pose))
         terminal = False
         while terminal is False:
             states.append(state)
@@ -145,7 +151,7 @@ class TRPOTrainer(GeneralTrainer):
                 self.running_stats.standard_deviation()
             norm_states.append(state_normalized)
             action = self.local_brain.sample_action(session, state_normalized, exploring)
-            new_state, reward, terminal = self.env.step(action)
+            new_state, reward, terminal = self.env.step(action) if not test else self.env.step(action, target_pose)
             actions.append(action)
             try:
                 reward = rewards[-1] if np.isnan(reward) else reward * self.rew_scale
@@ -154,7 +160,7 @@ class TRPOTrainer(GeneralTrainer):
             rewards.append(reward)
             if pbar is not None:
                 pbar.write(f'Action = ' + ''.join(f'{a:.2f} ' for a in action))
-                pbar.write(f'Reward = {reward:.3f}')
+                pbar.write(f'Reward = {reward:.5f}')
             state = new_state  # recurse and repeat until episode terminates
         then = time.time()
         while time.time() - then < 1.8:

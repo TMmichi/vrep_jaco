@@ -297,7 +297,6 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         print("Restarting Vrep")
         self.worker_pause = True
         self.disconnect()
-        #os.kill(vrep_pid, signal.SIGKILL)
         quit_signal = Int8()
         quit_signal.data = 1
         self.quit_pub.publish(quit_signal)
@@ -308,18 +307,16 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         time.sleep(1)
         self.worker_pause = False
 
-    def _get_observation(self):
+    def _get_observation(self,target=None):
         # TODO: Use multiprocessing to generate state from parallel computation
-        test = True
+        test = True                             #TODO: Remove test
         if test:
             observation = self.obj_get_position(
                 self.jointHandles_[5]) + self.obj_get_orientation(self.jointHandles_[5])
-            '''
-            for i in range(6):
-                observation.append(self.obj_get_joint_angle(self.jointHandles_[i]))'''
-            observation.append(0.6)
-            observation.append(0.125)
-            observation.append(0.75)    #Target Pose = [0.6,0.125,0.75]
+            if target == None:
+                observation += [0] * 3
+            else:
+                observation += target
         else:
             data_from_callback = []
             observation = self.state_gen.generate(data_from_callback)
@@ -327,11 +324,15 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
 
     def _get_reward(self, target_pose):
         # TODO: Reward from IRL
-        gripper_pose = self._get_observation()
+        test = True
+        if test:                                #TODO: Remove test
+            gripper_pose = self._get_observation(target_pose)
+        else:
+            gripper_pose = self._get_observation()
         if self.reward_method == "l2":
             dist_diff = np.linalg.norm(
                 np.array(gripper_pose[:3]) - np.array(target_pose[:3]))
-            reward = 2 - dist_diff
+            reward = (3 - dist_diff)*0.5            #TODO: Shape reward
             return reward - 1
         elif self.reward_method == "":
             return self.reward_module(gripper_pose, target_pose)
@@ -344,8 +345,8 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         gripper_pose = self._get_observation()
         dist_diff = np.linalg.norm(
             np.array(gripper_pose[:3]) - np.array(target_pose[:3]))
-        if dist_diff < 0.1:
-            return True, 100
+        if dist_diff < 0.2:                     #TODO: Shape terminal inspection
+            return True, 10
         else:
             return False, 0
 
