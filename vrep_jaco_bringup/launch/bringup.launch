@@ -3,8 +3,7 @@
  <!-- Launch v-rep -->
   <param name="simulation" value="true"/>
   <include file="$(find vrep_jaco_bringup)/launch/vrep.launch">
-    <!-- arg name="vrep_path" value="/home/ljh/Downloads/coppelia"/ -->
-    <arg name="vrep_path" value="/opt/vrep"/>
+    <arg name="vrep_path" value="/home/ljh/Downloads/coppelia"/>
     <arg name="scene_file" value="$(find vrep_jaco_bringup)/scene/jaco_table2.ttt"/>
     <arg name="gui" value="true"/>
     <arg name="paused" value="false"/>
