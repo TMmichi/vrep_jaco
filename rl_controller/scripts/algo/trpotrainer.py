@@ -52,13 +52,12 @@ class TRPOTrainer(GeneralTrainer):
             
             while self.episode_count < self.max_episode_count:
                 #TODO: Balance btw Exploration / Exploitation
-                exploring =  randint(0,1) if ((self.episode_count/self.max_episode_count) <= 0.3) else False
+                exploring =  randint(0,2) if ((self.episode_count/self.max_episode_count) <= 0.3) else False #2/3 of explore
                 if self.debug:
                     pbar1.write(f"Exploring = {exploring}")
                 raw_t = self.gen_trajectories(
                     session, self.local_brain.traj_batch_size, exploring)
                 t_processed = self.process_trajectories(session, raw_t)
-                print(t_processed)
                 pbar1.write(f"Trajectory Generated")
                 self.update_policy(session, t_processed)
                 try:
@@ -151,6 +150,7 @@ class TRPOTrainer(GeneralTrainer):
         if pbar is not None:
             pbar.write(f'\033[92mtarget_pose = \033[0m'+''.join(f'{p:.2f} ' for p in target_pose))
         terminal = False
+        nan_before = False
         while terminal is False:
             states.append(state)
             state_normalized = (state - self.running_stats.mean()) / \
@@ -165,15 +165,20 @@ class TRPOTrainer(GeneralTrainer):
                 except Exception:
                     reward = 0
                 rewards.append(reward)
-
                 if pbar is not None:
                     pbar.write(f'Action = ' + ''.join(f'{a:.2f} ' for a in action))
                     pbar.write(f'Reward = {reward:.5f}')
                 state = new_state  # recurse and repeat until episode terminates
+                nan_before = False
             else:
                 self.env.make_observation() if not test else self.env.make_observation(target_pose)
                 state = self.env.observation
+                if nan_before:
+                    state[0] += 0.001
+                states.pop()
+                norm_states.pop()
                 pbar.write(f'Invalid Action = ' + ''.join(f'{a:.2f} ' for a in action))
+                nan_before = True
         then = time.time()
         while time.time() - then < 1.8:
             self.env.step_simulation()
