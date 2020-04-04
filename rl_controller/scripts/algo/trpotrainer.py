@@ -1,5 +1,5 @@
 import time
-from random import uniform
+from random import uniform, randint
 import numpy as np
 import scipy.signal
 from algo.runningstat import RunningStats
@@ -36,11 +36,11 @@ class TRPOTrainer(GeneralTrainer):
         self._print_instance_info()
 
         with session.as_default(), session.graph.as_default():
-            pbar1 = tqdm(total=self.max_episode_count, position=1, desc="Total Episodes: ", leave=False)
+            pbar1 = tqdm(total=self.max_episode_count, position=1, desc="Total Episodes", leave=False)
             if self.training_index == None:
-                self.intialize_params(session=session, n_episodes=3)
+                #self.intialize_params(session=session, n_episodes=3)
                 raw_t = self.gen_trajectories(
-                    session, self.local_brain.traj_batch_size)
+                    session, self.local_brain.traj_batch_size, 0)
                 self.local_brain.save_network(self.episode_count) #test
                 t_processed = self.process_trajectories(session, raw_t)
                 self.update_policy(session, t_processed)
@@ -52,12 +52,14 @@ class TRPOTrainer(GeneralTrainer):
             
             while self.episode_count < self.max_episode_count:
                 #TODO: Balance btw Exploration / Exploitation
-                exploring =  random.randint(0,1) if ((self.episode_count/self.max_episode_count) <= 0.3) else False
+                exploring =  randint(0,1) if ((self.episode_count/self.max_episode_count) <= 0.3) else False
                 if self.debug:
                     pbar1.write(f"Exploring = {exploring}")
                 raw_t = self.gen_trajectories(
                     session, self.local_brain.traj_batch_size, exploring)
                 t_processed = self.process_trajectories(session, raw_t)
+                print(t_processed)
+                pbar1.write(f"Trajectory Generated")
                 self.update_policy(session, t_processed)
                 try:
                     self.update_value(t_processed_prev)
@@ -106,7 +108,11 @@ class TRPOTrainer(GeneralTrainer):
                  'disc_rewards': [], 'values': [], 'advantages': []}
         raw_states = []
 
-        pbar2 = tqdm(total=traj_batch_size, position=0, desc="batch generation: ", leave=False)
+        if exploring:
+            pbar_string = "Batch generation [exploring]"
+        else:
+            pbar_string = "Batch generation [sampling]"
+        pbar2 = tqdm(total=traj_batch_size, position=0, desc=pbar_string, leave=False)
         for i in range(traj_batch_size):
             actions, rewards, states, norm_states = self._gen_trajectory(session, exploring, pbar2)
             raw_t['states'].append(norm_states)
@@ -143,7 +149,7 @@ class TRPOTrainer(GeneralTrainer):
         if test:
             target_pose = [uniform(0.2,0.6) for i in range(3)]
         if pbar is not None:
-            pbar.write(f'\033[92m'+'target_pose = '+'\033[0m'+''.join(f'{p:.2f} ' for p in target_pose))
+            pbar.write(f'\033[92mtarget_pose = \033[0m'+''.join(f'{p:.2f} ' for p in target_pose))
         terminal = False
         while terminal is False:
             states.append(state)
@@ -151,17 +157,23 @@ class TRPOTrainer(GeneralTrainer):
                 self.running_stats.standard_deviation()
             norm_states.append(state_normalized)
             action = self.local_brain.sample_action(session, state_normalized, exploring)
-            new_state, reward, terminal = self.env.step(action) if not test else self.env.step(action, target_pose)
-            actions.append(action)
-            try:
-                reward = rewards[-1] if np.isnan(reward) else reward * self.rew_scale
-            except Exception:
-                reward = 0
-            rewards.append(reward)
-            if pbar is not None:
-                pbar.write(f'Action = ' + ''.join(f'{a:.2f} ' for a in action))
-                pbar.write(f'Reward = {reward:.5f}')
-            state = new_state  # recurse and repeat until episode terminates
+            if not np.isnan(np.sum(action)):
+                new_state, reward, terminal = self.env.step(action) if not test else self.env.step(action, target_pose)
+                actions.append(action)
+                try:
+                    reward = rewards[-1] if np.isnan(reward) else reward * self.rew_scale
+                except Exception:
+                    reward = 0
+                rewards.append(reward)
+
+                if pbar is not None:
+                    pbar.write(f'Action = ' + ''.join(f'{a:.2f} ' for a in action))
+                    pbar.write(f'Reward = {reward:.5f}')
+                state = new_state  # recurse and repeat until episode terminates
+            else:
+                self.env.make_observation() if not test else self.env.make_observation(target_pose)
+                state = self.env.observation
+                pbar.write(f'Invalid Action = ' + ''.join(f'{a:.2f} ' for a in action))
         then = time.time()
         while time.time() - then < 1.8:
             self.env.step_simulation()
