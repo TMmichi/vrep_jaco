@@ -146,7 +146,7 @@ void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
 
     move_group->setPoseTarget(target_pose); //motion planning to a desired pose of the end-effector
     ROS_DEBUG_NAMED("","Planning Goal");
-    move_group->plan(my_plan, 0.1);
+    // move_group->plan(my_plan, 0.1);
     ROS_DEBUG_NAMED("","Planning Finished");
 
     trajectory = my_plan.trajectory_;
@@ -217,7 +217,7 @@ void JacoController::spacenavCallback(const sensor_msgs::Joy::ConstPtr& msg)
 
     move_group->setPoseTarget(target_pose); //motion planning to a desired pose of the end-effector
     ROS_DEBUG_NAMED("","Planning Goal");
-    move_group->plan(my_plan, 0.1);
+    // move_group->plan(my_plan, 0.1);
     ROS_DEBUG_NAMED("","Planning Finished");
 
     trajectory = my_plan.trajectory_;
@@ -297,7 +297,7 @@ void JacoController::actionCallback(const std_msgs::Float32MultiArray &msg)
 
     move_group->setPoseTarget(target_pose); //motion planning to a desired pose of the end-effector
     ROS_DEBUG_NAMED("","Planning Goal");
-    move_group->plan(my_plan, 0.1);
+    // move_group->plan(my_plan, 0.1);
     ROS_DEBUG_NAMED("","Planning Finished");
 
     trajectory = my_plan.trajectory_;
