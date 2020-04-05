@@ -1,4 +1,5 @@
 import time
+from random import uniform, randint
 import numpy as np
 import scipy.signal
 from algo.runningstat import RunningStats
@@ -35,11 +36,11 @@ class TRPOTrainer(GeneralTrainer):
         self._print_instance_info()
 
         with session.as_default(), session.graph.as_default():
-            pbar1 = tqdm(total=self.max_episode_count, position=1, desc="Total Episodes: ", leave=False)
+            pbar1 = tqdm(total=self.max_episode_count, position=1, desc="Total Episodes", leave=False)
             if self.training_index == None:
-                self.intialize_params(session=session, n_episodes=3)
+                #self.intialize_params(session=session, n_episodes=3)
                 raw_t = self.gen_trajectories(
-                    session, self.local_brain.traj_batch_size)
+                    session, self.local_brain.traj_batch_size, 0)
                 self.local_brain.save_network(self.episode_count) #test
                 t_processed = self.process_trajectories(session, raw_t)
                 self.update_policy(session, t_processed)
@@ -51,12 +52,13 @@ class TRPOTrainer(GeneralTrainer):
             
             while self.episode_count < self.max_episode_count:
                 #TODO: Balance btw Exploration / Exploitation
-                exploring = not ((self.episode_count/self.max_episode_count) > 0.3)
+                exploring =  randint(0,2) if ((self.episode_count/self.max_episode_count) <= 0.3) else False #2/3 of explore
                 if self.debug:
                     pbar1.write(f"Exploring = {exploring}")
                 raw_t = self.gen_trajectories(
                     session, self.local_brain.traj_batch_size, exploring)
                 t_processed = self.process_trajectories(session, raw_t)
+                pbar1.write(f"Trajectory Generated")
                 self.update_policy(session, t_processed)
                 try:
                     self.update_value(t_processed_prev)
@@ -105,7 +107,11 @@ class TRPOTrainer(GeneralTrainer):
                  'disc_rewards': [], 'values': [], 'advantages': []}
         raw_states = []
 
-        pbar2 = tqdm(total=traj_batch_size, position=0, desc="batch generation: ", leave=False)
+        if exploring:
+            pbar_string = "Batch generation [exploring]"
+        else:
+            pbar_string = "Batch generation [sampling]"
+        pbar2 = tqdm(total=traj_batch_size, position=0, desc=pbar_string, leave=False)
         for i in range(traj_batch_size):
             actions, rewards, states, norm_states = self._gen_trajectory(session, exploring, pbar2)
             raw_t['states'].append(norm_states)
@@ -138,24 +144,31 @@ class TRPOTrainer(GeneralTrainer):
             self.env.step_simulation()
         actions, rewards, states, norm_states = [], [], [], []
 
+        test = True                     #TODO: Remove test
+        if test:
+            target_pose = [uniform(0.2,0.6) for i in range(3)]
+        if pbar is not None:
+            pbar.write(f'\033[92mtarget_pose = \033[0m'+''.join(f'{p:.2f} ' for p in target_pose))
         terminal = False
         while terminal is False:
             states.append(state)
+
+            mean = self.running_stats.mean()
+            std = self.running_stats.standard_deviation()
             state_normalized = (state - self.running_stats.mean()) / \
                 self.running_stats.standard_deviation()
+            self._valuerrorDebug("state_normalized",state_normalized) if self.debug else None
             norm_states.append(state_normalized)
             action = self.local_brain.sample_action(session, state_normalized, exploring)
-            new_state, reward, terminal = self.env.step(action)
+            new_state, reward, terminal = self.env.step(action) if not test else self.env.step(action, target_pose)
             actions.append(action)
-            try:
-                reward = rewards[-1] if np.isnan(reward) else reward * self.rew_scale
-            except Exception:
-                reward = 0
+            reward = rewards[-1] if np.isnan(reward) else reward * self.rew_scale
             rewards.append(reward)
             if pbar is not None:
                 pbar.write(f'Action = ' + ''.join(f'{a:.2f} ' for a in action))
-                pbar.write(f'Reward = {reward:.3f}')
+                pbar.write(f'Reward = {reward:.5f}')
             state = new_state  # recurse and repeat until episode terminates
+
         then = time.time()
         while time.time() - then < 1.8:
             self.env.step_simulation()
@@ -166,6 +179,7 @@ class TRPOTrainer(GeneralTrainer):
         for i in range(self.local_brain.traj_batch_size):
             feed_dict = {self.local_brain.input_ph: t['states'][i]}
             values = session.run(self.local_brain.value, feed_dict=feed_dict)
+            self._valuerrorDebug("values",values) if self.debug else None
             t['values'].append(values)
 
             ''' generalized advantage estimation from https://arxiv.org/pdf/1506.02438.pdf for policy gradient update'''
@@ -173,6 +187,7 @@ class TRPOTrainer(GeneralTrainer):
                 self.local_brain.reward_discount * values[1:], 0.0) - list(map(float, values))
             gae = self._discount(
                 temporal_differences, self.local_brain.gae_discount * self.local_brain.reward_discount)
+            self._valuerrorDebug("gae",gae) if self.debug else None
             t['advantages'].append(gae)
 
         t['states'] = np.concatenate(t['states'])
@@ -185,6 +200,7 @@ class TRPOTrainer(GeneralTrainer):
         concatenated_gae = np.concatenate(t['advantages'])
         normalized_gae = (concatenated_gae - concatenated_gae.mean()
                           ) / (concatenated_gae.std() + 1e-6)
+        self._valuerrorDebug("normalized_gae",normalized_gae) if self.debug else None
         t['advantages'] = normalized_gae
 
         t['actions'] = np.reshape(t['actions'], (-1, self.local_brain.env_action_number))
@@ -201,3 +217,11 @@ class TRPOTrainer(GeneralTrainer):
     def update_value(self, t):
         self.local_brain._update_value(t, self.auditor)
         return self
+    
+    def _valuerrorDebug(self, name, value):
+        #for i in range(len(value)):
+        #    print(value[i])
+        if np.isnan(np.sum(value)):
+            raise NameError("NaN in "+str(name))
+        elif np.isinf(np.sum(value)):
+            raise NameError("Inf in "+str(name))

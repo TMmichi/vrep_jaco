@@ -42,8 +42,8 @@ class TRPO(NeuralNetwork):
     ''' Hyperparameters from Appendix A in https://arxiv.org/abs/1707.06347,
     with some changes while experimenting '''
     def _define_params(self):
-        self.policy_learning_rate = 1 * 1e-04
-        self.value_learning_rate = 1.5 * 1e-03
+        self.policy_learning_rate = 4 * 1e-06
+        self.value_learning_rate = 1.5 * 1e-04
         self.n_policy_epochs = 20
         self.n_value_epochs = 15
         self.value_batch_size = 512
@@ -54,7 +54,7 @@ class TRPO(NeuralNetwork):
         self.ksi = 10
         self.reward_discount = 0.995
         self.gae_discount = 0.975
-        self.traj_batch_size = 10
+        self.traj_batch_size = 8
         self.activation = 'tanh'
         '''
         Policy Type: 'MLP' or 'RBF'
@@ -86,8 +86,10 @@ class TRPO(NeuralNetwork):
         if self.policy_action_type == 'Continous':
             ''' action mean network '''
             mu_model_input = Input(tensor=self.input_ph)
-            mu_model = Dense(units=128, activation=self.activation,
+            mu_model = Dense(units=256, activation=self.activation,
                             kernel_initializer=RandomNormal(0, 0.1))(mu_model_input)
+            mu_model = Dense(units=128, activation=self.activation,
+                            kernel_initializer=RandomNormal(0, 0.1))(mu_model)
             mu_model = Dense(units=128, activation=self.activation,
                             kernel_initializer=RandomNormal(0, 0.1))(mu_model)
             mean = Dense(units=self.env_action_number, activation=None,
