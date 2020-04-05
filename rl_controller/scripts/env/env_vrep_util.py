@@ -317,6 +317,10 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
                 observation += [0] * 3
             else:
                 observation += target
+            if np.isnan(np.sum(observation)):
+                #print("NAN OCCURED IN VREP CLIENT!!!!!")
+                # If nan, try to get observation recursively untill we do not have any nan
+                observation = self._get_observation(target)
         else:
             data_from_callback = []
             observation = self.state_gen.generate(data_from_callback)

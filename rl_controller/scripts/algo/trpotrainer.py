@@ -150,35 +150,25 @@ class TRPOTrainer(GeneralTrainer):
         if pbar is not None:
             pbar.write(f'\033[92mtarget_pose = \033[0m'+''.join(f'{p:.2f} ' for p in target_pose))
         terminal = False
-        nan_before = False
         while terminal is False:
             states.append(state)
+
+            mean = self.running_stats.mean()
+            std = self.running_stats.standard_deviation()
             state_normalized = (state - self.running_stats.mean()) / \
                 self.running_stats.standard_deviation()
+            self._valuerrorDebug("state_normalized",state_normalized) if self.debug else None
             norm_states.append(state_normalized)
             action = self.local_brain.sample_action(session, state_normalized, exploring)
-            if not np.isnan(np.sum(action)):
-                new_state, reward, terminal = self.env.step(action) if not test else self.env.step(action, target_pose)
-                actions.append(action)
-                try:
-                    reward = rewards[-1] if np.isnan(reward) else reward * self.rew_scale
-                except Exception:
-                    reward = 0
-                rewards.append(reward)
-                if pbar is not None:
-                    pbar.write(f'Action = ' + ''.join(f'{a:.2f} ' for a in action))
-                    pbar.write(f'Reward = {reward:.5f}')
-                state = new_state  # recurse and repeat until episode terminates
-                nan_before = False
-            else:
-                self.env.make_observation() if not test else self.env.make_observation(target_pose)
-                state = self.env.observation
-                if nan_before:
-                    state[0] += 0.001
-                states.pop()
-                norm_states.pop()
-                pbar.write(f'Invalid Action = ' + ''.join(f'{a:.2f} ' for a in action))
-                nan_before = True
+            new_state, reward, terminal = self.env.step(action) if not test else self.env.step(action, target_pose)
+            actions.append(action)
+            reward = rewards[-1] if np.isnan(reward) else reward * self.rew_scale
+            rewards.append(reward)
+            if pbar is not None:
+                pbar.write(f'Action = ' + ''.join(f'{a:.2f} ' for a in action))
+                pbar.write(f'Reward = {reward:.5f}')
+            state = new_state  # recurse and repeat until episode terminates
+
         then = time.time()
         while time.time() - then < 1.8:
             self.env.step_simulation()
@@ -189,6 +179,7 @@ class TRPOTrainer(GeneralTrainer):
         for i in range(self.local_brain.traj_batch_size):
             feed_dict = {self.local_brain.input_ph: t['states'][i]}
             values = session.run(self.local_brain.value, feed_dict=feed_dict)
+            self._valuerrorDebug("values",values) if self.debug else None
             t['values'].append(values)
 
             ''' generalized advantage estimation from https://arxiv.org/pdf/1506.02438.pdf for policy gradient update'''
@@ -196,6 +187,7 @@ class TRPOTrainer(GeneralTrainer):
                 self.local_brain.reward_discount * values[1:], 0.0) - list(map(float, values))
             gae = self._discount(
                 temporal_differences, self.local_brain.gae_discount * self.local_brain.reward_discount)
+            self._valuerrorDebug("gae",gae) if self.debug else None
             t['advantages'].append(gae)
 
         t['states'] = np.concatenate(t['states'])
@@ -208,6 +200,7 @@ class TRPOTrainer(GeneralTrainer):
         concatenated_gae = np.concatenate(t['advantages'])
         normalized_gae = (concatenated_gae - concatenated_gae.mean()
                           ) / (concatenated_gae.std() + 1e-6)
+        self._valuerrorDebug("normalized_gae",normalized_gae) if self.debug else None
         t['advantages'] = normalized_gae
 
         t['actions'] = np.reshape(t['actions'], (-1, self.local_brain.env_action_number))
@@ -224,3 +217,11 @@ class TRPOTrainer(GeneralTrainer):
     def update_value(self, t):
         self.local_brain._update_value(t, self.auditor)
         return self
+    
+    def _valuerrorDebug(self, name, value):
+        #for i in range(len(value)):
+        #    print(value[i])
+        if np.isnan(np.sum(value)):
+            raise NameError("NaN in "+str(name))
+        elif np.isinf(np.sum(value)):
+            raise NameError("Inf in "+str(name))
