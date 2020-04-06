@@ -11,11 +11,13 @@
   <include     if="$(arg use_sim)" file="$(find j2n6s300_moveit_config)/launch/planning_context.launch"/>
   <include unless="$(arg use_sim)" file="$(find j2n6s300_moveit_config)/launch/action_server.launch"/>
 
+  <!--
   <include file="$(find j2n6s300_moveit_config)/launch/move_group.launch">
     <arg name="allow_trajectory_execution" value="true"/>
     <arg name="fake_execution" value="false"/>
-    <arg name="info" value="true"/>
+    <arg name="info" value="false"/>
     <arg name="debug" value="false"/>
+  </include>-->
     <!--
       ㅡ moveit_simple_controllers.yaml -> controllers.yaml
         name: jaco -> j2n6s300
@@ -25,7 +27,6 @@
 
         + New controller for gripper
     -->
-  </include>
 
   <node name="jaco_ros_controller" pkg="jaco_controller_integrated" type="jaco_controller_integrated" respawn="false" output="screen">
     <param name="speed_constant" value="0.03"/>
@@ -34,9 +35,11 @@
     <param name="/use_sim_time" value="true"/>
   </node>
 
+  <!--
   <include file="$(find j2n6s300_moveit_config)/launch/moveit_rviz.launch">
     <arg name="config" value="true"/>
-    <arg name="debug" value="false"/>    
-  </include>
+    <arg name="debug" value="false"/>
+  </include>-->
+
   <!--<include file="$(find spacenav_node)/launch/classic.launch"/>-->
 </launch>

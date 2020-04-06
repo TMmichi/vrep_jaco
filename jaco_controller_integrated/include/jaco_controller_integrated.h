@@ -1,7 +1,9 @@
 #include <ros/ros.h>
 #include <chrono>
 #include <algorithm>
+#include <Poco/Process.h>
 
+#include <ros/network.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include "action_client/VrepInterface.hpp"
 #include <std_msgs/Int8.h>
@@ -25,7 +27,6 @@ public:
     JacoController();
 private:
     void updateParams();
-    void reset();
     void teleopCallback(const std_msgs::Int8::ConstPtr& msg);
     void spacenavCallback(const sensor_msgs::Joy::ConstPtr& msg);
     void actionCallback(const std_msgs::Float32MultiArray& msg);
@@ -35,12 +36,18 @@ private:
     ros::NodeHandle nh_local_;
 
     //Subscribers, Publishers
+    ros::Subscriber clock_sub_;
     ros::Subscriber teleop_sub_;
     ros::Subscriber spacenav_sub_;
     ros::Subscriber key_sub_;
     ros::Publisher key_check_pub_;
 
     //Variables
+    boost::mutex check_lock;
+    std::vector<std::string> node_list;
+    std::vector<std::string> launch_args;
+    Poco::ProcessHandle* ph;
+    bool called;
     moveit::planning_interface::MoveGroupInterface* move_group;
     std::unique_ptr<actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> > execute_action_client_;
     const robot_state::JointModelGroup* joint_model_group;

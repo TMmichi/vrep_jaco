@@ -5,13 +5,6 @@ using namespace jaco_controller_integrated;
 
 JacoController::JacoController() : nh_(""), nh_local_("~")
 {
-  launch_args.push_back("jaco_controller_integrated");
-  launch_args.push_back("move_group_only.launch");
-  Poco::ProcessHandle ph_running = Poco::Process::launch(
-    "roslaunch",launch_args);
-  ph = new Poco::ProcessHandle(ph_running);
-  called = false;
-
   updateParams();
 
   printf(MOVEIT_CONSOLE_COLOR_BLUE "Move_group setup within controller.\n" MOVEIT_CONSOLE_COLOR_RESET);
@@ -27,7 +20,6 @@ JacoController::JacoController() : nh_(""), nh_local_("~")
   printf(MOVEIT_CONSOLE_COLOR_BLUE "Joint states called\n" MOVEIT_CONSOLE_COLOR_RESET);
   debug = false;
 
-  //clock_sub_ = nh_.subscribe("clock", 1, &JacoController::moveitCheckCallback, this);
   teleop_sub_ = nh_.subscribe("key_input", 10, &JacoController::teleopCallback, this);
   spacenav_sub_ = nh_.subscribe("spacenav/joy", 2, &JacoController::spacenavCallback, this);
   key_sub_ = nh_.subscribe("rl_key_output", 10, &JacoController::actionCallback, this);
@@ -39,26 +31,22 @@ void JacoController::updateParams()
   nh_local_.param<bool>("jaco_ros_controller/cartesian", p_cartesian, false);
 }
 
+void JacoController::reset()
+{
+  // move_group->clientReset();
+  // bug
+}
+
 void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
 {
-  node_list.clear();
-  ros::master::getNodes(node_list);
-  if (find(node_list.begin(), node_list.end(), "/move_group") == node_list.end())
-  {
-    if (!called){
-      Poco::Process::wait(*ph);
-      free(ph); 
-      Poco::ProcessHandle ph_running = Poco::Process::launch(
-      "roslaunch",launch_args);
-      ph = new Poco::ProcessHandle(ph_running);
-      called = true;
-    }
-  } else {
-    called = false;
-  }
-
   key_input = msg->data;
   printf(MOVEIT_CONSOLE_COLOR_BLUE "Key In: %c\n", key_input);
+  printf(MOVEIT_CONSOLE_COLOR_RESET);
+  if (key_input == 'r')
+  {
+    this->reset();
+    return;
+  }
 
   waypoints.clear();
   current_pose = move_group->getCurrentPose().pose;
@@ -133,6 +121,10 @@ void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
     yaw -= 0.1;
     command = true;
     break;
+
+  case 'r':
+    this->reset();
+    break;
   }
 
   if (debug)
@@ -179,22 +171,6 @@ void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
 
 void JacoController::spacenavCallback(const sensor_msgs::Joy::ConstPtr& msg)
 {
-  node_list.clear();
-  ros::master::getNodes(node_list);
-  if (find(node_list.begin(), node_list.end(), "/move_group") == node_list.end())
-  {
-    if (!called){
-      Poco::Process::wait(*ph);
-      free(ph); 
-      Poco::ProcessHandle ph_running = Poco::Process::launch(
-      "roslaunch",launch_args);
-      ph = new Poco::ProcessHandle(ph_running);
-      called = true;
-    }
-  } else {
-    called = false;
-  }
-
   waypoints.clear();
   current_pose = move_group->getCurrentPose().pose;
   tf2::Quaternion q(current_pose.orientation.x, current_pose.orientation.y, current_pose.orientation.z, current_pose.orientation.w);
@@ -267,22 +243,6 @@ void JacoController::spacenavCallback(const sensor_msgs::Joy::ConstPtr& msg)
 
 void JacoController::actionCallback(const std_msgs::Float32MultiArray &msg)
 {
-  node_list.clear();
-  ros::master::getNodes(node_list);
-  if (find(node_list.begin(), node_list.end(), "/move_group") == node_list.end())
-  {
-    if (!called){
-      Poco::Process::wait(*ph);
-      free(ph); 
-      Poco::ProcessHandle ph_running = Poco::Process::launch(
-      "roslaunch",launch_args);
-      ph = new Poco::ProcessHandle(ph_running);
-      called = true;
-    }
-  } else {
-    called = false;
-  }
-
   printf(MOVEIT_CONSOLE_COLOR_BLUE "Action In: [");
   for (auto it = msg.data.begin(); it != msg.data.end(); it++)
   {
