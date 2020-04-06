@@ -230,6 +230,7 @@ class TRPO(NeuralNetwork):
         self.value_model.save_weights(self.model_path+"value_model_"+str(index)+".h5")
 
     def load_network(self, index):
+        print("LOADING MODEL")
         ''' load model '''
         with open(self.model_path+"policy_mu_model_"+str(index)+".json") as policy_json:
             self.policy_mu_model = model_from_json(policy_json.read())

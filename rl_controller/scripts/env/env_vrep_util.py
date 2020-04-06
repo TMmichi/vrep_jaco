@@ -111,8 +111,11 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
 
     def _publishWorker(self, e):
         if not self.worker_pause:
-            self._updateJointState()
-            self._publishJointInfo()
+            try:
+                self._updateJointState()
+                self._publishJointInfo()
+            except Exception:
+                pass
 
     def _updateJointState(self):
         self.jointState_.header.stamp = rospy.Time.now()
@@ -291,7 +294,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             except(psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                 pass
         '''
-        return True if (used/total*100)>85 else False
+        return True if (used/total*100)>75 else False
 
     def _vrep_process_reset(self):
         print("Restarting Vrep")
