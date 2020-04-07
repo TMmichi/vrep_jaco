@@ -66,7 +66,7 @@ class RL_controller:
         #If resume training on pre-trained models with episodes, else None
         args.model_path = "/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/models_jointpose/"
         os.makedirs(args.model_path,exist_ok=True)
-        args.training_index = 176
+        args.training_index = 200
         self.trainer = TRPOTrainer(**vars(args))
 
 

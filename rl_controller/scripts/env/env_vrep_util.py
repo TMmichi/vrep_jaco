@@ -140,6 +140,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         self.jointState_.position = position
         startPos = self.jointState_.position
         i = len(points)-2
+        print(points[i].positions[:6])
         move_diff = np.linalg.norm(np.array(points[i].positions[:6])-np.array(position[:6]))
         if (not move_diff > 1) or (not move_diff < 6):
             while not rospy.is_shutdown():
@@ -259,6 +260,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
 
     def _reset(self, sync=False):
         self.reset_pub.publish(Int8(data=ord('r')))
+        time.sleep(1.2)
         self.gripper_angle_1 = 0
         self.gripper_angle_2 = 0
         self.gripper_angle = 0
@@ -339,7 +341,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         if self.reward_method == "l2":
             dist_diff = np.linalg.norm(
                 np.array(gripper_pose[:3]) - np.array(target_pose[:3]))
-            reward = (3 - dist_diff)*0.05            #TODO: Shape reward
+            reward = (2 - dist_diff)            #TODO: Shape reward
             return reward - 1
         elif self.reward_method == "":
             return self.reward_module(gripper_pose, target_pose)
