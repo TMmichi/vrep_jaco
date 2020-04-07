@@ -45,12 +45,8 @@ class JacoVrepEnv(JacoVrepEnvUtil):
         # TODO: Determine how many time steps should be proceed when called
         num_step_pass = 4
         # actions = np.clip(actions,-self.action_space_max, self.action_space_max)
-        #assert self.action_space.contains(
-        #    action), "Action {} ({}) is invalid".format(action, type(action))
-        if not np.isnan(np.sum(action)):
-            self.take_action(action)
-        else:
-            pass
+        assert self.action_space.contains(
+            action), "Action {} ({}) is invalid".format(action, type(action))
         
         for _ in range(num_step_pass):
             # TODO: wait for step signal
