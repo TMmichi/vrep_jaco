@@ -37,8 +37,8 @@ class RL_controller:
 
         #TensorFlow Setting
         tf.compat.v1.reset_default_graph()
-        config = tf.compat.v1.ConfigProto(allow_soft_placement=True,
-                                          log_device_placement=False)
+        config = tf.compat.v1.ConfigProto(log_device_placement=False)
+        config.gpu_options.allow_growth = True
         self.sess = tf.compat.v1.Session(config=config)
         args.sess = self.sess
 
@@ -66,7 +66,7 @@ class RL_controller:
         #If resume training on pre-trained models with episodes, else None
         args.model_path = "/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/models_jointpose/"
         os.makedirs(args.model_path,exist_ok=True)
-        #args.training_index = 343
+        args.training_index = 200
         self.trainer = TRPOTrainer(**vars(args))
 
 

@@ -5,16 +5,6 @@ using namespace jaco_controller_integrated;
 
 JacoController::JacoController() : nh_(""), nh_local_("~")
 {
-  launch_args.push_back("jaco_controller_integrated");
-  launch_args.push_back("move_group_only.launch");
-  Poco::ProcessHandle ph_movegroupLaunch = Poco::Process::launch(
-    "roslaunch",launch_args);
-  ph_movegroup = new Poco::ProcessHandle(ph_movegroupLaunch);
-  called = false;
-
-  kill_args.push_back("kill");
-  kill_args.push_back("/move_group");
-
   updateParams();
 
   printf(MOVEIT_CONSOLE_COLOR_BLUE "Move_group setup within controller.\n" MOVEIT_CONSOLE_COLOR_RESET);
@@ -33,7 +23,6 @@ JacoController::JacoController() : nh_(""), nh_local_("~")
   teleop_sub_ = nh_.subscribe("key_input", 10, &JacoController::teleopCallback, this);
   spacenav_sub_ = nh_.subscribe("spacenav/joy", 2, &JacoController::spacenavCallback, this);
   key_sub_ = nh_.subscribe("rl_key_output", 10, &JacoController::actionCallback, this);
-  reset_sub_ = nh_.subscribe("reset_key", 10, &JacoController::resetCallback, this);
 }
 
 void JacoController::updateParams()
@@ -42,27 +31,22 @@ void JacoController::updateParams()
   nh_local_.param<bool>("jaco_ros_controller/cartesian", p_cartesian, false);
 }
 
+void JacoController::reset()
+{
+  // move_group->clientReset();
+  // bug
+}
+
 void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
 {
-  /*
-  node_list.clear();
-  ros::master::getNodes(node_list);
-  if (find(node_list.begin(), node_list.end(), "/move_group") == node_list.end())
-  {
-    if (!called){
-      Poco::Process::wait(*ph_movegroup);
-      free(ph_movegroup); 
-      Poco::ProcessHandle ph_movegroupLaunch = Poco::Process::launch(
-      "roslaunch",launch_args);
-      ph_movegroup = new Poco::ProcessHandle(ph_movegroupLaunch);
-      called = true;
-    }
-  } else {
-    called = false;
-  }*/
-
   key_input = msg->data;
   printf(MOVEIT_CONSOLE_COLOR_BLUE "Key In: %c\n", key_input);
+  printf(MOVEIT_CONSOLE_COLOR_RESET);
+  if (key_input == 'r')
+  {
+    this->reset();
+    return;
+  }
 
   waypoints.clear();
   current_pose = move_group->getCurrentPose().pose;
@@ -136,6 +120,10 @@ void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
   case 'i':
     yaw -= 0.1;
     command = true;
+    break;
+
+  case 'r':
+    this->reset();
     break;
   }
 
@@ -331,19 +319,6 @@ void JacoController::actionCallback(const std_msgs::Float32MultiArray &msg)
   else
   {
   }
-}
-
-void JacoController::resetCallback(const std_msgs::Int8::ConstPtr& msg)
-{
-  Poco::ProcessHandle ph_killLaunch = Poco::Process::launch("rosnode",kill_args);
-  ph_kill = new Poco::ProcessHandle(ph_killLaunch);
-  Poco::Process::wait(*ph_kill);
-  free(ph_kill);
-  Poco::Process::wait(*ph_movegroup);
-  free(ph_movegroup);
-  Poco::ProcessHandle ph_movegroupLaunch = Poco::Process::launch("roslaunch",launch_args);
-  ph_movegroup = new Poco::ProcessHandle(ph_movegroupLaunch);
-  reset_counter = 0;
 }
 
 int main(int argc, char **argv)
