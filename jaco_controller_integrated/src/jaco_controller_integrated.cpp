@@ -7,10 +7,13 @@ JacoController::JacoController() : nh_(""), nh_local_("~")
 {
   launch_args.push_back("jaco_controller_integrated");
   launch_args.push_back("move_group_only.launch");
-  Poco::ProcessHandle ph_running = Poco::Process::launch(
+  Poco::ProcessHandle ph_movegroupLaunch = Poco::Process::launch(
     "roslaunch",launch_args);
-  ph = new Poco::ProcessHandle(ph_running);
+  ph_movegroup = new Poco::ProcessHandle(ph_movegroupLaunch);
   called = false;
+
+  kill_args.push_back("kill");
+  kill_args.push_back("/move_group");
 
   updateParams();
 
@@ -27,10 +30,10 @@ JacoController::JacoController() : nh_(""), nh_local_("~")
   printf(MOVEIT_CONSOLE_COLOR_BLUE "Joint states called\n" MOVEIT_CONSOLE_COLOR_RESET);
   debug = false;
 
-  //clock_sub_ = nh_.subscribe("clock", 1, &JacoController::moveitCheckCallback, this);
   teleop_sub_ = nh_.subscribe("key_input", 10, &JacoController::teleopCallback, this);
   spacenav_sub_ = nh_.subscribe("spacenav/joy", 2, &JacoController::spacenavCallback, this);
   key_sub_ = nh_.subscribe("rl_key_output", 10, &JacoController::actionCallback, this);
+  reset_sub_ = nh_.subscribe("reset_key", 10, &JacoController::resetCallback, this);
 }
 
 void JacoController::updateParams()
@@ -41,21 +44,22 @@ void JacoController::updateParams()
 
 void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
 {
+  /*
   node_list.clear();
   ros::master::getNodes(node_list);
   if (find(node_list.begin(), node_list.end(), "/move_group") == node_list.end())
   {
     if (!called){
-      Poco::Process::wait(*ph);
-      free(ph); 
-      Poco::ProcessHandle ph_running = Poco::Process::launch(
+      Poco::Process::wait(*ph_movegroup);
+      free(ph_movegroup); 
+      Poco::ProcessHandle ph_movegroupLaunch = Poco::Process::launch(
       "roslaunch",launch_args);
-      ph = new Poco::ProcessHandle(ph_running);
+      ph_movegroup = new Poco::ProcessHandle(ph_movegroupLaunch);
       called = true;
     }
   } else {
     called = false;
-  }
+  }*/
 
   key_input = msg->data;
   printf(MOVEIT_CONSOLE_COLOR_BLUE "Key In: %c\n", key_input);
@@ -179,22 +183,6 @@ void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
 
 void JacoController::spacenavCallback(const sensor_msgs::Joy::ConstPtr& msg)
 {
-  node_list.clear();
-  ros::master::getNodes(node_list);
-  if (find(node_list.begin(), node_list.end(), "/move_group") == node_list.end())
-  {
-    if (!called){
-      Poco::Process::wait(*ph);
-      free(ph); 
-      Poco::ProcessHandle ph_running = Poco::Process::launch(
-      "roslaunch",launch_args);
-      ph = new Poco::ProcessHandle(ph_running);
-      called = true;
-    }
-  } else {
-    called = false;
-  }
-
   waypoints.clear();
   current_pose = move_group->getCurrentPose().pose;
   tf2::Quaternion q(current_pose.orientation.x, current_pose.orientation.y, current_pose.orientation.z, current_pose.orientation.w);
@@ -267,22 +255,6 @@ void JacoController::spacenavCallback(const sensor_msgs::Joy::ConstPtr& msg)
 
 void JacoController::actionCallback(const std_msgs::Float32MultiArray &msg)
 {
-  node_list.clear();
-  ros::master::getNodes(node_list);
-  if (find(node_list.begin(), node_list.end(), "/move_group") == node_list.end())
-  {
-    if (!called){
-      Poco::Process::wait(*ph);
-      free(ph); 
-      Poco::ProcessHandle ph_running = Poco::Process::launch(
-      "roslaunch",launch_args);
-      ph = new Poco::ProcessHandle(ph_running);
-      called = true;
-    }
-  } else {
-    called = false;
-  }
-
   printf(MOVEIT_CONSOLE_COLOR_BLUE "Action In: [");
   for (auto it = msg.data.begin(); it != msg.data.end(); it++)
   {
@@ -359,6 +331,19 @@ void JacoController::actionCallback(const std_msgs::Float32MultiArray &msg)
   else
   {
   }
+}
+
+void JacoController::resetCallback(const std_msgs::Int8::ConstPtr& msg)
+{
+  Poco::ProcessHandle ph_killLaunch = Poco::Process::launch("rosnode",kill_args);
+  ph_kill = new Poco::ProcessHandle(ph_killLaunch);
+  Poco::Process::wait(*ph_kill);
+  free(ph_kill);
+  Poco::Process::wait(*ph_movegroup);
+  free(ph_movegroup);
+  Poco::ProcessHandle ph_movegroupLaunch = Poco::Process::launch("roslaunch",launch_args);
+  ph_movegroup = new Poco::ProcessHandle(ph_movegroupLaunch);
+  reset_counter = 0;
 }
 
 int main(int argc, char **argv)

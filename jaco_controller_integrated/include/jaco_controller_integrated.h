@@ -30,6 +30,7 @@ private:
     void teleopCallback(const std_msgs::Int8::ConstPtr& msg);
     void spacenavCallback(const sensor_msgs::Joy::ConstPtr& msg);
     void actionCallback(const std_msgs::Float32MultiArray& msg);
+    void resetCallback(const std_msgs::Int8::ConstPtr& msg);
 
     //ROS handles
     ros::NodeHandle nh_;
@@ -40,13 +41,14 @@ private:
     ros::Subscriber teleop_sub_;
     ros::Subscriber spacenav_sub_;
     ros::Subscriber key_sub_;
+    ros::Subscriber reset_sub_;
     ros::Publisher key_check_pub_;
 
     //Variables
-    boost::mutex check_lock;
-    std::vector<std::string> node_list;
     std::vector<std::string> launch_args;
-    Poco::ProcessHandle* ph;
+    std::vector<std::string> kill_args;
+    Poco::ProcessHandle* ph_movegroup;
+    Poco::ProcessHandle* ph_kill;
     bool called;
     moveit::planning_interface::MoveGroupInterface* move_group;
     std::unique_ptr<actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> > execute_action_client_;
@@ -65,6 +67,7 @@ private:
     float p_speed_constant;
     bool p_cartesian;
     bool debug;
+    int reset_counter;
 };
 
 }
