@@ -42,6 +42,8 @@ class Data_collector:
         gripper_pose_list = []
         joint_angle_list = []
         for i in range(20):
+            proc_reset = self.env._memory_check()
+            self.env._vrep_process_reset() if proc_reset else None
             if self.env.sim_running:
                 self.env.stop_simulation()
             sample_angle = [sample(range(-180, 180), 1)[0], 150, sample(range(200, 270), 1)[0], sample(
@@ -58,6 +60,8 @@ class Data_collector:
                 self.env.jointHandles_[5]) + self.env.obj_get_orientation(self.env.jointHandles_[5]))
         for k in range(19):
             for j in range(k+1,20):
+                proc_reset = self.env._memory_check()
+                self.env._vrep_process_reset() if proc_reset else None
                 if self.env.sim_running:
                     self.env.stop_simulation()
                 for i, degree in enumerate(gripper_pose_list[k]):
@@ -71,10 +75,9 @@ class Data_collector:
                 while True:
                     for i_jointhandle in self.env.jointHandles_:
                         position.append(self.env.obj_get_joint_angle(i_jointhandle))
-                    if np.linalg.norm(np.array(position) - np.array(joint_angle_list[j])) < 0.01:
+                    self.env.step_simulation()
+                    if np.linalg.norm(np.array(position) - np.array(joint_angle_list[j])) < 0.001:
                         break
-
-        
 
 
 if __name__ == "__main__":
