@@ -13,7 +13,7 @@ import numpy as np
 class Data_collector:
     def __init__(self, feedbackRate_=50):
         rospy.init_node("Data_collector", anonymous=True)
-        self.use_sim = rospy.get_param("/Data_collector/use_sim")
+        self.use_sim = rospy.get_param("/rl_controller/use_sim")
         self.trigger_sub = rospy.Subscriber(
             "key_input", Int8, self.trigger, queue_size=10)
 
@@ -32,7 +32,7 @@ class Data_collector:
             **vars(args)) if self.use_sim else Real(**vars(args))
         args.env = self.env
         args.data_path = "/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/data_stategen/"
-        os.makedirs(args.model_path,exist_ok=True)
+        os.makedirs(args.data_path,exist_ok=True)
 
     def trigger(self, msg):
         if msg.data == ord('1'):

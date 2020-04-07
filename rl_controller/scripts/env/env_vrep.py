@@ -24,7 +24,10 @@ class JacoVrepEnv(JacoVrepEnvUtil):
         self.action_space_max = 3    				# 0.01 (m/s)
         act = np.array([self.action_space_max]*8) 	# x,y,z,r,p,y, finger 1/2, finger 3
         self.action_space = spaces.Box(-act, act)	# Action space: [-0.01, 0.01]
-        self.state_shape = kwargs['stateGen'].get_state_shape()
+        try:
+            self.state_shape = kwargs['stateGen'].get_state_shape()
+        except Exception:
+            self.state_shape = None
         self.seed()
         self.reset_environment()
 

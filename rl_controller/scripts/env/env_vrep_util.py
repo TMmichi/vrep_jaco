@@ -94,7 +94,10 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         self.gripper_angle = 0.35      # finger angle of manual control
 
         ### ------------  STATE GENERATION  ------------ ###
-        self.state_gen = kwargs['stateGen']
+        try:
+            self.state_gen = kwargs['stateGen']
+        except Exception:
+            self.state_gen = None
         self.image_buffersize = 5
         self.image_buff = []
         self.pressure_buffersize = 100
@@ -106,8 +109,12 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         self.data_buff_temp = [0, 0, 0]
 
         ### ------------  REWARD  ------------ ###
-        self.reward_method = kwargs['reward_method']
-        self.reward_module = kwargs['reward_module']
+        try:
+            self.reward_method = kwargs['reward_method']
+            self.reward_module = kwargs['reward_module']
+        except Exception:
+            self.reward_method = None
+            self.reward_module = None
 
     def _publishWorker(self, e):
         if not self.worker_pause:
