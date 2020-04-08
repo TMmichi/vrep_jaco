@@ -138,3 +138,4 @@ models/value_model_333.h5
 models/value_model_333.json
 models/value_model_343.h5
 models/value_model_343.json
+rl_controller/scripts/darknet/cfg/yolov3.weights
