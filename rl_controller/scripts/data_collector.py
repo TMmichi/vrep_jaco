@@ -3,7 +3,9 @@
 import os
 import time
 import rospy
+import rospkg
 import numpy as np
+from matplotlib import pyplot as plt
 from random import randint, sample
 from argparser import ArgParser
 from std_msgs.msg import Int8, Float32MultiArray
@@ -39,11 +41,14 @@ class Data_collector:
         self.joint_time =  0
         self.num = 0
         self.stop = False
+        self.rospack = rospkg.RosPack()
         self.net0 = yolo.load_net(b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.cfg", b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.weights", 0)
-        self.net1 = yolo.load_net(b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.cfg", b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.weights", 0)
-        #self.net0 = yolo.load_net(b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.cfg", b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.weights", 0)
-        #self.net0 = yolo.load_net(b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.cfg", b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.weights", 0)
+        #self.net1 = yolo.load_net(b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.cfg", b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.weights", 0)
+        #self.net2 = yolo.load_net(b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.cfg", b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.weights", 0)
+        #self.net3 = yolo.load_net(b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.cfg", b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.weights", 0)
         self.meta = yolo.load_meta(b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/coco.data")
+        args.data_path = "/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/data_stategen/"
+        os.makedirs(args.data_path,exist_ok=True)
 
         #ROS settings
         rospy.init_node("Data_collector", anonymous=True)
@@ -51,16 +56,21 @@ class Data_collector:
         self.trigger_sub = rospy.Subscriber("key_input", Int8, self.trigger, queue_size=10)
         self.jointstate_sub = rospy.Subscriber("/vrep/joint_states",JointState,self.jointstateCallback, queue_size=1)
         self.pressure_sub = rospy.Subscriber("/vrep/pressure_data",Float32MultiArray,self.pressureCallback, queue_size=1)
-        self.depth0_sub = rospy.Subscriber("/vrep/depth_image",Image,self.depth0Callback, queue_size=1)
-        self.image0_sub = rospy.Subscriber("/vrep/rgb_image",Image,self.image0Callback, queue_size=1)
+        #self.depth0_sub = rospy.Subscriber("/vrep/depth_image0",Image,self.depth0Callback, queue_size=1)
+        #self.image0_sub = rospy.Subscriber("/vrep/rgb_image0",Image,self.image0Callback, queue_size=1)
+        
+        self.depth1_sub = rospy.Subscriber("/vrep/depth_image1",Image,self.depth1Callback, queue_size=1)
+        self.image1_sub = rospy.Subscriber("/vrep/rgb_image1",Image,self.image1Callback, queue_size=1)
+        #self.depth2_sub = rospy.Subscriber("/vrep/depth_image2",Image,self.depth2Callback, queue_size=1)
+        #self.image2_sub = rospy.Subscriber("/vrep/rgb_image2",Image,self.image2Callback, queue_size=1)
+        #self.depth3_sub = rospy.Subscriber("/vrep/depth_image3",Image,self.depth3Callback, queue_size=1)
+        #self.image3_sub = rospy.Subscriber("/vrep/rgb_image3",Image,self.image3Callback, queue_size=1)
 
         self.rate = rospy.Rate(feedbackRate_)
         self.period = rospy.Duration(1.0/feedbackRate_)
         args.rate = self.rate
         args.period = self.period
-        self.env = JacoVrepEnv(**vars(args)) if self.use_sim else Real(**vars(args))
-        args.data_path = "/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/data_stategen/"
-        os.makedirs(args.data_path,exist_ok=True)
+        self.env = JacoVrepEnv(**vars(args)) if self.use_sim else Real(**vars(args))        
 
 
     def trigger(self, msg):
@@ -108,7 +118,7 @@ class Data_collector:
                     if np.linalg.norm(np.array(position) - np.array(joint_angle_list[j])) < 0.001:
                         break
 
-    def depth0Callback(self,msg):
+    def depth1Callback(self,msg):
         msg_time = round(msg.header.stamp.to_sec(),2)
         width = msg.width
         height = msg.height
@@ -118,32 +128,68 @@ class Data_collector:
         self.image_buff = [data,msg_time]
         self.data_buff_temp[0] = self.image_buff
 
-    def image0Callback(self,msg):
+    def image1Callback(self,msg):
         msg_time = round(msg.header.stamp.to_sec(),2)
         data = np.fromstring(msg.data,dtype=np.uint8)
         data = np.reshape(data,(msg.height,msg.width,3))
         data = np.flip(data,0)
+        
+        plt.imsave(self.rospack.get_path('vrep_jaco_data')+'/image/figure_rgb1.jpg',data)
+        plt.close()
 
+        data = np.swapaxes(data,1,2)
+        data = np.swapaxes(data,0,1)
+        data = data/255
+        
         r = yolo.detectTopic(self.net0, self.meta, data)
+        print("YOLO_TOPIC")
         if(len(r)==0):
             data_center = [[-1,-1]]
+            print("Not detected")
         else:
             data_center = []
             for i in range(len(r)):
                 a = 0
                 if a==0 and r[i][0]==b'cup':
+                    print("CUP")
                     a+=1
                     data_center = [[r[i][2][0],r[i][2][1]]]
                 elif a!=0 and r[i][0]==b'cup':
+                    print("CUP")
                     data_center = data_center+[[r[i][2][0],r[i][2][1]]]
             if len(data_center)==0:
                 data_center = [[-1,-1]]
-            
+                print("NO data center")
+        print(data_center)
+
+        print("YOLO_CALLED")
+        r = yolo.detect(self.net0, self.meta, b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/vrep_jaco_data/image/figure_rgb1.jpg")
+        if(len(r)==0):
+            data_center = [[-1,-1]]
+            print("Not detected")
+        else:
+            data_center = []
+            for i in range(len(r)):
+                a = 0
+                if a==0 and r[i][0]==b'cup':
+                    print("CUP")
+                    a+=1
+                    data_center = [[r[i][2][0],r[i][2][1]]]
+                elif a!=0 and r[i][0]==b'cup':
+                    print("CUP")
+                    data_center = data_center+[[r[i][2][0],r[i][2][1]]]
+            if len(data_center)==0:
+                data_center = [[-1,-1]]
+                print("NO data center")
+        print(data_center)
+
+        '''
         self.rgb_image_buff = [data_center, msg_time]
         self.data_buff_temp[3] = self.rgb_image_buff
 
         if self.joint_start==True and self.pressure_start==True and self.data_time_check(0.075):
-            self.data_buff.append(self.data_buff_temp.copy())
+            self.data_buff.append(self.data_buff_temp.copy())'''
+        
 
     def jointstateCallback(self,msg):
         if self.stop == False:
@@ -161,8 +207,6 @@ class Data_collector:
                     if self.pressure_start == True and self.data_time_check(0.075):
                         self.data_buff.append(self.data_buff_temp.copy())
                         self.num+=1
-                    if msg_time > 10: # saving time control
-                        self.data_record()
         
     def pressureCallback(self,msg):
         if self.stop == False:
@@ -180,8 +224,6 @@ class Data_collector:
                     if self.joint_start == True and self.data_time_check(0.075):
                         self.data_buff.append(self.data_buff_temp.copy())
                         self.num+=1
-                    if msg_time > 10: # saving time control
-                        self.data_record()
         
     ## 0.05 : 10hz | 0.075 : 20hz 계산
     def data_time_check(self, interval):
@@ -191,6 +233,10 @@ class Data_collector:
             return False
 
     def data_record(self):
+        cam_pose0 = [0,-1.75,0.75,-8,0,0]
+        cam_pose1 = [1.75,0,0.75,0,-8,90]
+        cam_pose2 = [0,0,2.5,103.7,0,180]
+        cam_pose3 = [0.5,1.225,2.1,60.16,-19.21,169.84]
         np.save(self.data_path,self.data_buff)
         self.stop = True # if False it records all data
         print("DATA RECORDED")
