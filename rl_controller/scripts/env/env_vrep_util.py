@@ -92,7 +92,6 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             self.feedback_.actual.positions.append(0)
         self.gripper_angle_1 = 0.35    # finger 1, 2
         self.gripper_angle_2 = 0.35    # finger 3
-        self.gripper_angle = 0.35      # finger angle of manual control
 
         ### ------------  STATE GENERATION  ------------ ###
         try:
@@ -256,31 +255,18 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
 
     def _keys(self, msg):
         self.key_input = msg.data
-        #print("input = ", self.key_input)
+        print("INPUT: ",self.key_input)
         if self.key_input == ord('r'):      # Reset environment
             self._reset()
             self.key_input = ord('1')
-        elif self.key_input == ord('t'):    # Reset environment (step-wised)
-            self._reset(True)
-        elif self.key_input == ord('n'):    # Next step
-            self.step_simulation()
-        elif self.key_input == ord('p'):    # Action from Policy
-            self.action_from_policy = True
-        elif self.key_input == ord('s'):    # Action from Sample
-            self.action_from_policy = False
         elif self.key_input in [ord('f'), ord('g'), ord('v'), ord('b'), ord('o'), ord('p')]:
             self._take_manual_action(self.key_input)
-        elif self.key_input == ord('9'):    # Action from Sample
-            self.action_from_policy = False
-        elif self.key_input == ord('0'):    # Action from Sample
-            self.action_from_policy = False
 
     def _reset(self, sync=False):
         self.reset_pub.publish(Int8(data=ord('r')))
         time.sleep(1.2)
-        self.gripper_angle_1 = 0
-        self.gripper_angle_2 = 0
-        self.gripper_angle = 0
+        self.gripper_angle_1 = 0.35
+        self.gripper_angle_2 = 0.35
         self.trajAS_.reset()
 
         proc_reset = self._memory_check()

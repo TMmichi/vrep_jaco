@@ -20,7 +20,7 @@ class TRPOTrainer(GeneralTrainer):
         self.local_brain = TRPO(**kwargs)
         self.episode_count = 0
         self.training_index = kwargs['training_index']
-        self.expert_input = False
+        self.action_from_policy = True
         self.expert_action = [0]*8
         self.gripper_angle = 0
         
@@ -31,6 +31,8 @@ class TRPOTrainer(GeneralTrainer):
         self.rew_scale = 0.25 #TODO: Learn more about it
 
         ### ------------  ROS INITIALIZATION  ------------ ###
+        self.key_sub_ = rospy.Subscriber(
+            "key_input", Int8, self._keyCallback, queue_size=10)
         self.spacenav_sub_ = rospy.Subscriber(
             "spacenav/joy", Joy, self._spacenavCallback, queue_size=2)
 
@@ -110,7 +112,6 @@ class TRPOTrainer(GeneralTrainer):
     ''' generate trajectories by rolling out the stochastic policy 'pi_theta_k', of iteration k,
     and no truncation of rolling horizon, unless needed'''
     def gen_trajectories(self, session, traj_batch_size, exploring=True):
-
         raw_t = {'states': [], 'actions': [], 'rewards': [],
                  'disc_rewards': [], 'values': [], 'advantages': []}
         raw_states = []
@@ -164,9 +165,11 @@ class TRPOTrainer(GeneralTrainer):
                 self.running_stats.standard_deviation()
             self._valuerrorDebug("state_normalized",state_normalized) if self.debug else None
             norm_states.append(state_normalized)
-            if not self.expert_input:
+            if self.action_from_policy:
+                print("TRAINER: action_from_policy = True")
                 action = self.local_brain.sample_action(session, state_normalized, exploring)
             else:
+                print("TRAINER: action_from_policy = False")
                 action = self.expert_action
             new_state, reward, terminal = self.env.step(action) if not test else self.env.step(action, target_pose)
             actions.append(action)
@@ -231,17 +234,14 @@ class TRPOTrainer(GeneralTrainer):
             raise NameError("NaN in "+str(name))
         elif np.isinf(np.sum(value)):
             raise NameError("Inf in "+str(name))
-
-    def _keys(self, msg):
-        if self.key_input == ord('9'):
-            self.expert_input = True
-        elif self.key_input == ord('0'):
-            self.expert_input = False
-        elif self.key_input == ord('o'):
-            self.gripper_angle = 1
-        elif self.key_input == ord('c'):
-            self.gripper_angle = -1
     
     def _spacenavCallback(self, msg):
-        self.expert_action = [msg.axes[0],msg.axes[1],msg.axes[2],msg.axes[3],msg.axes[4],msg.axes[5],self.gripper_angle,self.gripper_angle]
+        self.expert_action = [-msg.axes[1]*3,msg.axes[0]*3,msg.axes[2]*3,msg.axes[4]*2,-msg.axes[3]*2,msg.axes[5]*2,self.gripper_angle,self.gripper_angle]
         self.gripper_angle = 0
+    
+    def _keyCallback(self, msg):
+        if msg.data == ord('0'):
+            self.action_from_policy = True
+        if msg.data == ord('9'):
+            self.action_from_policy = False
+

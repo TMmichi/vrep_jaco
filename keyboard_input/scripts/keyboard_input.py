@@ -73,7 +73,7 @@ class SimpleKeyTeleop():
         self._interface.write_line(4, 'Position: q,e,w,s,a,d')
         self._interface.write_line(5, 'Orientation: y,i,u,j,h,k')
         self._interface.write_line(6, '1: Agent action, 2: Train')
-        self._interface.write_line(7, '0: Policy, 9: Expert')
+        self._interface.write_line(7, '9: Expert, 0: Policy')
         self._interface.write_line(9, 'z: Exit')
         while self._running:
             while True:
@@ -104,7 +104,7 @@ class SimpleKeyTeleop():
         self._interface.write_line(4, 'Position: q,e,w,s,a,d')
         self._interface.write_line(5, 'Orientation: y,i,u,j,h,k')
         self._interface.write_line(6, '1: Agent action, 2: Train')
-        self._interface.write_line(7, '0: Policy, 9: Expert')
+        self._interface.write_line(7, '9: Expert, 0: Policy')
         self._interface.write_line(9, 'z: Exit')
         
 

@@ -120,10 +120,10 @@ void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
     yaw -= 0.1;
     command = true;
     break;
-  case '9':
+  case '3':
     expert_input = true;
     break;
-  case '0':
+  case '4':
     expert_input = false;
     break;
   }
