@@ -51,6 +51,8 @@ class JacoVrepEnv(JacoVrepEnvUtil):
         assert self.action_space.contains(
             action), "Action {} ({}) is invalid".format(action, type(action))
         
+        self.take_action(action)
+
         for _ in range(num_step_pass):
             # TODO: wait for step signal
             self.step_simulation()
