@@ -55,8 +55,8 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             "/vrep/pressure_data", Float32MultiArray, self._pressure_CB, queue_size=1)
         self.reset_pub = rospy.Publisher("reset_key", Int8, queue_size=1)
         self.quit_pub = rospy.Publisher("quit_key", Int8, queue_size=1)
-        self.key_pub = rospy.Publisher(
-            "rl_key_output", Float32MultiArray, queue_size=1)
+        self.action_pub = rospy.Publisher(
+            "rl_action_output", Float32MultiArray, queue_size=1)
         self.jointPub_ = rospy.Publisher(
             "j2n6s300/joint_states", JointState, queue_size=1)
         self.feedbackPub_ = rospy.Publisher(
@@ -368,7 +368,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
     def _take_action(self, a):
         key_out = Float32MultiArray()  # a = [-1,0,1] * 8
         key_out.data = np.array(a[:6], dtype=np.float32)
-        self.key_pub.publish(key_out)
+        self.action_pub.publish(key_out)
         self.gripper_angle_1 = max(
             min(self.gripper_angle_1 + a[6]/20.0, 0), -0.7)
         self.gripper_angle_2 = max(

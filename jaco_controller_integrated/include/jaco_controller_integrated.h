@@ -40,7 +40,7 @@ private:
     ros::Subscriber clock_sub_;
     ros::Subscriber teleop_sub_;
     ros::Subscriber spacenav_sub_;
-    ros::Subscriber key_sub_;
+    ros::Subscriber action_sub_;
     ros::Subscriber reset_sub_;
     ros::Publisher key_check_pub_;
 
@@ -68,6 +68,7 @@ private:
     bool p_cartesian;
     bool debug;
     int reset_counter;
+    bool expert_input = false;
 };
 
 }

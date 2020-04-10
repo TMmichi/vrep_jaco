@@ -66,7 +66,7 @@ class RL_controller:
         #If resume training on pre-trained models with episodes, else None
         args.model_path = "/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/models_jointpose/"
         os.makedirs(args.model_path,exist_ok=True)
-        args.training_index = 200
+        args.training_index = 192
         self.trainer = TRPOTrainer(**vars(args))
 
 
@@ -90,6 +90,7 @@ class RL_controller:
             sess.run(tf.compat.v1.local_variables_initializer())
             K.set_session(sess)
             self.trainer.train(session=sess)
+            print("Train Finished")
 
 
 if __name__ == "__main__":
