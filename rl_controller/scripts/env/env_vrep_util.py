@@ -146,11 +146,11 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         try:
             for i_jointhandle in self.jointHandles_:
                 position.append(self.obj_get_joint_angle(i_jointhandle))
-            print("Position_now: ",position[:6])
+            #print("Position_now: ",position[:6])
             self.jointState_.position = position
             startPos = self.jointState_.position
             i = len(points)-2
-            print("Position_goal: ",points[i].positions[:6])
+            #print("Position_goal: ",points[i].positions[:6])
             move_diff = np.linalg.norm(np.array(points[i].positions[:6])-np.array(position[:6]))
             if (not move_diff > 1) or (not move_diff < 6):
                 while not rospy.is_shutdown():
@@ -268,8 +268,12 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             self.action_from_policy = True
         elif self.key_input == ord('s'):    # Action from Sample
             self.action_from_policy = False
-        elif self.key_input in [ord('o'), ord('c')]:
+        elif self.key_input in [ord('f'), ord('g'), ord('v'), ord('b'), ord('o'), ord('p')]:
             self._take_manual_action(self.key_input)
+        elif self.key_input == ord('9'):    # Action from Sample
+            self.action_from_policy = False
+        elif self.key_input == ord('0'):    # Action from Sample
+            self.action_from_policy = False
 
     def _reset(self, sync=False):
         self.reset_pub.publish(Int8(data=ord('r')))
@@ -388,16 +392,33 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             self.jointHandles_[8], radtoangle(self.gripper_angle_2))
 
     def _take_manual_action(self, key):
-        if key == ord("o"):
-            inc = 0.05
-        elif key == ord("c"):
-            inc = -0.05
+        if key == ord("f"):
+            inc1 = 0.05
+            inc2 = 0
+        elif key == ord("g"):
+            inc1 = -0.05
+            inc2 = 0
+        elif key == ord("v"):
+            inc1 = 0
+            inc2 = 0.05
+        elif key == ord("b"):
+            inc1 = 0
+            inc2 = -0.05
+        elif key == ord("o"):
+            inc1 = 0.05
+            inc2 = 0.05
+        elif key == ord("p"):
+            inc1 = -0.05
+            inc2 = -0.05
         else:
             pass
-        self.gripper_angle = max(min(self.gripper_angle+inc, 0), -0.7)
-        for i in range(6, 9):
+        self.gripper_angle_1 = max(min(self.gripper_angle_1+inc1, 0), -0.7)
+        self.gripper_angle_2 = max(min(self.gripper_angle_2+inc2, 0), -0.7)
+        for i in range(6, 8):
             self.obj_set_position_target(
-                self.jointHandles_[i], radtoangle(self.gripper_angle))
+                self.jointHandles_[i], radtoangle(self.gripper_angle_1))
+        self.obj_set_position_target(
+                self.jointHandles_[8], radtoangle(self.gripper_angle_2))
 
     # TODO: data saving method
     def _depth_CB(self, msg):
@@ -410,14 +431,6 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         data = np.fromstring(msg.data, dtype=np.uint16)
         data = np.reshape(data, (height, width))
         data = np.flip(data, 0)
-        '''
-        fig = plt.figure(frameon=False)
-        ax = fig.add_subplot(1,1,1)
-        plt.axis('off')
-        # fig.savefig('/home/ljh/Documents/Figure_1.png', bbox_inches='tight',pad_inches=0)
-        plt.imshow(data)
-        plt.show()'''
-        #print("depth image: ", msg_time)
         self.image_buff = [data, msg_time]
         try:
             self.data_buff_temp[0] = self.image_buff
