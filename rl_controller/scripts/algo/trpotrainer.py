@@ -32,7 +32,7 @@ class TRPOTrainer(GeneralTrainer):
 
         ### ------------  ROS INITIALIZATION  ------------ ###
         self.key_sub_ = rospy.Subscriber(
-            "key_input", Int8, self._keyCallback, queue_size=10)
+            "key_input", Int8, self._keyCallback, queue_size=1)
         self.spacenav_sub_ = rospy.Subscriber(
             "spacenav/joy", Joy, self._spacenavCallback, queue_size=2)
 
@@ -152,7 +152,6 @@ class TRPOTrainer(GeneralTrainer):
         while time.time() - then < 1.2:
             self.env.step_simulation()
         actions, rewards, states, norm_states = [], [], [], []
-
         test = True                     #TODO: Remove test
         if test:
             target_pose = [uniform(0.2,0.5) for i in range(2)] + [uniform(0.8,1.1)]
@@ -166,10 +165,10 @@ class TRPOTrainer(GeneralTrainer):
             self._valuerrorDebug("state_normalized",state_normalized) if self.debug else None
             norm_states.append(state_normalized)
             if self.action_from_policy:
-                print("TRAINER: action_from_policy = True")
+                pbar.write("TRAINER: action_from_policy = True")
                 action = self.local_brain.sample_action(session, state_normalized, exploring)
             else:
-                print("TRAINER: action_from_policy = False")
+                pbar.write("TRAINER: action_from_policy = False")
                 action = self.expert_action
             new_state, reward, terminal = self.env.step(action) if not test else self.env.step(action, target_pose)
             actions.append(action)
@@ -242,6 +241,10 @@ class TRPOTrainer(GeneralTrainer):
     def _keyCallback(self, msg):
         if msg.data == ord('0'):
             self.action_from_policy = True
-        if msg.data == ord('9'):
+        elif msg.data == ord('9'):
             self.action_from_policy = False
+        elif msg.data == ord('o'):
+            self.gripper_angle = 1
+        elif msg.data == ord('p'):
+            self.gripper_angle = -1
 

@@ -25,7 +25,7 @@ class RL_controller:
         rospy.init_node("RL_controller", anonymous=True)
         self.use_sim = rospy.get_param("/rl_controller/use_sim")
         self.trigger_sub = rospy.Subscriber(
-            "key_input", Int8, self.trigger, queue_size=10)
+            "key_input", Int8, self.trigger, queue_size=1)
 
         #Arguments
         parser = ArgParser()
