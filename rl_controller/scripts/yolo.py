@@ -1,6 +1,8 @@
 from ctypes import *
 import math
 import random
+import numpy as np
+import gc
 
 def sample(probs):
     s = sum(probs)
@@ -31,7 +33,6 @@ class DETECTION(Structure):
                 ("objectness", c_float),
                 ("sort_class", c_int)]
 
-
 class IMAGE(Structure):
     _fields_ = [("w", c_int),
                 ("h", c_int),
@@ -42,10 +43,8 @@ class METADATA(Structure):
     _fields_ = [("classes", c_int),
                 ("names", POINTER(c_char_p))]
 
-    
 
-#lib = CDLL("/home/pjreddie/documents/darknet/libdarknet.so", RTLD_GLOBAL)
-lib = CDLL("/home/kimtaehan/Desktop/yolo_darknet/darknet/libdarknet.so", RTLD_GLOBAL)
+lib = CDLL("/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/libdarknet.so", RTLD_GLOBAL)
 lib.network_width.argtypes = [c_void_p]
 lib.network_width.restype = c_int
 lib.network_height.argtypes = [c_void_p]
@@ -99,6 +98,10 @@ letterbox_image = lib.letterbox_image
 letterbox_image.argtypes = [IMAGE, c_int, c_int]
 letterbox_image.restype = IMAGE
 
+numpy_to_image = lib.float_to_image
+numpy_to_image.argtypes = [c_int, c_int, c_int, POINTER(c_float)]
+numpy_to_image.restype = IMAGE
+
 load_meta = lib.get_metadata
 lib.get_metadata.argtypes = [c_char_p]
 lib.get_metadata.restype = METADATA
@@ -122,7 +125,7 @@ def classify(net, meta, im):
     res = sorted(res, key=lambda x: -x[1])
     return res
 
-def detect(net, meta, image, thresh=.5, hier_thresh=.5, nms=.45):
+def detect(net, meta, image, thresh=.4, hier_thresh=.5, nms=.45):
     im = load_image(image, 0, 0)
     num = c_int(0)
     pnum = pointer(num)
@@ -130,7 +133,6 @@ def detect(net, meta, image, thresh=.5, hier_thresh=.5, nms=.45):
     dets = get_network_boxes(net, im.w, im.h, thresh, hier_thresh, None, 0, pnum)
     num = pnum[0]
     if (nms): do_nms_obj(dets, num, meta.classes, nms);
-
     res = []
     for j in range(num):
         for i in range(meta.classes):
@@ -141,7 +143,38 @@ def detect(net, meta, image, thresh=.5, hier_thresh=.5, nms=.45):
     free_image(im)
     free_detections(dets, num)
     return res
-    
+
+def detectTopic(net, meta, topic_data, thresh=.4, hier_thresh=.5, nms=.45):
+    raveled = topic_data.ravel()
+    c_float_p = POINTER(c_float)
+    data_p = raveled.ctypes.data_as(c_float_p)
+    im = numpy_to_image(topic_data.shape[1],topic_data.shape[2],topic_data.shape[0],data_p)
+    #im = IMAGE(topic_data.shape[1],topic_data.shape[2],topic_data.shape[0],data_p)
+    num = c_int(0)
+    pnum = pointer(num)
+    predict_image(net, im)
+    dets = get_network_boxes(net, im.w, im.h, thresh, hier_thresh, None, 0, pnum)
+    num = pnum[0]
+    if (nms): do_nms_obj(dets, num, meta.classes, nms);
+    res = []
+    for j in range(num):
+        for i in range(meta.classes):
+            if dets[j].prob[i] > 0:
+                b = dets[j].bbox
+                res.append((meta.names[i], dets[j].prob[i], (b.x, b.y, b.w, b.h)))
+    res = sorted(res, key=lambda x: -x[1])
+    #free_image(im)
+    #free_detections(dets, num)
+    return res
+
+def callImg(image):
+    im = load_image(image,0,0)
+    print("CALLED")
+    for i in range(239*640+310,239*640+310+20):
+        print(int(im.data[i]*255),end=' ')
+    print("")
+
+
 if __name__ == "__main__":
     #net = load_net("cfg/densenet201.cfg", "/home/pjreddie/trained/densenet201.weights", 0)
     #im = load_image("data/wolf.jpg", 0, 0)
