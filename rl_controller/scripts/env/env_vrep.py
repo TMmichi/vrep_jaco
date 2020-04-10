@@ -68,7 +68,7 @@ class JacoVrepEnv(JacoVrepEnvUtil):
     def terminal_inspection(self, target_pose):
         # TODO: terminal state definition
         test = False
-        temp_max_step = 20
+        temp_max_step = 250
         if test:
             self.current_steps += 1
             return False, 0 if self.current_steps < 32 else True, 0
