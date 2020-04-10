@@ -22,6 +22,7 @@ class TRPOTrainer(GeneralTrainer):
         self.training_index = kwargs['training_index']
         self.expert_input = False
         self.expert_action = [0]*8
+        self.gripper_angle = 0
         
         ### ------------  RUNNING STATISTICS  ------------ ###
         # https://arxiv.org/pdf/1707.02286.pdf p.12
@@ -30,11 +31,8 @@ class TRPOTrainer(GeneralTrainer):
         self.rew_scale = 0.25 #TODO: Learn more about it
 
         ### ------------  ROS INITIALIZATION  ------------ ###
-        self.key_sub_ = rospy.Subscriber(
-            "key_input", Int8, self._keys, queue_size=10)
         self.spacenav_sub_ = rospy.Subscriber(
             "spacenav/joy", Joy, self._spacenavCallback, queue_size=2)
-
 
     ''' 
     core training routine.
@@ -235,7 +233,6 @@ class TRPOTrainer(GeneralTrainer):
             raise NameError("Inf in "+str(name))
 
     def _keys(self, msg):
-        self.key_input = msg.data
         if self.key_input == ord('9'):
             self.expert_input = True
         elif self.key_input == ord('0'):
@@ -246,5 +243,5 @@ class TRPOTrainer(GeneralTrainer):
             self.gripper_angle = -1
     
     def _spacenavCallback(self, msg):
-        self.expert_action = [msg.axes[0]*5,msg.axes[1]*5,msg.axes[2]*5,msg.axes[3]*2,msg.axes[4]*2,msg.axes[5]*2,self.gripper_angle,self.gripper_angle]
+        self.expert_action = [msg.axes[0],msg.axes[1],msg.axes[2],msg.axes[3],msg.axes[4],msg.axes[5],self.gripper_angle,self.gripper_angle]
         self.gripper_angle = 0
