@@ -2,6 +2,10 @@ import time
 from random import uniform, randint
 import numpy as np
 import scipy.signal
+
+import rospy
+from std_msgs.msg import Int8
+from sensor_msgs.msg import Joy
 from algo.runningstat import RunningStats
 from algo.trainer import GeneralTrainer
 from algo.trpo import TRPO
@@ -16,21 +20,27 @@ class TRPOTrainer(GeneralTrainer):
         self.local_brain = TRPO(**kwargs)
         self.episode_count = 0
         self.training_index = kwargs['training_index']
-        '''
-        Running Statistics.
-        normalize observations using running mean and std over the course of the entire experiment,
-        fix the running statistics per batch
-        see p.12 in https://arxiv.org/pdf/1707.02286.pdf
-        '''
+        self.action_from_policy = True
+        self.expert_action = [0]*8
+        self.gripper_angle = 0
+        
+        ### ------------  RUNNING STATISTICS  ------------ ###
+        # https://arxiv.org/pdf/1707.02286.pdf p.12
         self.running_stats = RunningStats(
             self.local_brain.env.get_state_shape()[0])
         self.rew_scale = 0.25 #TODO: Learn more about it
+
+        ### ------------  ROS INITIALIZATION  ------------ ###
+        self.key_sub_ = rospy.Subscriber(
+            "key_input", Int8, self._keyCallback, queue_size=1)
+        self.spacenav_sub_ = rospy.Subscriber(
+            "spacenav/joy", Joy, self._spacenavCallback, queue_size=2)
 
     ''' 
     core training routine.
         updates value using previous batch of trajectories, 
         updates policy using current batch of trajectories,
-        For details, see https://arxiv.org/pdf/1703.02660.pdf
+        https://arxiv.org/pdf/1703.02660.pdf
     '''
     def train(self, session):
         self._print_instance_info()
@@ -102,15 +112,14 @@ class TRPOTrainer(GeneralTrainer):
     ''' generate trajectories by rolling out the stochastic policy 'pi_theta_k', of iteration k,
     and no truncation of rolling horizon, unless needed'''
     def gen_trajectories(self, session, traj_batch_size, exploring=True):
-
         raw_t = {'states': [], 'actions': [], 'rewards': [],
                  'disc_rewards': [], 'values': [], 'advantages': []}
         raw_states = []
 
         if exploring:
-            pbar_string = "Batch generation [exploring]"
-        else:
             pbar_string = "Batch generation [sampling]"
+        else:
+            pbar_string = "Batch generation [policy]"
         pbar2 = tqdm(total=traj_batch_size, position=0, desc=pbar_string, leave=False)
         for i in range(traj_batch_size):
             actions, rewards, states, norm_states = self._gen_trajectory(session, exploring, pbar2)
@@ -143,23 +152,24 @@ class TRPOTrainer(GeneralTrainer):
         while time.time() - then < 1.2:
             self.env.step_simulation()
         actions, rewards, states, norm_states = [], [], [], []
-
         test = True                     #TODO: Remove test
         if test:
-            target_pose = [uniform(0.2,0.6) for i in range(3)]
+            target_pose = [uniform(0.2,0.5) for i in range(2)] + [uniform(0.8,1.1)]
         if pbar is not None:
             pbar.write(f'\033[92mtarget_pose = \033[0m'+''.join(f'{p:.2f} ' for p in target_pose))
         terminal = False
         while terminal is False:
             states.append(state)
-
-            mean = self.running_stats.mean()
-            std = self.running_stats.standard_deviation()
             state_normalized = (state - self.running_stats.mean()) / \
                 self.running_stats.standard_deviation()
             self._valuerrorDebug("state_normalized",state_normalized) if self.debug else None
             norm_states.append(state_normalized)
-            action = self.local_brain.sample_action(session, state_normalized, exploring)
+            if self.action_from_policy:
+                pbar.write("TRAINER: action_from_policy = True")
+                action = self.local_brain.sample_action(session, state_normalized, exploring)
+            else:
+                pbar.write("TRAINER: action_from_policy = False")
+                action = self.expert_action
             new_state, reward, terminal = self.env.step(action) if not test else self.env.step(action, target_pose)
             actions.append(action)
             reward = rewards[-1] if np.isnan(reward) else reward * self.rew_scale
@@ -219,9 +229,22 @@ class TRPOTrainer(GeneralTrainer):
         return self
     
     def _valuerrorDebug(self, name, value):
-        #for i in range(len(value)):
-        #    print(value[i])
         if np.isnan(np.sum(value)):
             raise NameError("NaN in "+str(name))
         elif np.isinf(np.sum(value)):
             raise NameError("Inf in "+str(name))
+    
+    def _spacenavCallback(self, msg):
+        self.expert_action = [-msg.axes[1]*3,msg.axes[0]*3,msg.axes[2]*3,msg.axes[4]*2,-msg.axes[3]*2,msg.axes[5]*2,self.gripper_angle,self.gripper_angle]
+        self.gripper_angle = 0
+    
+    def _keyCallback(self, msg):
+        if msg.data == ord('0'):
+            self.action_from_policy = True
+        elif msg.data == ord('9'):
+            self.action_from_policy = False
+        elif msg.data == ord('o'):
+            self.gripper_angle = 1
+        elif msg.data == ord('p'):
+            self.gripper_angle = -1
+

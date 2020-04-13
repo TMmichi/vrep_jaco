@@ -68,11 +68,13 @@ class SimpleKeyTeleop():
         self.key_now = 0
 
     def run(self):
-        rate = rospy.Rate(self._hz)
         self._running = True
         self._interface.write_line(2, 'Pressed: None')
-        self._interface.write_line(5, 'Use w,a,s,d keys to move, z to exit.')
-        self._interface.write_line(7, '1: Agent action, 2: Train')
+        self._interface.write_line(4, 'Position: q,e,w,s,a,d')
+        self._interface.write_line(5, 'Orientation: y,i,u,j,h,k')
+        self._interface.write_line(6, '1: Agent action, 2: Train')
+        self._interface.write_line(7, '9: Expert, 0: Policy')
+        self._interface.write_line(9, 'z: Exit')
         while self._running:
             while True:
                 keycode = self._interface.read_key()
@@ -80,7 +82,6 @@ class SimpleKeyTeleop():
                     break
                 self._key_pressed(keycode)
                 self._publish(keycode)
-            #rate.sleep()
 
     def _key_pressed(self, keycode):
         if keycode == ord('z'):
@@ -100,9 +101,11 @@ class SimpleKeyTeleop():
             except Exception:
                 print("Wrong key")
         self._interface.write_line(2, 'Pressed: ' + chr(keycode))
-        self._interface.write_line(5, 'Use w,a,s,d keys to move, z to exit.')
-        self._interface.write_line(7, '1: Agent action, 2: Train.')
-        self._interface.refresh()
+        self._interface.write_line(4, 'Position: q,e,w,s,a,d')
+        self._interface.write_line(5, 'Orientation: y,i,u,j,h,k')
+        self._interface.write_line(6, '1: Agent action, 2: Train')
+        self._interface.write_line(7, '9: Expert, 0: Policy')
+        self._interface.write_line(9, 'z: Exit')
         
 
 

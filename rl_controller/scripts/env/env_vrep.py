@@ -46,11 +46,13 @@ class JacoVrepEnv(JacoVrepEnvUtil):
 
     def step(self, action, target_pose=None):
         # TODO: Determine how many time steps should be proceed when called
-        num_step_pass = 4
+        num_step_pass = 1
         # actions = np.clip(actions,-self.action_space_max, self.action_space_max)
         assert self.action_space.contains(
             action), "Action {} ({}) is invalid".format(action, type(action))
         
+        self.take_action(action)
+
         for _ in range(num_step_pass):
             # TODO: wait for step signal
             self.step_simulation()
@@ -67,7 +69,7 @@ class JacoVrepEnv(JacoVrepEnvUtil):
     def terminal_inspection(self, target_pose):
         # TODO: terminal state definition
         test = False
-        temp_max_step = 20
+        temp_max_step = 1000
         if test:
             self.current_steps += 1
             return False, 0 if self.current_steps < 32 else True, 0
