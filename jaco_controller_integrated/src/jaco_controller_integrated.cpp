@@ -45,7 +45,7 @@ void JacoController::updateParams()
 void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
 {
   key_input = msg->data;
-  printf(MOVEIT_CONSOLE_COLOR_BLUE "Key In: %c\n", key_input);
+  //printf(MOVEIT_CONSOLE_COLOR_BLUE "Key In: %c\n", key_input);
 
   waypoints.clear();
   current_pose = move_group->getCurrentPose().pose;
@@ -108,15 +108,19 @@ void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
       yaw -= 0.1;
       break;
     case '7':
+      printf(MOVEIT_CONSOLE_COLOR_BLUE "Spacenav: True\n");
       spacenav_input = true;
       break;
     case '8':
+      printf(MOVEIT_CONSOLE_COLOR_BLUE "Spacenav: False\n");
       spacenav_input = false;
       break;
     case '9':
+      printf(MOVEIT_CONSOLE_COLOR_BLUE "Key: True\n");
       expert_input = true;
       break;
     case '0':
+      printf(MOVEIT_CONSOLE_COLOR_BLUE "Key: False\n");
       expert_input = false;
       break;
   }

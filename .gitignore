@@ -534,3 +534,8 @@ rl_controller/scripts/darknet/obj/utils.o
 rl_controller/scripts/darknet/obj/yolo_layer.o
 rl_controller/scripts/darknet/obj/yolo.o
 >>>>>>> 0eacc68fab11337678e4ce21bad92ce8394663d9
+vrep_jaco_data/image/figure_rgb0.jpg
+vrep_jaco_data/image/figure_rgb1.jpg
+vrep_jaco_data/image/figure_rgb2.jpg
+vrep_jaco_data/image/figure_rgb3.jpg
+rl_controller/scripts/darknet/cfg/yolov3-big.weights

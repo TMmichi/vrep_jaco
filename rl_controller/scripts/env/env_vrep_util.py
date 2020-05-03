@@ -6,7 +6,8 @@ from env.vrep_env_rl import vrep  # vrep.sim_handle_parent
 import os
 import sys
 import time
-import psutil, signal
+import psutil
+import signal
 import subprocess
 from math import pi
 from random import sample, randint
@@ -33,7 +34,8 @@ def radtoangle(rad):
 class JacoVrepEnvUtil(vrep_env.VrepEnv):
     def __init__(self, **kwargs):
         ### ------------  V-REP API INITIALIZATION  ------------ ###
-        vrep_exec = rospy.get_param("/vrep_jaco_bringup_simulator/vrep_path")+"/coppeliaSim.sh -s "
+        vrep_exec = rospy.get_param(
+            "/vrep_jaco_bringup_simulator/vrep_path")+"/coppeliaSim.sh -s "
         scene = rospy.get_param("/vrep_jaco_bringup_simulator/scene_file")
         self.exec_string = vrep_exec+scene+" &"
 
@@ -150,7 +152,8 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             startPos = self.jointState_.position
             i = len(points)-2
             #print("Position_goal: ",points[i].positions[:6])
-            move_diff = np.linalg.norm(np.array(points[i].positions[:6])-np.array(position[:6]))
+            move_diff = np.linalg.norm(
+                np.array(points[i].positions[:6])-np.array(position[:6]))
             if (not move_diff > 1) or (not move_diff < 6):
                 while not rospy.is_shutdown():
                     if self.trajAS_.is_preempt_requested():
@@ -215,7 +218,6 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
                 self.trajAS_.set_aborted(result)
         except Exception as e:
             print(e, file=sys.stderr)
-            
 
     def _interpolate(self, last, current, alpha):
         intermediate = []
@@ -286,7 +288,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             self.step_simulation()
             time.sleep(0.5)
         return self._get_observation()
-    
+
     def _memory_check(self):
         total = psutil.virtual_memory().total
         used = total - psutil.virtual_memory().available
@@ -299,7 +301,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             except(psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                 pass
         '''
-        return True if (used/total*100)>75 else False
+        return True if (used/total*100) > 75 else False
 
     def _vrep_process_reset(self):
         print("Restarting Vrep")
@@ -315,9 +317,9 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         time.sleep(1)
         self.worker_pause = False
 
-    def _get_observation(self,target=None):
+    def _get_observation(self, target=None):
         # TODO: Use multiprocessing to generate state from parallel computation
-        test = True                             #TODO: Remove test
+        test = True  # TODO: Remove test
         if test:
             observation = self.obj_get_position(
                 self.jointHandles_[5]) + self.obj_get_orientation(self.jointHandles_[5])
@@ -337,14 +339,14 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
     def _get_reward(self, target_pose):
         # TODO: Reward from IRL
         test = True
-        if test:                                #TODO: Remove test
+        if test:  # TODO: Remove test
             gripper_pose = self._get_observation(target_pose)
         else:
             gripper_pose = self._get_observation()
         if self.reward_method == "l2":
             dist_diff = np.linalg.norm(
                 np.array(gripper_pose[:3]) - np.array(target_pose[:3]))
-            reward = (3 - dist_diff*1.3)            #TODO: Shape reward
+            reward = (3 - dist_diff*1.3)  # TODO: Shape reward
             return reward - 1
         elif self.reward_method == "":
             return self.reward_module(gripper_pose, target_pose)
@@ -357,7 +359,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         gripper_pose = self._get_observation()
         dist_diff = np.linalg.norm(
             np.array(gripper_pose[:3]) - np.array(target_pose[:3]))
-        if dist_diff < 0.2:                     #TODO: Shape terminal inspection
+        if dist_diff < 0.2:  # TODO: Shape terminal inspection
             return True, 10
         else:
             return False, 0
@@ -404,7 +406,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             self.obj_set_position_target(
                 self.jointHandles_[i], radtoangle(self.gripper_angle_1))
         self.obj_set_position_target(
-                self.jointHandles_[8], radtoangle(self.gripper_angle_2))
+            self.jointHandles_[8], radtoangle(self.gripper_angle_2))
 
     # TODO: data saving method
     def _depth_CB(self, msg):
