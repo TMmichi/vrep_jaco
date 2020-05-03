@@ -125,7 +125,7 @@ def classify(net, meta, im):
     res = sorted(res, key=lambda x: -x[1])
     return res
 
-def detect(net, meta, image, thresh=.4, hier_thresh=.5, nms=.45):
+def detect(net, meta, image, thresh=.75, hier_thresh=.4, nms=.45):
     im = load_image(image, 0, 0)
     num = c_int(0)
     pnum = pointer(num)
@@ -143,36 +143,6 @@ def detect(net, meta, image, thresh=.4, hier_thresh=.5, nms=.45):
     free_image(im)
     free_detections(dets, num)
     return res
-
-def detectTopic(net, meta, topic_data, thresh=.4, hier_thresh=.5, nms=.45):
-    raveled = topic_data.ravel()
-    c_float_p = POINTER(c_float)
-    data_p = raveled.ctypes.data_as(c_float_p)
-    im = numpy_to_image(topic_data.shape[1],topic_data.shape[2],topic_data.shape[0],data_p)
-    #im = IMAGE(topic_data.shape[1],topic_data.shape[2],topic_data.shape[0],data_p)
-    num = c_int(0)
-    pnum = pointer(num)
-    predict_image(net, im)
-    dets = get_network_boxes(net, im.w, im.h, thresh, hier_thresh, None, 0, pnum)
-    num = pnum[0]
-    if (nms): do_nms_obj(dets, num, meta.classes, nms);
-    res = []
-    for j in range(num):
-        for i in range(meta.classes):
-            if dets[j].prob[i] > 0:
-                b = dets[j].bbox
-                res.append((meta.names[i], dets[j].prob[i], (b.x, b.y, b.w, b.h)))
-    res = sorted(res, key=lambda x: -x[1])
-    #free_image(im)
-    #free_detections(dets, num)
-    return res
-
-def callImg(image):
-    im = load_image(image,0,0)
-    print("CALLED")
-    for i in range(239*640+310,239*640+310+20):
-        print(int(im.data[i]*255),end=' ')
-    print("")
 
 
 if __name__ == "__main__":
