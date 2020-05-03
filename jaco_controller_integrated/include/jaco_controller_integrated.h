@@ -69,6 +69,7 @@ private:
     bool debug;
     int reset_counter;
     bool expert_input = false;
+    bool spacenav_input = false;
 };
 
 }

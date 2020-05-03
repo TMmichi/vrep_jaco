@@ -247,4 +247,7 @@ class TRPOTrainer(GeneralTrainer):
             self.gripper_angle = 1
         elif msg.data == ord('p'):
             self.gripper_angle = -1
+        elif msg.data in [ord('w')]:
+            self.expert_action = [0,0.01,0,0,0,0,0,0]
+            self.gripper_angle = 0
 

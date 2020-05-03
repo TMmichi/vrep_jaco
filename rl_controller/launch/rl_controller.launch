@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
   <arg name="use_sim" default="True"/>
-  <node name="rl_controller" pkg="rl_controller" type="rl_controller.py" output="screen">
+  <node name="rl_controller" pkg="rl_controller" type="rl_controller_script.py" output="screen">
     <param name="use_sim" value="$(arg use_sim)"/>
   </node>
 </launch>

@@ -12,6 +12,7 @@ from matplotlib import pyplot as plt
 
 import rospy
 from argparser import ArgParser
+from rl_controller.srv import InitTraining
 from std_msgs.msg import Int8
 from state_gen.state_generator import State_generator
 from env.env_vrep import JacoVrepEnv
@@ -24,8 +25,7 @@ class RL_controller:
     def __init__(self, feedbackRate_=50):
         rospy.init_node("RL_controller", anonymous=True)
         self.use_sim = rospy.get_param("/rl_controller/use_sim")
-        self.trigger_sub = rospy.Subscriber(
-            "key_input", Int8, self.trigger, queue_size=1)
+        self.trainig_srv = rospy.Service('training',InitTraining,self._train)
 
         #Arguments
         parser = ArgParser()
@@ -66,10 +66,10 @@ class RL_controller:
         #If resume training on pre-trained models with episodes, else None
         args.model_path = "/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/models_jointpose/"
         os.makedirs(args.model_path,exist_ok=True)
-        args.training_index = 192
+        #args.training_index = 192
         self.trainer = TRPOTrainer(**vars(args))
 
-
+    '''
     def trigger(self, msg):
         if msg.data == ord('1'):
             self._agent()
@@ -82,9 +82,10 @@ class RL_controller:
         with self.sess as sess:
             sess.run(tf.compat.v1.global_variables_initializer())
             sess.run(tf.compat.v1.local_variables_initializer())
-            K.set_session(sess)
+            K.set_session(sess)'''
 
-    def _train(self):
+    def _train(self,req):
+        print("Training service init")
         with self.sess as sess:
             sess.run(tf.compat.v1.global_variables_initializer())
             sess.run(tf.compat.v1.local_variables_initializer())

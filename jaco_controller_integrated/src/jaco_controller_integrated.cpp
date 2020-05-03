@@ -68,64 +68,57 @@ void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
   waypoints.push_back(current_pose);
   target_pose = current_pose;
 
-  bool command = false;
   switch (key_input)
   {
-  case 'w':
-    target_pose.position.y += 0.01;
-    command = true;
-    break;
-  case 's':
-    target_pose.position.y -= 0.01;
-    command = true;
-    break;
-  case 'a':
-    target_pose.position.x -= 0.01;
-    command = true;
-    break;
-  case 'd':
-    target_pose.position.x += 0.01;
-    command = true;
-    break;
-  case 'e':
-    target_pose.position.z += 0.01;
-    command = true;
-    break;
-  case 'q':
-    target_pose.position.z -= 0.01;
-    command = true;
-    break;
+    case 'w':
+      target_pose.position.y += 0.01;
+      break;
+    case 's':
+      target_pose.position.y -= 0.01;
+      break;
+    case 'a':
+      target_pose.position.x -= 0.01;
+      break;
+    case 'd':
+      target_pose.position.x += 0.01;
+      break;
+    case 'e':
+      target_pose.position.z += 0.01;
+      break;
+    case 'q':
+      target_pose.position.z -= 0.01;
+      break;
 
-  case 'u':
-    roll += 0.1;
-    command = true;
-    break;
-  case 'j':
-    roll -= 0.1;
-    command = true;
-    break;
-  case 'h':
-    pitch += 0.1;
-    command = true;
-    break;
-  case 'k':
-    pitch -= 0.1;
-    command = true;
-    break;
-  case 'y':
-    yaw += 0.1;
-    command = true;
-    break;
-  case 'i':
-    yaw -= 0.1;
-    command = true;
-    break;
-  case '3':
-    expert_input = true;
-    break;
-  case '4':
-    expert_input = false;
-    break;
+    case 'u':
+      roll += 0.1;
+      break;
+    case 'j':
+      roll -= 0.1;
+      break;
+    case 'h':
+      pitch += 0.1;
+      break;
+    case 'k':
+      pitch -= 0.1;
+      break;
+    case 'y':
+      yaw += 0.1;
+      break;
+    case 'i':
+      yaw -= 0.1;
+      break;
+    case '7':
+      spacenav_input = true;
+      break;
+    case '8':
+      spacenav_input = false;
+      break;
+    case '9':
+      expert_input = true;
+      break;
+    case '0':
+      expert_input = false;
+      break;
   }
 
   if (debug)
@@ -139,7 +132,7 @@ void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
   }
   
   moveit_msgs::RobotTrajectory trajectory;
-  if (!p_cartesian && command)
+  if (!p_cartesian && !expert_input)
   {
     tf2::Quaternion orientation;
     orientation.setRPY(roll, pitch, yaw);
@@ -156,7 +149,7 @@ void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
     ROS_DEBUG_NAMED("","Goal Sending");
     execute_action_client_->sendGoal(goal);
   }
-  else if (p_cartesian && command)
+  else if (p_cartesian && !expert_input)
   {
     waypoints.push_back(target_pose);
     fraction = move_group->computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
@@ -172,7 +165,7 @@ void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
 
 void JacoController::spacenavCallback(const sensor_msgs::Joy::ConstPtr& msg)
 {
-  if (expert_input){
+  if (spacenav_input){
     waypoints.clear();
     current_pose = move_group->getCurrentPose().pose;
     tf2::Quaternion q(current_pose.orientation.x, current_pose.orientation.y, current_pose.orientation.z, current_pose.orientation.w);

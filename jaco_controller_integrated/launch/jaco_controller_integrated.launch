@@ -40,6 +40,4 @@
     <arg name="config" value="true"/>
     <arg name="debug" value="false"/>
   </include>-->
-
-  <include file="$(find spacenav_node)/launch/classic.launch"/>
 </launch>

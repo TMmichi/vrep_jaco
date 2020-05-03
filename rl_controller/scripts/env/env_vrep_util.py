@@ -255,7 +255,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
 
     def _keys(self, msg):
         self.key_input = msg.data
-        print("INPUT: ",self.key_input)
+        #print("INPUT: ",self.key_input)
         if self.key_input == ord('r'):      # Reset environment
             self._reset()
             self.key_input = ord('1')
