@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<launch>∂
+  <param name="use_sim_time" value="true"/>
+  <node name="env_client" pkg="env_client" type="env_client.py" output="screen"></node>
+</launch>

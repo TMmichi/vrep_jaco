@@ -1,0 +1,16 @@
+1)
+/home/kimtaehan/Desktop/vrep_jaco_2/src/jaco_controller_integrated/src/jaco_controller_integrated.cpp:33:15: error: ‘class moveit::planning_interface::MoveGroupInterface’ has no member named ‘ClientReset’
+   move_group->ClientReset();
+
+2)
+/home/kimtaehan/Desktop/vrep_jaco_2/src/rl_controller/scripts/state_gen/vae_train_test_keras_film.py
+이거 안돌아갑니다 ㅠㅠ
+
+3)
+/home/kimtaehan/Desktop/vrep_jaco_2/src/rl_controller/scripts/state_gen/vae_train_test_keras_film.py
+npy경로 수정 하였습니다.
+
+4)
+coppeliasim으로 업그레이드를 안하여서
+vrep_jaco_bringup bringup.launch 에서 vrep 경로 수정 하였습니다
+

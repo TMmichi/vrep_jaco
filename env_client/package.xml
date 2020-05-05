@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>env_client</name>
+  <version>1.0.0</version>
+  <description>Machine Learning and Control Systems Lab.</description>
+  <license>TODO</license>
+  <maintainer email="ljh_0921@yonsei.ac.kr">Jeonghoon Lee</maintainer>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>rospy</depend>
+  <depend>std_msgs</depend>
+  <depend>rosgraph_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>control_msgs</depend>
+  <depend>trajectory_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>actionlib</depend>
+</package>
