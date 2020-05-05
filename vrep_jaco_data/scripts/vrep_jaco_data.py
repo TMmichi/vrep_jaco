@@ -24,13 +24,19 @@ class Vrep_jaco_data:
         rospy.init_node("vrep_jaco_data",anonymous=True)
         
         self.image_buffersize = 5
-        self.image_buff = []
+        self.image_buff0 = []
+        self.image_buff1 = []
+        self.image_buff2 = []
+        self.image_buff3 = []
         self.joint_buffersize = 100
         self.joint_state = []
         self.pressure_buffersize = 100
         self.pressure_state = []
         self.rgb_image_buffersize = 5
-        self.rgb_image_buff = []
+        self.rgb_image_buff0 = []
+        self.rgb_image_buff1 = []
+        self.rgb_image_buff2 = []
+        self.rgb_image_buff3 = []
 
         self.data_buff = []
         self.data_buff_temp = [[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]]
@@ -59,8 +65,8 @@ class Vrep_jaco_data:
         self.stop = False
 
         ## absolute path needed
-        self.net = yolo.load_net(b"/home/kimtaehan/Desktop/ws/src/vrep_jaco_data/scripts/darknet/cfg/yolov3-tiny.cfg", b"/home/kimtaehan/Desktop/ws/src/vrep_jaco_data/scripts/darknet/yolov3-tiny.weights", 0)
-        self.meta = yolo.load_meta(b"/home/kimtaehan/Desktop/ws/src/vrep_jaco_data/scripts/darknet/cfg/coco.data")
+        self.net = yolo.load_net(b"/home/kth/Desktop/ws/lab/vrep_jaco_ws/src/vrep_jaco_data/scripts/darknet/cfg/yolov3-tiny.cfg", b"/home/kth/Desktop/ws/lab/vrep_jaco_ws/src/vrep_jaco_data/scripts/darknet/yolov3-tiny.weights", 0)
+        self.meta = yolo.load_meta(b"/home/kth/Desktop/ws/lab/vrep_jaco_ws/src/vrep_jaco_data/scripts/darknet/cfg/coco.data")
 
         self.jointstate_sub = rospy.Subscriber("/vrep/joint_states",JointState,self.jointstate_CB, queue_size=1)
         self.pressure_sub = rospy.Subscriber("/vrep/pressure_data",Float32MultiArray,self.pressure_CB, queue_size=1)
@@ -86,8 +92,8 @@ class Vrep_jaco_data:
         data = np.fromstring(msg.data,dtype=np.uint16)
         data = np.reshape(data,(height,width))
         data = np.flip(data,0)
-        self.image_buff = [data,msg_time]
-        self.data_buff_temp[0] = self.image_buff
+        self.image_buff0 = [data,msg_time]
+        self.data_buff_temp[0] = self.image_buff0
         # print("depth0 : ",self.depth0)
 
     def depth_CB1(self,msg):
@@ -100,8 +106,8 @@ class Vrep_jaco_data:
         data = np.fromstring(msg.data,dtype=np.uint16)
         data = np.reshape(data,(height,width))
         data = np.flip(data,0)
-        self.image_buff = [data,msg_time]
-        self.data_buff_temp[1] = self.image_buff
+        self.image_buff1 = [data,msg_time]
+        self.data_buff_temp[1] = self.image_buff1
         # print("depth : ",msg_time)
         # print("depth1 : ",self.depth1)
 
@@ -116,8 +122,8 @@ class Vrep_jaco_data:
         data = np.fromstring(msg.data,dtype=np.uint16)
         data = np.reshape(data,(height,width))
         data = np.flip(data,0)
-        self.image_buff = [data,msg_time]
-        self.data_buff_temp[2] = self.image_buff
+        self.image_buff2 = [data,msg_time]
+        self.data_buff_temp[2] = self.image_buff2
         # print("depth : ",msg_time)
         # print("depth2 : ",self.depth2)
 
@@ -132,8 +138,8 @@ class Vrep_jaco_data:
         data = np.fromstring(msg.data,dtype=np.uint16)
         data = np.reshape(data,(height,width))
         data = np.flip(data,0)
-        self.image_buff = [data,msg_time]
-        self.data_buff_temp[3] = self.image_buff
+        self.image_buff3 = [data,msg_time]
+        self.data_buff_temp[3] = self.image_buff3
         # print("depth : ",msg_time)
         # print("depth3 : ",self.depth3)
 
@@ -149,7 +155,7 @@ class Vrep_jaco_data:
         plt.imsave(self.rospack.get_path('vrep_jaco_data')+'/image/figure_rgb0.jpg',data)
         plt.close()
         print("gogo")
-        r = yolo.detect(self.net, self.meta, b"/home/kimtaehan/Desktop/ws/src/vrep_jaco_data/image/figure_rgb0.jpg")
+        r = yolo.detect(self.net, self.meta, b"/home/kth/Desktop/ws/lab/vrep_jaco_ws/src/vrep_jaco_data/image/figure_rgb0.jpg")
         if(len(r)==0):
             data_center = [[-1,-1]]
         else:
@@ -165,8 +171,8 @@ class Vrep_jaco_data:
             if len(data_center)==0:
                 data_center = [[-1,-1]]
             
-        self.rgb_image_buff = [data_center, msg_time]
-        self.data_buff_temp[4] = self.rgb_image_buff
+        self.rgb_image_buff0 = [data_center, msg_time]
+        self.data_buff_temp[4] = self.rgb_image_buff0
         self.rgb0 = True
         ## should fix time
         # if self.joint_start==True and self.pressure_start==True and self.data_time_check(0.075):
@@ -181,7 +187,7 @@ class Vrep_jaco_data:
         data = np.flip(data,0)
         plt.imsave(self.rospack.get_path('vrep_jaco_data')+'/image/figure_rgb1.jpg',data)
         plt.close()
-        r = yolo.detect(self.net, self.meta, b"/home/kimtaehan/Desktop/ws/src/vrep_jaco_data/image/figure_rgb1.jpg")
+        r = yolo.detect(self.net, self.meta, b"/home/kth/Desktop/ws/lab/vrep_jaco_ws/src/vrep_jaco_data/image/figure_rgb1.jpg")
         if(len(r)==0):
             data_center = [[-1,-1]]
         else:
@@ -196,8 +202,8 @@ class Vrep_jaco_data:
             if len(data_center)==0:
                 data_center = [[-1,-1]]
             
-        self.rgb_image_buff = [data_center, msg_time]
-        self.data_buff_temp[5] = self.rgb_image_buff
+        self.rgb_image_buff1 = [data_center, msg_time]
+        self.data_buff_temp[5] = self.rgb_image_buff1
         self.rgb1 = True
         ## should fix time
         # if self.joint_start==True and self.pressure_start==True and self.data_time_check(0.075):
@@ -212,7 +218,7 @@ class Vrep_jaco_data:
         data = np.flip(data,0)
         plt.imsave(self.rospack.get_path('vrep_jaco_data')+'/image/figure_rgb2.jpg',data)
         plt.close()
-        r = yolo.detect(self.net, self.meta, b"/home/kimtaehan/Desktop/ws/src/vrep_jaco_data/image/figure_rgb2.jpg")
+        r = yolo.detect(self.net, self.meta, b"/home/kth/Desktop/ws/lab/vrep_jaco_ws/src/vrep_jaco_data/image/figure_rgb2.jpg")
         if(len(r)==0):
             data_center = [[-1,-1]]
         else:
@@ -227,8 +233,8 @@ class Vrep_jaco_data:
             if len(data_center)==0:
                 data_center = [[-1,-1]]
             
-        self.rgb_image_buff = [data_center, msg_time]
-        self.data_buff_temp[6] = self.rgb_image_buff
+        self.rgb_image_buff2 = [data_center, msg_time]
+        self.data_buff_temp[6] = self.rgb_image_buff2
         self.rgb2 = True
         ## should fix time
         # if self.joint_start==True and self.pressure_start==True and self.data_time_check(0.075):
@@ -243,7 +249,7 @@ class Vrep_jaco_data:
         data = np.flip(data,0)
         plt.imsave(self.rospack.get_path('vrep_jaco_data')+'/image/figure_rgb3.jpg',data)
         plt.close()
-        r = yolo.detect(self.net, self.meta, b"/home/kimtaehan/Desktop/ws/src/vrep_jaco_data/image/figure_rgb3.jpg")
+        r = yolo.detect(self.net, self.meta, b"/home/kth/Desktop/ws/lab/vrep_jaco_ws/src/vrep_jaco_data/image/figure_rgb3.jpg")
         if(len(r)==0):
             data_center = [[-1,-1]]
         else:
@@ -258,8 +264,8 @@ class Vrep_jaco_data:
             if len(data_center)==0:
                 data_center = [[-1,-1]]
             
-        self.rgb_image_buff = [data_center, msg_time]
-        self.data_buff_temp[7] = self.rgb_image_buff
+        self.rgb_image_buff3 = [data_center, msg_time]
+        self.data_buff_temp[7] = self.rgb_image_buff3
         self.rgb3 = True
         ## should fix time
         # if self.joint_start==True and self.pressure_start==True and self.data_time_check(0.075):
@@ -386,7 +392,7 @@ class Vrep_jaco_data:
 
     def data_record(self):
         np.save(self.rospack.get_path('vrep_jaco_data')+"/data/dummy_data",self.data_buff)
-        self.stop = True # if False it records all data
+        # self.stop = True # if False it records all data
         print("DATA RECORDED")
         # # raise rospy.ROSInterruptException
 
