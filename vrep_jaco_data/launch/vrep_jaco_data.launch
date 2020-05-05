@@ -1,5 +1,0 @@
-<?xml version="1.0"?>
-<launch>
-  <node name="vrep_jaco_data" pkg="vrep_jaco_data" type="vrep_jaco_data.py" output="screen">
-  </node>
-</launch>
