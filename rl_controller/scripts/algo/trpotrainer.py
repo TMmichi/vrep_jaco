@@ -264,11 +264,15 @@ class TRPOTrainer(GeneralTrainer):
         inc = 2
         if msg.data == ord('0'):
             self.action_from_policy = True
+            self.action_from_spacenav = False
         elif msg.data == ord('9'):
             self.action_from_policy = False
+            self.action_from_spacenav = False
         elif msg.data == ord('7'):
+            self.action_from_policy = False
             self.action_from_spacenav = True
         elif msg.data == ord('8'):
+            self.action_from_policy = True
             self.action_from_spacenav = False
         elif msg.data == ord('o'):
             self.gripper_angle = 1

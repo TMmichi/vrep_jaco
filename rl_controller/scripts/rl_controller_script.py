@@ -23,7 +23,7 @@ class RL_controller:
     def __init__(self, feedbackRate_=50):
         rospy.init_node("RL_controller", anonymous=True)
         self.use_sim = rospy.get_param("/rl_controller/use_sim")
-        self.trainig_srv = rospy.Service('training', InitTraining, self._train)
+        self.trainig_srv = rospy.Service('policy_train', InitTraining, self._train)
 
         # Arguments
         parser = ArgParser()
