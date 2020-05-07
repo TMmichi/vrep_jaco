@@ -1,6 +1,0 @@
-moveit/moveit_commander
-/home/kth/Desktop/vrep_test/moveit/devel/.private/moveit_commander/cmake.lock /home/kth/Desktop/vrep_test/moveit/devel/./cmake.lock
-/home/kth/Desktop/vrep_test/moveit/devel/.private/moveit_commander/share/moveit_commander/cmake/moveit_commanderConfig.cmake /home/kth/Desktop/vrep_test/moveit/devel/share/moveit_commander/cmake/moveit_commanderConfig.cmake
-/home/kth/Desktop/vrep_test/moveit/devel/.private/moveit_commander/share/moveit_commander/cmake/moveit_commanderConfig-version.cmake /home/kth/Desktop/vrep_test/moveit/devel/share/moveit_commander/cmake/moveit_commanderConfig-version.cmake
-/home/kth/Desktop/vrep_test/moveit/devel/.private/moveit_commander/lib/python2.7/dist-packages/moveit_commander/__init__.py /home/kth/Desktop/vrep_test/moveit/devel/lib/python2.7/dist-packages/moveit_commander/__init__.py
-/home/kth/Desktop/vrep_test/moveit/devel/.private/moveit_commander/lib/pkgconfig/moveit_commander.pc /home/kth/Desktop/vrep_test/moveit/devel/lib/pkgconfig/moveit_commander.pc

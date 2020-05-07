@@ -1,7 +1,0 @@
-moveit_visual_tools
-/home/kth/Desktop/vrep_test/moveit/devel/.private/moveit_visual_tools/cmake.lock /home/kth/Desktop/vrep_test/moveit/devel/./cmake.lock
-/home/kth/Desktop/vrep_test/moveit/devel/.private/moveit_visual_tools/share/moveit_visual_tools/cmake/moveit_visual_toolsConfig.cmake /home/kth/Desktop/vrep_test/moveit/devel/share/moveit_visual_tools/cmake/moveit_visual_toolsConfig.cmake
-/home/kth/Desktop/vrep_test/moveit/devel/.private/moveit_visual_tools/share/moveit_visual_tools/cmake/moveit_visual_toolsConfig-version.cmake /home/kth/Desktop/vrep_test/moveit/devel/share/moveit_visual_tools/cmake/moveit_visual_toolsConfig-version.cmake
-/home/kth/Desktop/vrep_test/moveit/devel/.private/moveit_visual_tools/lib/libmoveit_visual_tools.so /home/kth/Desktop/vrep_test/moveit/devel/lib/libmoveit_visual_tools.so
-/home/kth/Desktop/vrep_test/moveit/devel/.private/moveit_visual_tools/lib/pkgconfig/moveit_visual_tools.pc /home/kth/Desktop/vrep_test/moveit/devel/lib/pkgconfig/moveit_visual_tools.pc
-/home/kth/Desktop/vrep_test/moveit/devel/.private/moveit_visual_tools/lib/moveit_visual_tools/moveit_visual_tools_demo /home/kth/Desktop/vrep_test/moveit/devel/lib/moveit_visual_tools/moveit_visual_tools_demo

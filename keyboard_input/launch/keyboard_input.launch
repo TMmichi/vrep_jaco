@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+  <param name="use_sim_time" value="true"/>
+  <node name="keyboard_input" pkg="keyboard_input" type="keyboard_input.py" output="screen"></node>
+  <include file="$(find spacenav_node)/launch/classic.launch"/>
+</launch>
