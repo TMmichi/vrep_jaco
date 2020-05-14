@@ -34,6 +34,7 @@ JacoController::JacoController() : nh_(""), nh_local_("~")
   spacenav_sub_ = nh_.subscribe("spacenav/joy", 2, &JacoController::spacenavCallback, this);
   action_sub_ = nh_.subscribe("rl_action_output", 10, &JacoController::actionCallback, this);
   reset_sub_ = nh_.subscribe("reset_key", 10, &JacoController::resetCallback, this);
+  learning_sub_ = nh_.subscribe("learning_key", 10, &JacoController::islearningCallback, this);
 }
 
 void JacoController::updateParams()
@@ -110,18 +111,22 @@ void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
     case '7':
       printf(MOVEIT_CONSOLE_COLOR_BLUE "Spacenav: True\n");
       spacenav_input = true;
+      keyboard_input = false;
       break;
     case '8':
       printf(MOVEIT_CONSOLE_COLOR_BLUE "Spacenav: False\n");
       spacenav_input = false;
+      keyboard_input = false;
       break;
     case '9':
-      printf(MOVEIT_CONSOLE_COLOR_BLUE "Key: True\n");
-      expert_input = true;
+      printf(MOVEIT_CONSOLE_COLOR_BLUE "Keyboard: True\n");
+      keyboard_input = true;
+      spacenav_input = false;
       break;
     case '0':
-      printf(MOVEIT_CONSOLE_COLOR_BLUE "Key: False\n");
-      expert_input = false;
+      printf(MOVEIT_CONSOLE_COLOR_BLUE "Keyboard: False\n");
+      keyboard_input = false;
+      spacenav_input = false;
       break;
   }
 
@@ -136,7 +141,7 @@ void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
   }
   
   moveit_msgs::RobotTrajectory trajectory;
-  if (!p_cartesian && !expert_input)
+  if (!p_cartesian && keyboard_input && !islearning)
   {
     tf2::Quaternion orientation;
     orientation.setRPY(roll, pitch, yaw);
@@ -153,8 +158,8 @@ void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
     ROS_DEBUG_NAMED("","Goal Sending");
     execute_action_client_->sendGoal(goal);
   }
-  else if (p_cartesian && !expert_input)
-  {
+  else if (p_cartesian && keyboard_input && !islearning)
+  { 
     waypoints.push_back(target_pose);
     fraction = move_group->computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
     control_msgs::FollowJointTrajectoryGoal goal;
@@ -169,7 +174,7 @@ void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
 
 void JacoController::spacenavCallback(const sensor_msgs::Joy::ConstPtr& msg)
 {
-  if (spacenav_input){
+  if (spacenav_input && !islearning){
     waypoints.clear();
     current_pose = move_group->getCurrentPose().pose;
     tf2::Quaternion q(current_pose.orientation.x, current_pose.orientation.y, current_pose.orientation.z, current_pose.orientation.w);
@@ -332,6 +337,16 @@ void JacoController::resetCallback(const std_msgs::Int8::ConstPtr& msg)
   Poco::ProcessHandle ph_movegroupLaunch = Poco::Process::launch("roslaunch",launch_args);
   ph_movegroup = new Poco::ProcessHandle(ph_movegroupLaunch);
   reset_counter = 0;
+}
+
+void JacoController::islearningCallback(const std_msgs::Int8::ConstPtr& msg)
+{
+  if(msg->data==1){
+    islearning = true;
+  }
+  if(msg->data==0){
+    islearning=false;
+  }
 }
 
 int main(int argc, char **argv)

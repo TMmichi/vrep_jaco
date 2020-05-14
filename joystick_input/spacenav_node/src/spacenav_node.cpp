@@ -222,7 +222,7 @@ int main(int argc, char **argv)
     if (joy_stale)
     {
       joy_pub.publish(joystick_msg);
-      ros::Duration(0.03).sleep();
+      ros::Duration(0.05).sleep();
     }
 
     if (queue_empty) {

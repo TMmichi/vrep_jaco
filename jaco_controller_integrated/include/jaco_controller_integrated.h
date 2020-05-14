@@ -31,6 +31,7 @@ private:
     void spacenavCallback(const sensor_msgs::Joy::ConstPtr& msg);
     void actionCallback(const std_msgs::Float32MultiArray& msg);
     void resetCallback(const std_msgs::Int8::ConstPtr& msg);
+    void islearningCallback(const std_msgs::Int8::ConstPtr& msg);
 
     //ROS handles
     ros::NodeHandle nh_;
@@ -42,6 +43,7 @@ private:
     ros::Subscriber spacenav_sub_;
     ros::Subscriber action_sub_;
     ros::Subscriber reset_sub_;
+    ros::Subscriber learning_sub_;
     ros::Publisher key_check_pub_;
 
     //Variables
@@ -68,8 +70,9 @@ private:
     bool p_cartesian;
     bool debug;
     int reset_counter;
-    bool expert_input = false;
+    bool keyboard_input = false;
     bool spacenav_input = false;
+    bool islearning = false;
 };
 
 }
