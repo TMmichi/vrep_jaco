@@ -60,7 +60,7 @@ class RL_controller:
         #args.training_index = 192
         self.num_timesteps = args.num_timesteps
         self.trainer = TRPO(MlpPolicy, self.env, cg_damping=0.1, vf_iters=5, vf_stepsize=1e-3,
-                            tensorboard_log="~/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/tensorboard_log", full_tensorboard_log=True)
+                            tensorboard_log="/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/tensorboard_log", full_tensorboard_log=True)
 
     def _train(self, req):
         print("Training service init")

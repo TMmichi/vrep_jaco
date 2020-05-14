@@ -129,6 +129,8 @@ int main(int argc, char **argv)
   ros::param::get("~/static_rot_deadband", static_rot_deadband);
 
   sensor_msgs::Joy joystick_msg;
+  double joy_pub_delay = 0.05;
+  ros::param::get("~/joy_pub_delay",joy_pub_delay);
   joystick_msg.axes.resize(6);
   joystick_msg.buttons.resize(2);
   
@@ -222,7 +224,7 @@ int main(int argc, char **argv)
     if (joy_stale)
     {
       joy_pub.publish(joystick_msg);
-      ros::Duration(0.05).sleep();
+      ros::Duration(joy_pub_delay).sleep();
     }
 
     if (queue_empty) {
