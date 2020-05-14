@@ -24,6 +24,7 @@ class RL_controller:
         rospy.init_node("RL_controller", anonymous=True)
         self.use_sim = rospy.get_param("/rl_controller/use_sim")
         self.trainig_srv = rospy.Service('policy_train', InitTraining, self._train)
+        self.learningkey_pub = rospy.Publisher("learning_key", Int8, queue_size=1)
 
         # Arguments
         parser = ArgParser()
@@ -68,6 +69,9 @@ class RL_controller:
     def _train(self, req):
         print("Training service init")
         with self.sess as sess:
+            learning_key = Int8()
+            learning_key.data = 1
+            self.learningkey_pub.publish(learning_key)
             sess.run(tf.compat.v1.global_variables_initializer())
             sess.run(tf.compat.v1.local_variables_initializer())
             K.set_session(sess)

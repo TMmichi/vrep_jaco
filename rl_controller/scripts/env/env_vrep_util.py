@@ -10,7 +10,7 @@ import psutil
 import signal
 import subprocess
 from math import pi
-from random import sample, randint
+from random import sample, randint, uniform
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -61,6 +61,8 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             "rl_action_output", Float32MultiArray, queue_size=1)
         self.jointPub_ = rospy.Publisher(
             "j2n6s300/joint_states", JointState, queue_size=1)
+        self.target_pub_ = rospy.Publisher(
+            "test_target", Float32MultiArray, queue_size=1)
         self.feedbackPub_ = rospy.Publisher(
             "feedback_states", FollowJointTrajectoryFeedback, queue_size=1)
         self.publishWorkerTimer_ = rospy.Timer(
@@ -111,6 +113,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         self.data_buff_temp = [0, 0, 0]
 
         ### ------------  REWARD  ------------ ###
+        self.goal = self._sample_goal()
         try:
             self.reward_method = kwargs['reward_method']
             self.reward_module = kwargs['reward_module']
@@ -270,13 +273,10 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         self.gripper_angle_1 = 0.35
         self.gripper_angle_2 = 0.35
         self.trajAS_.reset()
-
         proc_reset = self._memory_check()
         self._vrep_process_reset() if proc_reset else None
-
         if self.sim_running:
             self.stop_simulation()
-
         random_init_angle = [sample(range(-180, 180), 1)[0], 150, sample(range(200, 270), 1)[0], sample(
             range(50, 130), 1)[0], sample(range(50, 130), 1)[0], sample(range(50, 130), 1)[0]]  # angle in degree
         for i, degree in enumerate(random_init_angle):
@@ -287,6 +287,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         if sync:
             self.step_simulation()
             time.sleep(0.5)
+        self.goal = self._sample_goal()
         return self._get_observation()
 
     def _memory_check(self):
@@ -317,48 +318,49 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         time.sleep(1)
         self.worker_pause = False
 
-    def _get_observation(self, target=None):
+    def _get_observation(self,):
         # TODO: Use multiprocessing to generate state from parallel computation
         test = True  # TODO: Remove test
         if test:
             observation = self.obj_get_position(
                 self.jointHandles_[5]) + self.obj_get_orientation(self.jointHandles_[5])
-            if target == None:
-                observation += [0] * 3
-            else:
-                observation += target
+            observation += self.goal
             if np.isnan(np.sum(observation)):
                 #print("NAN OCCURED IN VREP CLIENT!!!!!")
                 # If nan, try to get observation recursively untill we do not have any nan
-                observation = self._get_observation(target)
+                observation = self._get_observation()
         else:
             data_from_callback = []
             observation = self.state_gen.generate(data_from_callback)
         return np.array(observation)
 
-    def _get_reward(self, target_pose):
+    def _get_reward(self):
         # TODO: Reward from IRL
         test = True
-        if test:  # TODO: Remove test
-            gripper_pose = self._get_observation(target_pose)
-        else:
-            gripper_pose = self._get_observation()
+        gripper_pose = self._get_observation()
         if self.reward_method == "l2":
             dist_diff = np.linalg.norm(
-                np.array(gripper_pose[:3]) - np.array(target_pose[:3]))
+                np.array(gripper_pose[:3]) - np.array(self.goal))
             reward = (3 - dist_diff*1.3)  # TODO: Shape reward
             return reward - 1
         elif self.reward_method == "":
-            return self.reward_module(gripper_pose, target_pose)
+            return self.reward_module(gripper_pose, self.goal)
         else:
             print("Constant Reward. SHOULD BE FIXED")
             return 30
             #raise NameError("Wrong reward type")
+    
+    def _sample_goal(self):
+        target_pose = [uniform(0.2, 0.5) for i in range(2)] + [uniform(0.8, 1.1)]
+        target_out = Float32MultiArray()
+        target_out.data = np.array(target_pose, dtype=np.float32)
+        self.target_pub_.publish(target_out)
+        return target_pose
 
-    def _get_terminal_inspection(self, target_pose):
+    def _get_terminal_inspection(self):
         gripper_pose = self._get_observation()
         dist_diff = np.linalg.norm(
-            np.array(gripper_pose[:3]) - np.array(target_pose[:3]))
+            np.array(gripper_pose[:3]) - np.array(self.goal))
         if dist_diff < 0.2:  # TODO: Shape terminal inspection
             return True, 10
         else:

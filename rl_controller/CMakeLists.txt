@@ -14,6 +14,8 @@ catkin_python_setup()
 add_service_files(
   FILES
   InitTraining.srv
+  ViewCollect.srv
+  TrajCollect.srv
 )
 
 generate_messages(

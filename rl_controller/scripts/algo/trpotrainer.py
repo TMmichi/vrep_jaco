@@ -1,11 +1,10 @@
 import time
-from random import uniform, randint
+from random import randint
 import numpy as np
 import scipy.signal
 
 import rospy
 from std_msgs.msg import Int8
-from std_msgs.msg import Float32MultiArray
 from sensor_msgs.msg import Joy
 from algo.runningstat import RunningStats
 from algo.trainer import GeneralTrainer
@@ -37,8 +36,6 @@ class TRPOTrainer(GeneralTrainer):
             "key_input", Int8, self._keyCallback, queue_size=1)
         self.spacenav_sub_ = rospy.Subscriber(
             "spacenav/joy", Joy, self._spacenavCallback, queue_size=2)
-        self.target_pub_ = rospy.Publisher(
-            "test_target", Float32MultiArray, queue_size=1)
 
     ''' 
     core training routine.
@@ -159,20 +156,11 @@ class TRPOTrainer(GeneralTrainer):
     ''' generate a single episodic trajectory '''
 
     def _gen_trajectory(self, session, exploring=True, pbar=None):
-        state = self.local_brain.env.reset_environment()
+        state = self.local_brain.env.reset()
         then = time.time()
         while time.time() - then < 1.2:
             self.env.step_simulation()
         actions, rewards, states, norm_states = [], [], [], []
-        test = True  # TODO: Remove test
-        if test:
-            target_pose = [uniform(0.2, 0.5) for i in range(2)] + [uniform(0.8, 1.1)]
-            target_out = Float32MultiArray()
-            target_out.data = np.array(target_pose, dtype=np.float32)
-            self.target_pub_.publish(target_out)
-        if pbar is not None:
-            pbar.write(f'\033[92mtarget_pose = \033[0m' +
-                       ''.join(f'{p:.2f} ' for p in target_pose))
         terminal = False
         while terminal is False:
             states.append(state)
@@ -188,8 +176,7 @@ class TRPOTrainer(GeneralTrainer):
             else:
                 pbar.write("TRAINER: action_from_policy = False")
                 action = self.expert_action
-            new_state, reward, terminal = self.env.step(
-                action) if not test else self.env.step(action, target_pose)
+            new_state, reward, terminal, _ = self.env.step(action)
             actions.append(action)
             reward = rewards[-1] if np.isnan(reward) else reward * self.rew_scale
             rewards.append(reward)
