@@ -1,8 +1,5 @@
 #!/usr/bin/env python
 
-from env.vrep_env_rl import vrep_env
-from env.vrep_env_rl import vrep  # vrep.sim_handle_parent
-
 import os
 import sys
 import time
@@ -16,6 +13,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 import rospy
+from env.vrep_env_rl import vrep_env
+from env.vrep_env_rl import vrep  # vrep.sim_handle_parent
 from env.SimpleActionServer_mod import SimpleActionServer_mod
 from std_msgs.msg import Int8
 from std_msgs.msg import Int8MultiArray
@@ -51,6 +50,8 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         # Subscribers / Publishers / TimerCallback
         self.key_sub = rospy.Subscriber(
             "key_input", Int8, self._keys, queue_size=10)
+        self.joint_state_sub = rospy.Subscriber(
+            "/j2n6s300/joint_states", JointState, self._jointState_CB, queue_size=10)
         self.rs_image_sub = rospy.Subscriber(
             "/vrep/depth_image", Image, self._depth_CB, queue_size=1)
         self.pressure_sub = rospy.Subscriber(
@@ -59,14 +60,10 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         self.quit_pub = rospy.Publisher("quit_key", Int8, queue_size=1)
         self.action_pub = rospy.Publisher(
             "rl_action_output", Float32MultiArray, queue_size=1)
-        self.jointPub_ = rospy.Publisher(
-            "j2n6s300/joint_states", JointState, queue_size=1)
         self.target_pub_ = rospy.Publisher(
             "test_target", Float32MultiArray, queue_size=1)
         self.feedbackPub_ = rospy.Publisher(
             "feedback_states", FollowJointTrajectoryFeedback, queue_size=1)
-        self.publishWorkerTimer_ = rospy.Timer(
-            kwargs['period'], self._publishWorker)
         self.worker_pause = False
 
         ### ------------  ACTION LIBRARY INITIALIZATION  ------------ ###
@@ -121,32 +118,19 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             self.reward_method = None
             self.reward_module = None
 
-    def _publishWorker(self, e):
-        if not self.worker_pause:
-            try:
-                self._updateJointState()
-                self._publishJointInfo()
-            except Exception:
-                pass
 
-    def _updateJointState(self):
-        self.jointState_.header.stamp = rospy.Time.now()
-        position = []
-        for i_jointhandle in self.jointHandles_:
-            position.append(self.obj_get_joint_angle(i_jointhandle))
-        self.jointState_.position = position
-
-    def _publishJointInfo(self):
-        self.jointPub_.publish(self.jointState_)
-        self.feedback_.header.stamp = rospy.Time.now()
-        self.feedback_.actual.positions = self.jointState_.position
-        self.feedbackPub_.publish(self.feedback_)
+    def _jointState_CB(self,msg):
+        self.jointState_.position = msg.position
 
     def _trajCB(self, goal):
         result = FollowJointTrajectoryResult()
         points = goal.trajectory.points
         startTime = rospy.Time.now()
         position = []
+        try:
+            print(goal.trajectory.points[-1].positions[:6])
+        except Exception as e:
+            print(e, file=sys.stderr)
         try:
             for i_jointhandle in self.jointHandles_:
                 position.append(self.obj_get_joint_angle(i_jointhandle))
