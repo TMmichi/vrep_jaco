@@ -194,12 +194,12 @@ void JacoController::spacenavCallback(const sensor_msgs::Joy::ConstPtr& msg)
 
     waypoints.push_back(current_pose);
     target_pose = current_pose;
-    target_pose.position.y += msg->axes[0] / 20.0;
-    target_pose.position.x -= msg->axes[1] / 20.0;
-    target_pose.position.z += msg->axes[2] / 20.0;
-    roll += msg->axes[4] / 10.0;
-    pitch -= msg->axes[3] / 10.0;
-    yaw += msg->axes[5] / 10.0;
+    target_pose.position.y += msg->axes[0] / 68.35;
+    target_pose.position.x -= msg->axes[1] / 68.35;
+    target_pose.position.z += msg->axes[2] / 68.35;
+    roll += msg->axes[4] / 6.835 / 2;
+    pitch -= msg->axes[3] / 6.835 / 2;
+    yaw += msg->axes[5] / 6.835 / 2;
 
     if (debug)
     {
