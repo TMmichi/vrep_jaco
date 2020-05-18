@@ -8,9 +8,10 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 import rospy
-import rospkg
 from std_msgs.msg import Int8, Float32MultiArray
-from sensor_msgs.msg import Image, JointState
+from sensor_msgs.msg import Image, JointState, Joy
+from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
 from rl_controller.srv import ViewCollect, TrajCollect
 
 from argparser import ArgParser
@@ -29,6 +30,8 @@ class Data_collector:
 
         # Parameters for TrajColect
         self.collect_init = False
+        self.mobile_action = np.array([0,0])
+        self.gripper_action = np.array([0,0,0,0,0,0],dtype=np.float16)
 
         # Parameters for ViewCollect
         self.image_buffersize = 5
@@ -48,12 +51,7 @@ class Data_collector:
         self.joint_time =  0
         self.num = 0
         self.stop = False
-        self.rospack = rospkg.RosPack()
-        #self.net0 = yolo.load_net(b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.cfg", b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.weights", 0)
-        #self.net1 = yolo.load_net(b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.cfg", b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.weights", 0)
-        #self.net2 = yolo.load_net(b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.cfg", b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.weights", 0)
-        #self.net3 = yolo.load_net(b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.cfg", b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.weights", 0)
-        #self.meta = yolo.load_meta(b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/coco.data")
+        self.record = False
         self.data_path = "/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/data_stategen/"
         os.makedirs(self.data_path,exist_ok=True)
 
@@ -62,9 +60,58 @@ class Data_collector:
         self.use_sim = rospy.get_param("/rl_controller/use_sim")
         self.viewcollect_srv = rospy.Service('view_collect', ViewCollect, self._viewCollect)
         self.trajcollect_srv = rospy.Service('traj_collect',TrajCollect, self._trajCollect)
-        self.key_sub = rospy.Subscriber("key_input", Int8, self._keyInput, queue_size=10)
+        self.key_pub = rospy.Publisher("key_input", Int8, queue_size=1)
+        self.key_sub = rospy.Subscriber("key_input", Int8, self.keyCallback, queue_size=10)
+        self.spacenav_sub = rospy.Subscriber("spacenav/joy", Joy, self.spacenavCallback, queue_size=2)
+        self.mobile_sub = rospy.Subscriber("cmd_vel", Twist, self.mobileactCallback, queue_size=1)
+        self.odom_sub = rospy.Subscriber("odom",Odometry, self.odomCallback, queue_size=1)
         self.jointstate_sub = rospy.Subscriber("/vrep/joint_states",JointState,self.jointstateCallback, queue_size=1)
         self.pressure_sub = rospy.Subscriber("/vrep/pressure_data",Float32MultiArray,self.pressureCallback, queue_size=1)
+        self.rate = rospy.Rate(feedbackRate_)
+        self.period = rospy.Duration(1.0/feedbackRate_)
+        args.rate = self.rate
+        args.period = self.period
+        self.env = JacoVrepEnv(**vars(args)) if self.use_sim else Real(**vars(args))        
+
+
+    def _trajCollect(self,req):
+        start_spacenav = Int8()
+        start_spacenav.data = ord('7')
+        stop_spacenav = Int8()
+        stop_spacenav.data = ord('8')
+        os.makedirs(self.data_path + "traj_data",exist_ok=True)
+        sample_num = 5
+        for i in range(1,sample_num+1):
+            self._envResetCall()
+            while not self.record:
+                pass
+            self.key_pub.publish(start_spacenav)
+            print("Trajectory ",str(i))
+            data_buff = []
+            while self.record:
+                data_buff_temp = []
+                data_buff_temp.append(rospy.Time.now())     # ROS time
+                data_buff_temp.append([0.225,0.15,1.1117])  # target position
+
+                data_buff_temp.append(self.gripper_action)    # gripper action
+                gripper_pose = self.env.obj_get_position(
+                    self.env.jointHandles_[5]) + self.env.obj_get_orientation(self.env.jointHandles_[5])
+                data_buff_temp.append(gripper_pose)         # gripper pose (Absolute Position in m, Euler Angles in rad) 
+
+                data_buff_temp.append(self.mobile_action)   # mobile action
+                data_buff_temp.append(self.odom)            # mobile odometry (Absolute)
+                data_buff.append(data_buff_temp)
+                self.env.step_simulation()
+            self.key_pub.publish(stop_spacenav)
+            np.save(self.data_path + "traj_data/trajData_" + str(i) +".npy",data_buff)
+
+    def _envResetCall(self):
+        sample_angle = [sample(range(-100, -80), 1)[0], sample(range(130, 150), 1)[0], sample(range(240, 280), 1)[0], sample(
+            range(50, 130), 1)[0], sample(range(10, 40), 1)[0], sample(range(110, 130), 1)[0]]  # angle in degree
+        self.env._reset(target_angle=sample_angle,sync=False)
+
+    def _viewCollect(self,req):
+        os.makedirs(self.data_path + "view_data",exist_ok=True)
         self.depth0_sub = rospy.Subscriber("/vrep/depth_image0",Image,self.depth0Callback, queue_size=1)
         self.image0_sub = rospy.Subscriber("/vrep/rgb_image0",Image,self.image0Callback, queue_size=1)
         self.depth1_sub = rospy.Subscriber("/vrep/depth_image1",Image,self.depth1Callback, queue_size=1)
@@ -74,50 +121,12 @@ class Data_collector:
         self.depth3_sub = rospy.Subscriber("/vrep/depth_image3",Image,self.depth3Callback, queue_size=1)
         self.image3_sub = rospy.Subscriber("/vrep/rgb_image3",Image,self.image3Callback, queue_size=1)
 
-        self.rate = rospy.Rate(feedbackRate_)
-        self.period = rospy.Duration(1.0/feedbackRate_)
-        args.rate = self.rate
-        args.period = self.period
-        self.env = JacoVrepEnv(**vars(args)) if self.use_sim else Real(**vars(args))        
+        #self.net0 = yolo.load_net(b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.cfg", b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.weights", 0)
+        #self.net1 = yolo.load_net(b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.cfg", b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.weights", 0)
+        #self.net2 = yolo.load_net(b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.cfg", b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.weights", 0)
+        #self.net3 = yolo.load_net(b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.cfg", b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.weights", 0)
+        #self.meta = yolo.load_meta(b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/coco.data")
 
-
-    def _keyInput(self,msg):
-        if msg.data == ord('1'):
-            self.collect_init = True
-        elif msg.data == ord('2'):
-            self.collect_init = False
-
-    def _trajCollect(self,req):
-        print("while loop is on the run")
-        print("Press 1 to start")
-        while True:
-            if self.collect_init:
-                print("Data Collection Init")
-                proc_reset = self.env._memory_check()
-                self.env._vrep_process_reset() if proc_reset else None
-                if self.env.sim_running:
-                    self.env.stop_simulation()
-                sample_angle = [sample(range(-180, 180), 1)[0], 150, sample(range(200, 270), 1)[0], sample(
-                    range(50, 130), 1)[0], sample(range(50, 130), 1)[0], sample(range(50, 130), 1)[0]]
-                for i, degree in enumerate(sample_angle):
-                    noise = randint(-20, 20)
-                    self.env.obj_set_position_inst(self.env.jointHandles_[i], -degree+noise)
-                    self.env.obj_set_position_target(self.env.jointHandles_[i], -degree+noise)
-                    self.env.start_simulation(sync=True, time_step=0.05)
-                position = []
-                while True:
-                    if self.collect_init:
-                        for i_jointhandle in self.env.jointHandles_:
-                            position.append(self.env.obj_get_joint_angle(i_jointhandle))
-                        self.env.step_simulation()
-                    else:
-                        break
-                self.collect_init = False
-                print("Episode terminated.")
-                print("Press 1 to re-collect")
-
-    
-    def _viewCollect(self,req):
         gripper_pose_list = []
         joint_angle_list = []
         sample_num = 5
@@ -208,7 +217,7 @@ class Data_collector:
             data = np.reshape(data,(msg.height,msg.width,3))
             data = np.flip(data,0)
             then = datetime.datetime.now()
-            plt.imsave(self.rospack.get_path('vrep_jaco_data')+'/image/figure_rgb'+str(index)+'.jpg',data)
+            plt.imsave('home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/vrep_jaco_data/image/figure_rgb'+str(index)+'.jpg',data)
             plt.close()
             r = yolo.detect(net, self.meta, fig_path)
             if(len(r)==0):
@@ -235,11 +244,26 @@ class Data_collector:
         except Exception as e:
             print(e)
 
+    def keyCallback(self,msg):
+        if msg.data == ord('1'):
+            self.record = self.record != True
+
+    def spacenavCallback(self,msg):
+        # del(x,y,z,r,p,y)
+        self.gripper_action = np.array([-msg.axes[1], msg.axes[0], msg.axes[2], msg.axes[4]*5, -msg.axes[3]*5, msg.axes[5]*5],dtype=np.float16)/68.45
+    
+    def mobileactCallback(self,msg):
+        # v_l, v_a
+        self.mobile_action = np.array([msg.linear.x,msg.angular.z],dtype=np.float16)
+    
+    def odomCallback(self,msg):
+        # x,y,x,y,z,w (poition, orientation)
+        self.odom = np.array([msg.pose.pose.position.x,msg.pose.pose.position.y,msg.pose.pose.orientation.x,msg.pose.pose.orientation.y,msg.pose.pose.orientation.z,msg.pose.pose.orientation.w])
+        
     def jointstateCallback(self,msg):
         if self.stop == False:
             if self.joint_trigger:
                 msg_time = round(msg.header.stamp.to_sec(),2)
-                # print("joint : ",msg_time)
                 self.joint_state.append([msg.position,msg_time])
                 if len(self.joint_state) > self.joint_buffersize:
                     self.joint_state.pop(0)
@@ -269,7 +293,6 @@ class Data_collector:
                         self.data_buff.append(self.data_buff_temp.copy())
                         self.num+=1
         
-    ## 0.05 : 10hz | 0.075 : 20hz 계산
     def data_time_check(self, interval):
         if abs(self.data_buff_temp[0][1]-self.data_buff_temp[1][1])<interval and abs(self.data_buff_temp[1][1]-self.data_buff_temp[2][1])<interval and abs(self.data_buff_temp[0][1]-self.data_buff_temp[2][1])<interval and abs(self.data_buff_temp[3][1]-self.data_buff_temp[0][1])<interval and abs(self.data_buff_temp[3][1]-self.data_buff_temp[1][1])<interval and abs(self.data_buff_temp[3][1]-self.data_buff_temp[2][1])<interval:
             return True

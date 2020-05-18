@@ -70,6 +70,7 @@ class RL_controller:
             self.learningkey_pub.publish(learning_key)
             self.trainer.learn(total_timesteps=self.num_timesteps)
             print("Train Finished")
+            self.trainer.save("/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/models_baseline")
 
 
 if __name__ == "__main__":

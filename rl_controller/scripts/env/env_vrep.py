@@ -26,12 +26,12 @@ class JacoVrepEnv(JacoVrepEnvUtil):
         try:
             self.state_shape = kwargs['stateGen'].get_state_shape()
         except Exception:
-            self.state_shape = None
+            self.state_shape = [9]
         self.obs_max = 2
         obs = np.array([self.obs_max]*self.state_shape[0])
         self.observation_space = spaces.Box(-obs, obs)
 
-        self.action_space_max = 3    				# 0.01 (m/s)
+        self.action_space_max = 1    				# 0.01 (m/s)
         act = np.array([self.action_space_max]*8) 	# x,y,z,r,p,y, finger 1/2, finger 3
         self.action_space = spaces.Box(-act, act)	# Action space: [-0.01, 0.01]
         

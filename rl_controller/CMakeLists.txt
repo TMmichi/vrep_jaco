@@ -6,7 +6,9 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   message_generation
   std_msgs
+  sensor_msgs
   geometry_msgs
+  nav_msgs
 )
 
 catkin_python_setup()
@@ -21,7 +23,9 @@ add_service_files(
 generate_messages(
   DEPENDENCIES
   std_msgs
+  sensor_msgs
   geometry_msgs
+  nav_msgs
 )
 
 catkin_package(CATKIN_DEPENDS
