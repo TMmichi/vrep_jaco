@@ -279,7 +279,7 @@ void JacoController::actionCallback(const std_msgs::Float32MultiArray &msg)
   target_pose.position.y += msg.data[1] / 100.0;
   target_pose.position.z += msg.data[2] / 100.0;
   roll += msg.data[3] / 20.0;
-  pitch += msg.data[4] / 20.0;
+  pitch -= msg.data[4] / 20.0;
   yaw += msg.data[5] / 20.0;
 
   if (debug)

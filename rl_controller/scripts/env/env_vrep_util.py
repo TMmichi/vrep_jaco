@@ -232,9 +232,11 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         #print("INPUT: ",self.key_input)
         if self.key_input == ord('r'):      # Reset environment
             self._reset()
-            self.key_input = ord('1')
+            self.key_input = ord('3')
         elif self.key_input in [ord('f'), ord('g'), ord('v'), ord('b'), ord('o'), ord('p')]:
             self._take_manual_action(self.key_input)
+        elif self.key_input == ord('2'):
+            self.step_simulation()
 
     def _reset(self, target_angle=None, sync=False):
         self.reset_pub.publish(Int8(data=ord('r')))
