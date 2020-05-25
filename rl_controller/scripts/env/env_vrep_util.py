@@ -133,22 +133,26 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             print(e, file=sys.stderr)
         try:
             then = datetime.datetime.now()
+            print("0: ", datetime.datetime.now()-then)
             for i_jointhandle in self.jointHandles_:
                 position.append(self.obj_get_joint_angle(i_jointhandle))
+            print("0-1: ", datetime.datetime.now()-then)
             self.jointState_.position = position
             i = len(points)-2
             move_diff = np.linalg.norm(
                 np.array(points[i].positions[:6])-np.array(position[:6]))
-            #print("1", datetime.datetime.now()-then)
+            print("1", datetime.datetime.now()-then)
             if (not move_diff > 1) or (not move_diff < 6):
                 while not rospy.is_shutdown():
                     if self.trajAS_.is_preempt_requested():
                         self.trajAS_.set_preempted()
+                        print("Preempted")
                         break
                     fromStart = rospy.Time.now() - startTime
-                    while i < len(points) - 1 and points[i+1].time_from_start < fromStart:
+                    while i < len(points) - 1 and points[i+1].time_from_start.to_sec() - points[0].time_from_start.to_sec() < fromStart.to_sec():
                         print("In While")
                         i += 1
+                    print(len(points), i, points[i+1].time_from_start.to_sec() - points[0].time_from_start.to_sec(), fromStart.to_sec())
                     if i == len(points)-1:
                         self.reachedGoal = True
                         for j in range(6):
@@ -157,18 +161,19 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
                                 tolerance = goal.goal_tolerance[j].position
                             if abs(self.jointState_.position[j] - points[i].positions[j]) > tolerance:
                                 self.reachedGoal = False
+                                print("1-1", datetime.datetime.now()-then)
                                 break
                         timeTolerance = rospy.Duration(
                             max(goal.goal_time_tolerance.to_sec(), 0.1))
                         if self.reachedGoal:
                             result.error_code = result.SUCCESSFUL
                             self.trajAS_.set_succeeded(result)
-                            #print("2-1", datetime.datetime.now()-then)
+                            print("2-1", datetime.datetime.now()-then)
                             break
                         elif fromStart > points[i].time_from_start + timeTolerance:
                             result.error_code = result.GOAL_TOLERANCE_VIOLATED
                             self.trajAS_.set_aborted(result)
-                            #print("2-2", datetime.datetime.now()-then)
+                            print("2-2", datetime.datetime.now()-then)
                             break
                         target = points[i].positions
                     else:
@@ -178,10 +183,10 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
                         if fromStart > points[i].time_from_start + timeTolerance or fromStart < rospy.Duration(0):
                             result.error_code = result.GOAL_TOLERANCE_VIOLATED
                             self.trajAS_.set_aborted(result)
-                            #print("3-1", datetime.datetime.now()-then)
+                            print("3-1", datetime.datetime.now()-then)
                             break
                         try:
-                            #print("3-2", datetime.datetime.now()-then)
+                            print("3-2", datetime.datetime.now()-then)
                             target = points[i].positions
                         except Exception as e:
                             target = [0, 0, 0, 0, 0, 0]
@@ -190,7 +195,9 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
                         self.obj_set_position_target(
                             self.jointHandles_[j], radtoangle(-target[j]))
                     time.sleep(0.02)
-                    #print("4", datetime.datetime.now()-then)
+                    print("4", datetime.datetime.now()-then)
+                if rospy.is_shutdown():
+                    print(9)
             else:
                 result.error_code = result.GOAL_TOLERANCE_VIOLATED
                 self.trajAS_.set_aborted(result)
@@ -240,7 +247,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
 
     def _reset(self, target_angle=None, sync=False):
         self.reset_pub.publish(Int8(data=ord('r')))
-        time.sleep(1.2)
+        time.sleep(4.2)
         self.gripper_angle_1 = 0.35
         self.gripper_angle_2 = 0.35
         self.trajAS_.reset()
@@ -254,10 +261,13 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         else:
             random_init_angle = target_angle
         for i, degree in enumerate(random_init_angle):
-            noise = randint(-20, 20)
-            self.obj_set_position_inst(self.jointHandles_[i], -degree+noise)
-            self.obj_set_position_target(self.jointHandles_[i], -degree+noise)
-        self.start_simulation(sync=sync, time_step=0.05)
+            self.obj_set_position_inst(self.jointHandles_[i], -degree)
+            self.obj_set_position_target(self.jointHandles_[i], -degree)
+        self.start_simulation(sync=sync, time_step=0.025)
+        gripper_pose = self._get_observation()
+        dist_diff = np.linalg.norm(
+            np.array(gripper_pose[:3]) - np.array(self.goal))
+        self.ref_reward = (3 - dist_diff*1.3)
         if sync:
             self.step_simulation()
             time.sleep(0.5)
@@ -315,7 +325,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             dist_diff = np.linalg.norm(
                 np.array(gripper_pose[:3]) - np.array(self.goal))
             reward = (3 - dist_diff*1.3)  # TODO: Shape reward
-            return reward - 1
+            return reward - self.ref_reward
         elif self.reward_method == "":
             return self.reward_module(gripper_pose, self.goal)
         else:

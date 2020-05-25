@@ -6,6 +6,7 @@ from gym import spaces
 from gym.utils import seeding
 
 import numpy as np
+import datetime
 
 
 class JacoVrepEnv(JacoVrepEnvUtil):
@@ -22,6 +23,7 @@ class JacoVrepEnv(JacoVrepEnvUtil):
         ### ------------  RL SETUP  ------------ ###
         self.current_steps = 0
         self.num_envs = 1
+        self.max_steps = kwargs['steps_per_batch']
 
         try:
             self.state_shape = kwargs['stateGen'].get_state_shape()
@@ -41,7 +43,7 @@ class JacoVrepEnv(JacoVrepEnvUtil):
 
     def reset(self, sync=False):
         self.current_steps = 0
-        return self._reset()
+        return self._reset(sync=sync)
 
     def get_state_shape(self):
         return self.state_shape
@@ -53,8 +55,13 @@ class JacoVrepEnv(JacoVrepEnvUtil):
         return self.action_space_max
 
     def step(self, action):
+        then = datetime.datetime.now()
+        if not self.trajAS_.execute_thread.is_alive():
+            print("Thread Dead")
+        else:
+            print( "Thread alive")
         # TODO: Determine how many time steps should be proceed when called
-        num_step_pass = 1
+        num_step_pass = 15
         # actions = np.clip(actions,-self.action_space_max, self.action_space_max)
         assert self.action_space.contains(
             action), "Action {} ({}) is invalid".format(action, type(action))
@@ -65,18 +72,18 @@ class JacoVrepEnv(JacoVrepEnvUtil):
         self.make_observation()
         reward_val = self._get_reward()
         done, additional_reward = self.terminal_inspection()
+        print("A step time: ", datetime.datetime.now() - then)
         return self.observation, reward_val + additional_reward, done, {0:0}
 
     def terminal_inspection(self):
         # TODO: terminal state definition
         test = False
-        temp_max_step = 1000
         if test:
             self.current_steps += 1
             return False, 0 if self.current_steps < 32 else True, 0
         else:
             self.current_steps += 1
-            if self.current_steps < temp_max_step:
+            if self.current_steps < self.max_steps:
                 return self._get_terminal_inspection()
             else:
                 return True, 0

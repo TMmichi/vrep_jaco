@@ -334,6 +334,7 @@ void JacoController::resetCallback(const std_msgs::Int8::ConstPtr& msg)
   free(ph_kill);
   Poco::Process::wait(*ph_movegroup);
   free(ph_movegroup);
+  sleep(3);
   Poco::ProcessHandle ph_movegroupLaunch = Poco::Process::launch("roslaunch",launch_args);
   ph_movegroup = new Poco::ProcessHandle(ph_movegroupLaunch);
   reset_counter = 0;

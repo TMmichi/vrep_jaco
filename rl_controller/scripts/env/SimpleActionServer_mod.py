@@ -304,7 +304,9 @@ class SimpleActionServer_mod:
 
               if shall_run:
                   try:
+                      print("Traj_CB called")
                       self.execute_callback(goal)
+                      print("Traj_CB ended")
 
                       if self.is_active():
                           rospy.logwarn("Your executeCallback did not set the goal to a terminal status.  " +
