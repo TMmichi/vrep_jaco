@@ -540,8 +540,9 @@ class CNN_Encoder(tf.keras.Model):
                         training=training)
                 elif not isfilm:
                     x = block(
-                        x, 
-                        training=training)
+                        x)
+                        # , 
+                        # training=training)
                 elif isfilm is None:
                     x = block(x)
         mean, logvar = tf.split(x, num_or_size_splits=2, axis=1)
@@ -606,8 +607,9 @@ class CNN_Decoder(tf.keras.Model):
             with tf.compat.v1.variable_scope(block_id):
                 if not isfilm:
                     x_hat = block(
-                        x_hat, 
-                        training=training)
+                        x_hat)
+                        # , 
+                        # training=training)
                 elif isfilm is None:
                     x_hat = block(x_hat)
         if apply_sigmoid:

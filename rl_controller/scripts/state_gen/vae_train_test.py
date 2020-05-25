@@ -12,7 +12,7 @@ batch_size = 16
 learn_rate = 5e-6
 
 """ Image data """
-data = np.load("/home/kth/Desktop/vrep_jaco/src/vrep_jaco_data/data/dummy_data.npy",allow_pickle=True)
+data = np.load("/home/ljh/Project/vrep_jaco/src/vrep_jaco_data/data/dummy_data.npy",allow_pickle=True)
 data = data[0][0][0]/5000
 data = np.reshape(data,[1,data.shape[0],data.shape[1],1])
 

@@ -1,5 +1,7 @@
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL']='3'
+# os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
+# os.environ["CUDA_VISIBLE_DEVICES"]="0"
 import time
 import state_gen_util as state_gen_util
 import tensorflow as tf
@@ -8,7 +10,7 @@ from matplotlib import pyplot as plt
 import cv2 as cv
 from tqdm import tqdm
 import rospkg
-
+import datetime
 ros_path = rospkg.RosPack()
 
 fig = plt.figure()
@@ -19,6 +21,9 @@ tf.enable_eager_execution(config=config)
 
 # train
 use_fit = True
+# use_fit = False
+
+train_im_num = 0 #2 4 6
 
 """ Image data """
 # data = np.load("./dummy_data.npy",allow_pickle=True)
@@ -28,7 +33,7 @@ if not use_fit:
     for j in range(20):
         train_dataset = []
         for i in range(20):
-            img = data[i][0][0]/5000
+            img = data[i][train_im_num][0]/5000
             img = np.reshape(img,[img.shape[0],img.shape[1],1])
             train_dataset.append(img)
         train_dataset = np.array(train_dataset,dtype=np.float32)
@@ -41,12 +46,13 @@ else:
     test_x = []
     print(len(data))
     for i in range(len(data)):
+    # for i in range(len(data)):
         if i % 10 == 0:
-            img = data[i][0][0]/5000
+            img = data[i][train_im_num][0]/5000
             img = np.reshape(img,[img.shape[0],img.shape[1],1])
             test_x.append(img)
         else:
-            img = data[i][0][0]/5000
+            img = data[i][train_im_num][0]/5000
             img = np.reshape(img,[img.shape[0],img.shape[1],1])
             train_dataset.append(img)
     train_dataset = np.array(train_dataset,dtype=np.float32)
@@ -55,10 +61,12 @@ else:
 
 """ training """
 # train
-epochs = 100
+epochs = 500
 pic_data = []
 
+# train = True
 train = False
+
 if not use_fit:
     if train:
         """ build graph """
@@ -84,19 +92,25 @@ if not use_fit:
         pic_data.append(eval_pic)
 else:
     if train:
+        log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+
         """ build graph """
         autoencoder = state_gen_util.Autoencoder(debug=False)
         optimizer = tf.keras.optimizers.Adam(1e-4)
         autoencoder.compile(optimizer=optimizer,
                             loss = autoencoder.compute_loss)
-        autoencoder.fit(train_dataset,train_dataset,batch_size=20,epochs=100)
+        autoencoder.fit(train_dataset,train_dataset,batch_size=10,epochs=epochs,callbacks=[tensorboard_callback])
         #autoencoder.save('weights/autoencoder_weights',save_format='tf')
         autoencoder.save_weights('weights/autoencoder_weights2')
     else:
-        autoencoder_load = state_gen_util.Autoencoder(debug=False)
+        # autoencoder_load = state_gen_util.Autoencoder(debug=False)
+        autoencoder_load = state_gen_util.Autoencoder(debug=False,survival_prob=1.0,with_batch_norm=False)
+
         optimizer = tf.keras.optimizers.Adam(1e-4)
         autoencoder_load.compile(optimizer=optimizer,
-                            loss = autoencoder_load.compute_loss)
+                            # loss = autoencoder_load.compute_loss)
+                            loss = autoencoder_load.compute_loss,survival_prob=1.0,with_batch_norm=False)
         autoencoder_load.train_on_batch(test_x,test_x)
         autoencoder_load.load_weights('weights/autoencoder_weights2',)
         autoencoder_load.summary()
