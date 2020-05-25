@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import math
 import rospy
 from rl_controller.srv import InitTraining
 from std_msgs.msg import Int8
@@ -51,26 +52,35 @@ class RL_controller:
         args.rate = self.rate
         args.period = self.period
 
+        # If resume training on pre-trained models with episodes, else None
+        self.model_path = "/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/models_baseline/"
+        args.model_path = self.model_path
+        self.tb_dir = "/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/tensorboard_log"
+        args.tb_dir = self.tb_dir
+
+        self.steps_per_batch = 50
+        args.steps_per_batch = self.steps_per_batch
+        self.num_episodes = 100
+        self.train_num = 20
         self.env = JacoVrepEnv(
             **vars(args)) if self.use_sim else Real(**vars(args))
-
-        # If resume training on pre-trained models with episodes, else None
-        args.model_path = "/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/models_jointpose/"
-        os.makedirs(args.model_path, exist_ok=True)
-        #args.training_index = 192
-        self.num_timesteps = args.num_timesteps
-        self.trainer = TRPO(MlpPolicy, self.env, cg_damping=0.1, vf_iters=5, vf_stepsize=1e-3,
-                            tensorboard_log="/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/tensorboard_log", full_tensorboard_log=True)
+        self.num_timesteps = self.steps_per_batch * math.ceil(self.num_episodes / self.train_num)
+        self.trainer = TRPO(MlpPolicy, self.env, cg_damping=0.1, vf_iters=5, vf_stepsize=1e-3, timesteps_per_batch=self.steps_per_batch,
+                            tensorboard_log=args.tb_dir, full_tensorboard_log=True)
 
     def _train(self, req):
         print("Training service init")
         with self.sess:
-            learning_key = Int8()
-            learning_key.data = 1
-            self.learningkey_pub.publish(learning_key)
-            self.trainer.learn(total_timesteps=self.num_timesteps)
-            print("Train Finished")
-            self.trainer.save("/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/models_baseline")
+            for train_iter in range(1, self.train_num):
+                print("Training Iter: ", train_iter)
+                model_dir = self.model_path + str(train_iter)
+                os.makedirs(model_dir, exist_ok=True)
+                learning_key = Int8()
+                learning_key.data = 1
+                self.learningkey_pub.publish(learning_key)
+                self.trainer.learn(total_timesteps=self.num_timesteps)
+                print("Train Finished")
+                self.trainer.save(model_dir)
 
 
 if __name__ == "__main__":

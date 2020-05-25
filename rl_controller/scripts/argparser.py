@@ -22,7 +22,7 @@ class ArgParser():
     def _add_arguments_baseline(self):
         #self.parser.add_argument('--env', help='environment ID', type=str, default='Reacher-v2')
         self.parser.add_argument('--seed', help='RNG seed', type=int, default=0)
-        self.parser.add_argument('--num-timesteps', type=int, default=int(1e6))
+        #self.parser.add_argument('--num-timesteps', type=int, default=int(10500))
         self.parser.add_argument('--play', default=False, action='store_true')
         self.parser.add_argument('__name', default="rl_controller", help='name')
         self.parser.add_argument('__log', default="log_dir", help='log')
