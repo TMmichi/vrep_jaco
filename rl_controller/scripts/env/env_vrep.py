@@ -23,7 +23,10 @@ class JacoVrepEnv(JacoVrepEnvUtil):
         ### ------------  RL SETUP  ------------ ###
         self.current_steps = 0
         self.num_envs = 1
-        self.max_steps = kwargs['steps_per_batch']
+        try:
+            self.max_steps = kwargs['steps_per_batch'] * kwargs['batches_per_episodes']
+        except Exception:
+            self.max_steps = 500
 
         try:
             self.state_shape = kwargs['stateGen'].get_state_shape()
@@ -56,12 +59,14 @@ class JacoVrepEnv(JacoVrepEnvUtil):
 
     def step(self, action):
         then = datetime.datetime.now()
-        if not self.trajAS_.execute_thread.is_alive():
-            print("Thread Dead")
-        else:
-            print( "Thread alive")
+        '''
+            if not self.trajAS_.execute_thread.is_alive():
+                print("Thread Dead")
+            else:
+                print( "Thread alive")
+        '''
         # TODO: Determine how many time steps should be proceed when called
-        num_step_pass = 15
+        num_step_pass = 3   # moveit trajectory planning (0.125) + target angle following (?)
         # actions = np.clip(actions,-self.action_space_max, self.action_space_max)
         assert self.action_space.contains(
             action), "Action {} ({}) is invalid".format(action, type(action))
@@ -72,7 +77,7 @@ class JacoVrepEnv(JacoVrepEnvUtil):
         self.make_observation()
         reward_val = self._get_reward()
         done, additional_reward = self.terminal_inspection()
-        print("A step time: ", datetime.datetime.now() - then)
+        #print("A step time: ", datetime.datetime.now() - then)
         return self.observation, reward_val + additional_reward, done, {0:0}
 
     def terminal_inspection(self):

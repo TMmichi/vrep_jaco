@@ -58,13 +58,15 @@ class RL_controller:
         self.tb_dir = "/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/tensorboard_log"
         args.tb_dir = self.tb_dir
 
-        self.steps_per_batch = 50
+        self.steps_per_batch = 100
+        self.batches_per_episodes = 5
         args.steps_per_batch = self.steps_per_batch
+        args.batches_per_episodes = self.batches_per_episodes
         self.num_episodes = 100
-        self.train_num = 20
+        self.train_num = 5
         self.env = JacoVrepEnv(
             **vars(args)) if self.use_sim else Real(**vars(args))
-        self.num_timesteps = self.steps_per_batch * math.ceil(self.num_episodes / self.train_num)
+        self.num_timesteps = self.steps_per_batch * self.batches_per_episodes * math.ceil(self.num_episodes / self.train_num)
         self.trainer = TRPO(MlpPolicy, self.env, cg_damping=0.1, vf_iters=5, vf_stepsize=1e-3, timesteps_per_batch=self.steps_per_batch,
                             tensorboard_log=args.tb_dir, full_tensorboard_log=True)
 

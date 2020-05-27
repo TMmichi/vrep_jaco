@@ -267,7 +267,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
 
     def _reset(self, target_angle=None, sync=False):
         self.reset_pub.publish(Int8(data=ord('r')))
-        time.sleep(4.2)
+        time.sleep(0.2)
         self.gripper_angle_1 = 0.35
         self.gripper_angle_2 = 0.35
         self.trajAS_.reset()
