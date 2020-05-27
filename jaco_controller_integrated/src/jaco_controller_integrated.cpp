@@ -220,15 +220,15 @@ void JacoController::spacenavCallback(const sensor_msgs::Joy::ConstPtr& msg)
     trajectory_msgs::JointTrajectory trajectory;
     if (!p_cartesian)
     {
-      ROS_INFO_NAMED("","Pose planning");
+      ROS_DEBUG_NAMED("","Pose planning");
       tf2::Quaternion orientation;
       orientation.setRPY(roll, pitch, yaw);
       target_pose.orientation = tf2::toMsg(orientation);
 
       move_group->setPoseTarget(target_pose); //motion planning to a desired pose of the end-effector
-      ROS_INFO_NAMED("","Planning Goal");
-      move_group->plan(my_plan, p_timeout);
-      ROS_INFO_NAMED("","Planning Finished");
+      ROS_DEBUG_NAMED("","Planning Goal");
+      move_group->plan(my_plan);
+      ROS_DEBUG_NAMED("","Planning Finished");
 
       trajectory.points = my_plan.trajectory_.joint_trajectory.points;
       traj_pub_.publish(trajectory);
