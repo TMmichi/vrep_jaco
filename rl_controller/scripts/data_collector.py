@@ -65,7 +65,7 @@ class Data_collector:
         self.spacenav_sub = rospy.Subscriber("spacenav/joy", Joy, self.spacenavCallback, queue_size=2)
         self.mobile_sub = rospy.Subscriber("cmd_vel", Twist, self.mobileactCallback, queue_size=1)
         self.odom_sub = rospy.Subscriber("odom",Odometry, self.odomCallback, queue_size=1)
-        self.jointstate_sub = rospy.Subscriber("/vrep/joint_states",JointState,self.jointstateCallback, queue_size=1)
+        self.jointstate_sub = rospy.Subscriber("/j2n6s300/joint_states",JointState,self.jointstateCallback, queue_size=1)
         self.pressure_sub = rospy.Subscriber("/vrep/pressure_data",Float32MultiArray,self.pressureCallback, queue_size=1)
         self.rate = rospy.Rate(feedbackRate_)
         self.period = rospy.Duration(1.0/feedbackRate_)
@@ -79,31 +79,33 @@ class Data_collector:
         start_spacenav.data = ord('7')
         stop_spacenav = Int8()
         stop_spacenav.data = ord('8')
-        os.makedirs(self.data_path + "traj_data",exist_ok=True)
-        sample_num = 5
-        for i in range(1,sample_num+1):
-            self._envResetCall()
+        folder_dir = self.data_path + "traj_data_SJ"
+        os.makedirs(folder_dir,exist_ok=True)
+        self._envResetCall()
+        sample_num = 10
+        data_buff = []
+        print("Trajectory Collection Init")
+        for i in range(10,sample_num):
+            print("Traj: ",i+1)
             while not self.record:
-                pass
+                time_init = rospy.Time.now()
             self.key_pub.publish(start_spacenav)
-            print("Trajectory ",str(i))
-            data_buff = []
             while self.record:
                 data_buff_temp = []
-                data_buff_temp.append(rospy.Time.now())     # ROS time
-                data_buff_temp.append([0.225,0.15,1.1117])  # target position
-
+                data_buff_temp.append(rospy.Time.now()-time_init)     # ROS time
+                # target position 1: [-0.35,0.125,0.8212]
+                # target position 2: [0.225,0.15,1.1117]
                 data_buff_temp.append(self.gripper_action)    # gripper action
                 gripper_pose = self.env.obj_get_position(
                     self.env.jointHandles_[5]) + self.env.obj_get_orientation(self.env.jointHandles_[5])
                 data_buff_temp.append(gripper_pose)         # gripper pose (Absolute Position in m, Euler Angles in rad) 
-
+                data_buff_temp.append(self.joint_state)     # joint state
                 data_buff_temp.append(self.mobile_action)   # mobile action
                 data_buff_temp.append(self.odom)            # mobile odometry (Absolute)
                 data_buff.append(data_buff_temp)
                 self.env.step_simulation()
             self.key_pub.publish(stop_spacenav)
-            np.save(self.data_path + "traj_data/trajData_" + str(i) +".npy",data_buff)
+            np.save(folder_dir+"/trajData_SJ"+str(i+1)+".npy",data_buff)
 
     def _envResetCall(self):
         sample_angle = [sample(range(-100, -80), 1)[0], sample(range(130, 150), 1)[0], sample(range(240, 280), 1)[0], sample(
@@ -261,20 +263,7 @@ class Data_collector:
         self.odom = np.array([msg.pose.pose.position.x,msg.pose.pose.position.y,msg.pose.pose.orientation.x,msg.pose.pose.orientation.y,msg.pose.pose.orientation.z,msg.pose.pose.orientation.w])
         
     def jointstateCallback(self,msg):
-        if self.stop == False:
-            if self.joint_trigger:
-                msg_time = round(msg.header.stamp.to_sec(),2)
-                self.joint_state.append([msg.position,msg_time])
-                if len(self.joint_state) > self.joint_buffersize:
-                    self.joint_state.pop(0)
-                self.data_buff_temp[1] = self.joint_state[-1]
-                self.joint_start = True
-                self.joint_trigger = False
-                if not self.pressure_trigger:
-                    self.pressure_trigger = True
-                    if self.pressure_start == True and self.data_time_check(0.075):
-                        self.data_buff.append(self.data_buff_temp.copy())
-                        self.num+=1
+        self.joint_state = msg.position[:6]
         
     def pressureCallback(self,msg):
         if self.stop == False:
