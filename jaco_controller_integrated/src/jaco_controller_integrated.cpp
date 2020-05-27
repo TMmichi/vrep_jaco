@@ -35,7 +35,7 @@ JacoController::JacoController() : nh_(""), nh_local_("~")
   teleop_sub_ = nh_.subscribe("key_input", 10, &JacoController::teleopCallback, this);
   spacenav_sub_ = nh_.subscribe("spacenav/joy", 2, &JacoController::spacenavCallback, this);
   action_sub_ = nh_.subscribe("rl_action_output", 10, &JacoController::actionCallback, this);
-  reset_sub_ = nh_.subscribe("reset_key", 10, &JacoController::resetCallback, this);
+  //reset_sub_ = nh_.subscribe("reset_key", 10, &JacoController::resetCallback, this);
   learning_sub_ = nh_.subscribe("learning_key", 10, &JacoController::islearningCallback, this);
   traj_pub_ = nh_.advertise<trajectory_msgs::JointTrajectory>("j2n6s300/trajectory", 1);
 }
@@ -145,7 +145,8 @@ void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
     ROS_INFO("target orientation_y: %f", yaw);
   }
   
-  moveit_msgs::RobotTrajectory trajectory;
+  //moveit_msgs::RobotTrajectory trajectory;
+  trajectory_msgs::JointTrajectory trajectory;
   if (!p_cartesian && keyboard_input && !islearning)
   {
     tf2::Quaternion orientation;
@@ -157,20 +158,22 @@ void JacoController::teleopCallback(const std_msgs::Int8::ConstPtr &msg)
     move_group->plan(my_plan, p_timeout);
     ROS_DEBUG_NAMED("","Planning Finished");
 
-    trajectory = my_plan.trajectory_;
-    control_msgs::FollowJointTrajectoryGoal goal;
-    goal.trajectory = trajectory.joint_trajectory;
-    ROS_DEBUG_NAMED("","Goal Sending");
-    execute_action_client_->sendGoal(goal);
+    //trajectory = my_plan.trajectory_;
+    trajectory.points = my_plan.trajectory_.joint_trajectory.points;
+    traj_pub_.publish(trajectory);
+    //control_msgs::FollowJointTrajectoryGoal goal;
+    //goal.trajectory = trajectory.joint_trajectory;
+    //ROS_DEBUG_NAMED("","Goal Sending");
+    //execute_action_client_->sendGoal(goal);
   }
   else if (p_cartesian && keyboard_input && !islearning)
   { 
     waypoints.push_back(target_pose);
-    fraction = move_group->computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
-    control_msgs::FollowJointTrajectoryGoal goal;
-    goal.trajectory = trajectory.joint_trajectory;
-    ROS_DEBUG_NAMED("","Goal Sending");
-    execute_action_client_->sendGoal(goal);
+    //fraction = move_group->computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
+    //control_msgs::FollowJointTrajectoryGoal goal;
+    //goal.trajectory = trajectory.joint_trajectory;
+    //ROS_DEBUG_NAMED("","Goal Sending");
+    //execute_action_client_->sendGoal(goal);
   }
   else
   {
@@ -230,6 +233,7 @@ void JacoController::spacenavCallback(const sensor_msgs::Joy::ConstPtr& msg)
       move_group->plan(my_plan);
       ROS_DEBUG_NAMED("","Planning Finished");
 
+      //trajectory = my_plan.trajectory_;
       trajectory.points = my_plan.trajectory_.joint_trajectory.points;
       traj_pub_.publish(trajectory);
       //control_msgs::FollowJointTrajectoryGoal goal;
@@ -299,7 +303,8 @@ void JacoController::actionCallback(const std_msgs::Float32MultiArray &msg)
     ROS_INFO("target orientation_y: %f", yaw);
   }
 
-  moveit_msgs::RobotTrajectory trajectory;
+  //moveit_msgs::RobotTrajectory trajectory;
+  trajectory_msgs::JointTrajectory trajectory;
   if (!p_cartesian)
   {
     ROS_DEBUG_NAMED("","Pose planning");
@@ -312,21 +317,23 @@ void JacoController::actionCallback(const std_msgs::Float32MultiArray &msg)
     move_group->plan(my_plan, p_timeout);
     ROS_DEBUG_NAMED("","Planning Finished");
 
-    trajectory = my_plan.trajectory_;
-    control_msgs::FollowJointTrajectoryGoal goal;
-    goal.trajectory = trajectory.joint_trajectory;
-    ROS_DEBUG_NAMED("","Goal Sending");
-    execute_action_client_->sendGoal(goal);
+    //trajectory = my_plan.trajectory_;
+    trajectory.points = my_plan.trajectory_.joint_trajectory.points;
+    traj_pub_.publish(trajectory);
+    //control_msgs::FollowJointTrajectoryGoal goal;
+    //goal.trajectory = trajectory.joint_trajectory;
+    //ROS_DEBUG_NAMED("","Goal Sending");
+    //execute_action_client_->sendGoal(goal);
   }
   else if (p_cartesian)
   {
     ROS_DEBUG_NAMED("","Cartesian planning\n");
     waypoints.push_back(target_pose);
-    fraction = move_group->computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
-    control_msgs::FollowJointTrajectoryGoal goal;
-    goal.trajectory = trajectory.joint_trajectory;
-    ROS_DEBUG_NAMED("","Goal Sending");
-    execute_action_client_->sendGoal(goal);
+    //fraction = move_group->computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
+    //control_msgs::FollowJointTrajectoryGoal goal;
+    //goal.trajectory = trajectory.joint_trajectory;
+    //ROS_DEBUG_NAMED("","Goal Sending");
+    //execute_action_client_->sendGoal(goal);
   }
   else
   {
