@@ -29,8 +29,24 @@
     -->
 
   <node name="jaco_ros_controller" pkg="jaco_controller_integrated" type="jaco_controller_integrated" respawn="false" output="screen">
-    <param name="speed_constant" value="0.03"/>
+    <param name="speed_constant" value="0.01"/>
     <param name="cartesian" value="false"/>
+    <param name="timeout" value="0.2"/>
+    <param name="plannerID" value="RRTConnectkConfigDefault"/>
+    <!--
+      planner_configs:
+    - SBLkConfigDefault
+    - ESTkConfigDefault
+    - LBKPIECEkConfigDefault
+    - BKPIECEkConfigDefault
+    - KPIECEkConfigDefault
+    - RRTkConfigDefault
+    - RRTConnectkConfigDefault
+    - RRTstarkConfigDefault
+    - TRRTkConfigDefault
+    - PRMkConfigDefault
+    - PRMstarkConfigDefault
+    -->
 
     <param name="/use_sim_time" value="true"/>
   </node>
