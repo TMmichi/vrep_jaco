@@ -25,6 +25,7 @@ from sensor_msgs.msg import JointState
 from control_msgs.msg import FollowJointTrajectoryAction
 from control_msgs.msg import FollowJointTrajectoryFeedback
 from control_msgs.msg import FollowJointTrajectoryResult
+from trajectory_msgs.msg import JointTrajectory
 
 
 def radtoangle(rad):
@@ -48,7 +49,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
 
         ### ------------  ROS INITIALIZATION  ------------ ###
         self.rate = kwargs['rate']
-        # Subscribers / Publishers / TimerCallback
+        # Subscribers / Publishers
         self.key_sub = rospy.Subscriber(
             "key_input", Int8, self._keys, queue_size=10)
         self.joint_state_sub = rospy.Subscriber(
@@ -57,6 +58,8 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             "/vrep/depth_image", Image, self._depth_CB, queue_size=1)
         self.pressure_sub = rospy.Subscriber(
             "/vrep/pressure_data", Float32MultiArray, self._pressure_CB, queue_size=1)
+        self.traj_sub = rospy.Subscriber(
+            "j2n6s300/trajectory", JointTrajectory, self._trajCB_raw, queue_size=1)
         self.reset_pub = rospy.Publisher("reset_key", Int8, queue_size=1)
         self.quit_pub = rospy.Publisher("quit_key", Int8, queue_size=1)
         self.action_pub = rospy.Publisher(
@@ -152,7 +155,8 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
                     while i < len(points) - 1 and points[i+1].time_from_start.to_sec() - points[0].time_from_start.to_sec() < fromStart.to_sec():
                         print("In While")
                         i += 1
-                    print(len(points), i, points[i+1].time_from_start.to_sec() - points[0].time_from_start.to_sec(), fromStart.to_sec())
+                    print(len(points), i, points[i+1].time_from_start.to_sec(
+                    ) - points[0].time_from_start.to_sec(), fromStart.to_sec())
                     if i == len(points)-1:
                         self.reachedGoal = True
                         for j in range(6):
@@ -201,6 +205,22 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             else:
                 result.error_code = result.GOAL_TOLERANCE_VIOLATED
                 self.trajAS_.set_aborted(result)
+        except Exception as e:
+            print(e, file=sys.stderr)
+
+    def _trajCB_raw(self, msg):
+        points = msg.points[-1]
+        position = []
+        for i_jointhandle in self.jointHandles_:
+            position.append(self.obj_get_joint_angle(i_jointhandle))
+        self.jointState_.position = position
+        try:
+            move_diff = np.linalg.norm(
+                np.array(points.positions[:6])-np.array(position[:6]))
+            if (not move_diff > 1) or (not move_diff < 6):
+                for j in range(0, 6):
+                    self.obj_set_position_target(
+                        self.jointHandles_[j], radtoangle(-points.positions[j]))
         except Exception as e:
             print(e, file=sys.stderr)
 
@@ -263,7 +283,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         for i, degree in enumerate(random_init_angle):
             self.obj_set_position_inst(self.jointHandles_[i], -degree)
             self.obj_set_position_target(self.jointHandles_[i], -degree)
-        self.start_simulation(sync=sync, time_step=0.025)
+        self.start_simulation(sync=sync, time_step=0.05)
         gripper_pose = self._get_observation()
         dist_diff = np.linalg.norm(
             np.array(gripper_pose[:3]) - np.array(self.goal))
@@ -278,13 +298,13 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         total = psutil.virtual_memory().total
         used = total - psutil.virtual_memory().available
         '''
-        for proc in psutil.process_iter():
-            try:
-                processName = proc.name()
-                if processName in ['coppeliaSim','vrep']:
-                    print("vrep found")
-            except(psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                pass
+            for proc in psutil.process_iter():
+                try:
+                    processName = proc.name()
+                    if processName in ['coppeliaSim','vrep']:
+                        print("vrep found")
+                except(psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                    pass
         '''
         return True if (used/total*100) > 85 else False
 
@@ -308,6 +328,8 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         if test:
             observation = self.obj_get_position(
                 self.jointHandles_[5]) + self.obj_get_orientation(self.jointHandles_[5])
+            for i_jointhandle in self.jointHandles_[:6]:
+                observation.append(self.obj_get_joint_angle(i_jointhandle))
             observation += self.goal
             if np.isnan(np.sum(observation)):
                 #print("NAN OCCURED IN VREP CLIENT!!!!!")

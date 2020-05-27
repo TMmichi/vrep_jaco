@@ -12,7 +12,8 @@
 #include <sensor_msgs/Joy.h>
 #include <actionlib/client/simple_action_client.h>
 #include <actionlib/client/terminal_state.h>
-#include <trajectory_msgs/JointTrajectoryPoint.h>
+//#include <trajectory_msgs/JointTrajectoryPoint.h>
+#include <trajectory_msgs/JointTrajectory.h>
 
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/macros/console_colors.h>
@@ -45,6 +46,7 @@ private:
     ros::Subscriber reset_sub_;
     ros::Subscriber learning_sub_;
     ros::Publisher key_check_pub_;
+    ros::Publisher traj_pub_;
 
     //Variables
     std::vector<std::string> launch_args;
@@ -68,6 +70,8 @@ private:
     double fraction;
     float p_speed_constant;
     bool p_cartesian;
+    float p_timeout;
+    std::string p_planner_ID;
     bool debug;
     int reset_counter;
     bool keyboard_input = false;
