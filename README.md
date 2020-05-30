@@ -123,6 +123,11 @@ Since we are teaking ROS timer with sim_time, it is required to modify `timer.py
 cd /opt/ros/${ROS_DISTRO}/lib/python2.7/dist-packages/rospy
 ```
 
+### 1.6 Post installation
+```
+pip install pyyaml matplotlib
+```
+
 ## 2. Usage (WIP)
 
 Manipulation of a real machine and one in the simulation are much alike from each other.
