@@ -12,7 +12,7 @@
 				      default_planner_request_adapters/FixStartStateCollision
 				      default_planner_request_adapters/FixStartStatePathConstraints" />
 
-  <arg name="default_workspace_bounds" default="5"/>
+  <arg name="default_workspace_bounds" default="0.80"/>
   <arg name="start_state_max_bounds_error" default="0.1"/>
   <arg name="start_state_max_dt" default="0.5"/>
   <arg name="max_sampling_attempts" default="20"/>

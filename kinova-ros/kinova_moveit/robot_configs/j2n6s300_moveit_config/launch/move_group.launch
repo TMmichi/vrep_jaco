@@ -52,7 +52,6 @@
 				      move_group/MoveGroupStateValidationService
 				      move_group/MoveGroupGetPlanningSceneService
 				      move_group/ApplyPlanningSceneService
-				      
 				      "/>
               <!--
               move_group/MoveGroupExecuteTrajectoryAction

@@ -27,7 +27,6 @@ class JacoVrepEnv(JacoVrepEnvUtil):
             self.max_steps = kwargs['steps_per_batch'] * kwargs['batches_per_episodes']
         except Exception:
             self.max_steps = 500
-
         try:
             self.state_shape = kwargs['stateGen'].get_state_shape()
         except Exception:
@@ -36,9 +35,10 @@ class JacoVrepEnv(JacoVrepEnvUtil):
         obs = np.array([self.obs_max]*self.state_shape[0])
         self.observation_space = spaces.Box(-obs, obs)
 
-        self.action_space_max = 1    				# 0.01 (m/s)
-        act = np.array([self.action_space_max]*8) 	# x,y,z,r,p,y, finger 1/2, finger 3
-        self.action_space = spaces.Box(-act, act)	# Action space: [-0.01, 0.01]
+        self.action_space_max = 0.7 * 2				# 0.007 (m) -> multiplied by factor of 2, will later be divided into 2 @ step
+                                                    # unit action (1) from the policy = 0.5 (cm) in real world
+        act = np.array([self.action_space_max]*8) 	# x,y,z,r,p,y, finger {1,2}, finger 3
+        self.action_space = spaces.Box(-act, act)	# Action space: [-1.4, 1.4]
         
         self.seed()
         self.reset()
@@ -58,7 +58,7 @@ class JacoVrepEnv(JacoVrepEnvUtil):
         return self.action_space_max
 
     def step(self, action):
-        then = datetime.datetime.now()
+        #then = datetime.datetime.now()
         '''
             if not self.trajAS_.execute_thread.is_alive():
                 print("Thread Dead")
@@ -66,11 +66,13 @@ class JacoVrepEnv(JacoVrepEnvUtil):
                 print( "Thread alive")
         '''
         # TODO: Determine how many time steps should be proceed when called
-        num_step_pass = 3   # moveit trajectory planning (0.125) + target angle following (?)
+        # moveit trajectory planning (0.15) + target angle following (0.3 - 0.15?)
+        # -> In real world, full timesteps are used for conducting action (No need for finding IK solution)
+        num_step_pass = 6   
         # actions = np.clip(actions,-self.action_space_max, self.action_space_max)
         assert self.action_space.contains(
             action), "Action {} ({}) is invalid".format(action, type(action))
-        self.take_action(action)
+        self.take_action(action/2)
         for _ in range(num_step_pass):
             # TODO: wait for step signal
             self.step_simulation()

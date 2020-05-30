@@ -306,7 +306,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
                 except(psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                     pass
         '''
-        return True if (used/total*100) > 85 else False
+        return True if (used/total*100) > 75 else False
 
     def _vrep_process_reset(self):
         print("Restarting Vrep")
@@ -356,7 +356,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             #raise NameError("Wrong reward type")
 
     def _sample_goal(self):
-        target_pose = [uniform(0.2, 0.5)
+        target_pose = [uniform(0.2, 0.5) * sample([-1,1],1)[0]
                        for i in range(2)] + [uniform(0.8, 1.1)]
         target_out = Float32MultiArray()
         target_out.data = np.array(target_pose, dtype=np.float32)

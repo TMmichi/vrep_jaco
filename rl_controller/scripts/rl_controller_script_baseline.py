@@ -62,8 +62,8 @@ class RL_controller:
         self.batches_per_episodes = 5
         args.steps_per_batch = self.steps_per_batch
         args.batches_per_episodes = self.batches_per_episodes
-        self.num_episodes = 100
-        self.train_num = 5
+        self.num_episodes = 1000
+        self.train_num = 1
         self.env = JacoVrepEnv(
             **vars(args)) if self.use_sim else Real(**vars(args))
         self.num_timesteps = self.steps_per_batch * self.batches_per_episodes * math.ceil(self.num_episodes / self.train_num)
@@ -73,9 +73,9 @@ class RL_controller:
     def _train(self, req):
         print("Training service init")
         with self.sess:
-            for train_iter in range(1, self.train_num):
+            for train_iter in range(self.train_num):
                 print("Training Iter: ", train_iter)
-                model_dir = self.model_path + str(train_iter)
+                model_dir = self.model_path + str(rospy.Time.now())
                 os.makedirs(model_dir, exist_ok=True)
                 learning_key = Int8()
                 learning_key.data = 1
