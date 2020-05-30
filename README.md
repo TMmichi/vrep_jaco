@@ -17,6 +17,13 @@ Installation in Ubuntu 18.04 with ROS melodic is recommended (since other versio
 V-rep source can be downloaded from [here](http://www.coppeliarobotics.com/ubuntuVersions.html) and should be installed within the `/opt` folder. Installed location can be varied, but should be matched with the vrep_path argument within the launch file: `vrep_jaco_bringup/launch/bringup.launch: vrep_path`
 If have you install Coppelia (v4.0.0) instead of V-rep (v3.6.n), you need to move file:`libsimExtROSInterface.so` from folder:`compiledRosPlugins` to the source folder.
 
+Within the source file:
+```bash
+cd compiledRosPlugins
+mv libsimExtROSInterface.so ..
+
+```
+
 #### 1-1-2. Create workspace with individual folders for vrep_jaco and moveit
 
 Since we are not using official repo of moveit, it is required to create and build moveit from the modified source of our repo.
@@ -36,6 +43,18 @@ wstool init src
 ```
 
 to create `src` folder with .rosinstall file in it.
+
+#### 1-1-4. ROS installation
+
+It is assumed that the one is capable of installing ROS with full compatibility. This package is running python3, so proper steps to deal with python3 should be followed, Additionally, standalone `catkin` package is also required, so it should be installed along with the ROS default `catkin_make`
+
+```bash
+sudo apt-get install python3-pip python3-yaml
+sudo pip3 install rospkg catkin_pkg
+
+sudo apt-get install python-catkin-tools    // if using Ubuntu
+sudo pip install -U catkin_tools            // if using other OS
+```
 
 ### 1-2. Clone and install dependencies, build & source repo for Moveit installation
 
