@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from env.env_vrep_util import JacoVrepEnvUtil, radtoangle
+from env.env_vrep_util import , radtoangle
 
 from gym import spaces
 from gym.utils import seeding
@@ -10,16 +10,9 @@ import numpy as np
 import datetime
 
 
-class JacoVrepEnv(JacoVrepEnvUtil):
-    def __init__(
-        self,
-        server_addr='127.0.0.1',
-        server_port=19997,
-            **kwargs):
+class TestEnv(object):
+    def __init__(self, **kwargs):
         self.debug = kwargs['debug']
-        kwargs['server_addr'] = server_addr
-        kwargs['server_port'] = server_port
-        super().__init__(**kwargs)
 
         ### ------------  RL SETUP  ------------ ###
         self.current_steps = 0
@@ -33,6 +26,7 @@ class JacoVrepEnv(JacoVrepEnvUtil):
             self.state_shape = kwargs['stateGen'].get_state_shape()
         except Exception:
             self.state_shape = [9]
+            
         self.obs_max = 2
         obs = np.array([self.obs_max]*self.state_shape[0])
         self.observation_space = spaces.Box(-obs, obs)
@@ -89,18 +83,13 @@ class JacoVrepEnv(JacoVrepEnvUtil):
         #print("Making observation takes: ",datetime.datetime.now() - then)
         reward_val = self._get_reward()
         #print("Receiving rew takes: ",datetime.datetime.now() - then)
-        try:
-            #write_str = "Target: {0:.3f}, {1:.3f}, {2:.3f}, {3:.3f} {4:.3f}, {5:.3f} | Obs: {6:.3f}, {7:.3f}, {8:.3f}, {9:.3f}, {10:.3f}, {11:.3f} | {12:.3f}, {13:.3f}, {14:.3f}, {15:.3f}, {16:.3f}, {17:.3f}, {18:.3f}, {19:.3f}, {20:.3f} | \033[92m Reward: {21:.5f}\033[0m".format(
-            #    self.target[0], self.target[1], self.target[2], self.target[3], self.target[4], self.target[5], self.obs[0], self.obs[1], self.obs[2], self.obs[3], self.obs[4], self.obs[5], self.obs[6], self.obs[7], self.obs[8], self.obs[9], self.obs[10], self.obs[11], self.obs[12], self.obs[13], self.obs[14], reward_val)
-            write_str = "Target: {0:.3f}, {1:.3f}, {2:.3f}, {3:.3f} {4:.3f}, {5:.3f} | Obs: {6:.3f}, {7:.3f}, {8:.3f}, {9:.3f}, {10:.3f}, {11:.3f} | \033[92m Reward: {21:.5f}\033[0m".format(
-                self.target[0], self.target[1], self.target[2], self.target[3], self.target[4], self.target[5], self.obs[0], self.obs[1], self.obs[2], self.obs[3], self.obs[4], self.obs[5], self.obs[6], self.obs[7], self.obs[8], reward_val)
-            print(write_str, end='\r')
-            self.joint_angle_log.writelines(write_str+"\n")
-        except Exception:
-            pass
+        write_str = "Target: {0:.3f}, {1:.3f}, {2:.3f}, {3:.3f} {4:.3f}, {5:.3f} | Obs: {6:.3f}, {7:.3f}, {8:.3f}, {9:.3f}, {10:.3f}, {11:.3f} | {12:.3f}, {13:.3f}, {14:.3f}, {15:.3f}, {16:.3f}, {17:.3f}, {18:.3f}, {19:.3f}, {20:.3f} | \033[92m Reward: {21:.5f}\033[0m".format(
+            self.target[0], self.target[1], self.target[2], self.target[3], self.target[4], self.target[5], self.obs[0], self.obs[1], self.obs[2], self.obs[3], self.obs[4], self.obs[5], self.obs[6], self.obs[7], self.obs[8], self.obs[9], self.obs[10], self.obs[11], self.obs[12], self.obs[13], self.obs[14], reward_val)
+        print(write_str, end='\r')
         #print("Printing takes: ",datetime.datetime.now() - then)
         done, additional_reward = self.terminal_inspection()
         #print("\033[31mWhole step takes: ",datetime.datetime.now() - then,"\033[0m")
+        self.joint_angle_log.writelines(write_str+"\n")
         return self.obs, reward_val + additional_reward, done, {0: 0}
 
     def terminal_inspection(self):
@@ -129,7 +118,7 @@ class JacoVrepEnv(JacoVrepEnvUtil):
         #print("Before loop: ",datetime.datetime.now())
         while not self.action_received:
             if (datetime.datetime.now() - then).total_seconds() > 0.25: #Should be a bit greater than then moveit timeout, ELSE ERROR!
-                #print("\033[31mPlan not found\033[0m")
+                print("\033[31mPlan not found\033[0m")
                 break
             pass
         #print("action done at: ",datetime.datetime.now())

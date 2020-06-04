@@ -58,6 +58,6 @@ class State_generator:
         return input_placeholder, keep_prob, state
     
     def get_state_shape(self):
-        self.stateSize = 15
+        self.stateSize = 9
         stateShape = (self.stateSize,)
         return stateShape

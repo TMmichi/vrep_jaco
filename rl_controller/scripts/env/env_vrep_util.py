@@ -47,6 +47,32 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         vrep_env.VrepEnv.__init__(
             self, self.addr, self.port)
 
+        ### ------------  JOINT HANDLES INITIALIZATION  ------------ ###
+        self.jointState_ = JointState()
+        self.jointState_.position = [0,0,0,0,0,0,0,0,0,0,0,0]
+        self.feedback_ = FollowJointTrajectoryFeedback()
+        self.jointHandles_ = []
+        self.base_position = []
+        # Joint prefix setup
+        vrepArmPrefix = "jaco_joint_"
+        vrepFingerPrefix = "jaco_joint_finger_"
+        vrepFingerTipPrefix = "jaco_joint_finger_tip_"
+        urdfArmPrefix = "j2n6s300_joint_"
+        urdfFingerPrefix = "j2n6s300_joint_finger_"
+        urdfFingerTipPrefix = "j2n6s300_joint_finger_tip_"
+        # Handle init
+        self.jointHandles_ = self._initJoints(
+            vrepArmPrefix, vrepFingerPrefix, vrepFingerTipPrefix,
+            urdfArmPrefix, urdfFingerPrefix, urdfFingerTipPrefix)
+        # Feedback message initialization
+        for i in range(0, 6):
+            self.feedback_.joint_names.append(self.jointState_.name[i])
+            self.feedback_.actual.positions.append(0)
+        self.target_angle = []
+        self.gripper_pose = []
+        self.gripper_angle_1 = 0.35    # finger 1, 2
+        self.gripper_angle_2 = 0.35    # finger 3
+
         ### ------------  ROS INITIALIZATION  ------------ ###
         self.rate = kwargs['rate']
         # Subscribers / Publishers
@@ -75,28 +101,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         self.trajAS_ = SimpleActionServer_mod(
             self._action_name, FollowJointTrajectoryAction, self._trajCB, False)
         self.trajAS_.start()
-
-        ### ------------  JOINT HANDLES INITIALIZATION  ------------ ###
-        self.jointState_ = JointState()
-        self.feedback_ = FollowJointTrajectoryFeedback()
-        self.jointHandles_ = []
-        # Joint prefix setup
-        vrepArmPrefix = "jaco_joint_"
-        vrepFingerPrefix = "jaco_joint_finger_"
-        vrepFingerTipPrefix = "jaco_joint_finger_tip_"
-        urdfArmPrefix = "j2n6s300_joint_"
-        urdfFingerPrefix = "j2n6s300_joint_finger_"
-        urdfFingerTipPrefix = "j2n6s300_joint_finger_tip_"
-        # Handle init
-        self.jointHandles_ = self._initJoints(
-            vrepArmPrefix, vrepFingerPrefix, vrepFingerTipPrefix,
-            urdfArmPrefix, urdfFingerPrefix, urdfFingerTipPrefix)
-        # Feedback message initialization
-        for i in range(0, 6):
-            self.feedback_.joint_names.append(self.jointState_.name[i])
-            self.feedback_.actual.positions.append(0)
-        self.gripper_angle_1 = 0.35    # finger 1, 2
-        self.gripper_angle_2 = 0.35    # finger 3
+        self.action_received = False
 
         ### ------------  STATE GENERATION  ------------ ###
         try:
@@ -209,12 +214,14 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             print(e, file=sys.stderr)
 
     def _trajCB_raw(self, msg):
+        #print("traj received from moveit at: ", datetime.datetime.now())
         points = msg.points[-1]
-        position = []
-        for i_jointhandle in self.jointHandles_:
-            position.append(self.obj_get_joint_angle(i_jointhandle))
-        self.jointState_.position = position
+        self.target_angle = points.positions[:6]
+        position = self.jointState_.position
         try:
+            #for i_jointhandle in self.jointHandles_:
+            #    position.append(self.obj_get_joint_angle(i_jointhandle))
+            #self.jointState_.position = position
             move_diff = np.linalg.norm(
                 np.array(points.positions[:6])-np.array(position[:6]))
             if (not move_diff > 1) or (not move_diff < 6):
@@ -223,6 +230,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
                         self.jointHandles_[j], radtoangle(-points.positions[j]))
         except Exception as e:
             print(e, file=sys.stderr)
+        self.action_received = True
 
     def _initJoints(
             self,
@@ -284,15 +292,18 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             self.obj_set_position_inst(self.jointHandles_[i], -degree)
             self.obj_set_position_target(self.jointHandles_[i], -degree)
         self.start_simulation(sync=sync, time_step=0.05)
-        gripper_pose = self._get_observation()
-        dist_diff = np.linalg.norm(
-            np.array(gripper_pose[:3]) - np.array(self.goal))
-        self.ref_reward = (3 - dist_diff*1.3)
+        #time.sleep(0.5)
         if sync:
-            self.step_simulation()
-            time.sleep(0.5)
+            for _ in range(10):
+                self.step_simulation()
+        obs = self._get_observation()[0]
         self.goal = self._sample_goal()
-        return self._get_observation()
+        dist_diff = np.linalg.norm(
+            np.array(obs[:3]) - np.array(self.goal))
+        self.base_position = np.array(self.obj_get_position(self.jointHandles_[0]))
+        self.ref_reward = (3 - dist_diff*1.3)
+        #time.sleep(1)
+        return obs
 
     def _memory_check(self):
         total = psutil.virtual_memory().total
@@ -326,37 +337,43 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         # TODO: Use multiprocessing to generate state from parallel computation
         test = True  # TODO: Remove test
         if test:
-            observation = self.obj_get_position(
-                self.jointHandles_[5]) + self.obj_get_orientation(self.jointHandles_[5])
-            for i_jointhandle in self.jointHandles_[:6]:
-                observation.append(self.obj_get_joint_angle(i_jointhandle))
+            self.gripper_pose = self.obj_get_position(self.jointHandles_[5])
+            observation = self.gripper_pose + self.obj_get_orientation(self.jointHandles_[5])
+            #observation += self.jointState_.position[:6]
+            #for i_jointhandle in self.jointHandles_[:6]:
+            #    observation.append(self.obj_get_joint_angle(i_jointhandle))
             observation += self.goal
-            if np.isnan(np.sum(observation)):
+            #if np.isnan(np.sum(observation)):
                 #print("NAN OCCURED IN VREP CLIENT!!!!!")
                 # If nan, try to get observation recursively untill we do not have any nan
-                observation = self._get_observation()
+            #    observation = self._get_observation()[0]
         else:
             data_from_callback = []
             observation = self.state_gen.generate(data_from_callback)
-        return np.array(observation)
+        return np.array(observation), self.target_angle
 
     def _get_reward(self):
         # TODO: Reward from IRL
-        gripper_pose = self._get_observation()
+        gripper_pose = np.array(self.gripper_pose)
         if self.reward_method == "l2":
-            dist_diff = np.linalg.norm(
-                np.array(gripper_pose[:3]) - np.array(self.goal))
-            reward = (3 - dist_diff*1.3)  # TODO: Shape reward
-            return reward - self.ref_reward
+            wb = np.linalg.norm(gripper_pose - self.base_position)
+            if wb < 0.85:
+                if 3.14 - 0.15 < self.jointState_.position[2] < 3.14 + 0.15:
+                    reward = -1
+                else:
+                    dist_diff = np.linalg.norm(gripper_pose - np.array(self.goal))
+                    reward = ((3 - dist_diff*1.3) - self.ref_reward) * 0.1  # TODO: Shape reward
+            else:
+                reward = -1
+            return reward
         elif self.reward_method == "":
             return self.reward_module(gripper_pose, self.goal)
         else:
-            print("Constant Reward. SHOULD BE FIXED")
+            print("\033[31mConstant Reward. SHOULD BE FIXED\033[0m")
             return 30
-            #raise NameError("Wrong reward type")
 
     def _sample_goal(self):
-        target_pose = [uniform(0.2, 0.5) * sample([-1,1],1)[0]
+        target_pose = [uniform(0.2, 0.5) * sample([-1, 1], 1)[0]
                        for i in range(2)] + [uniform(0.8, 1.1)]
         target_out = Float32MultiArray()
         target_out.data = np.array(target_pose, dtype=np.float32)
@@ -364,11 +381,11 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         return target_pose
 
     def _get_terminal_inspection(self):
-        gripper_pose = self._get_observation()
         dist_diff = np.linalg.norm(
-            np.array(gripper_pose[:3]) - np.array(self.goal))
-        if dist_diff < 0.2:  # TODO: Shape terminal inspection
-            return True, 10
+            np.array(self.gripper_pose) - np.array(self.goal))
+        if dist_diff < 0.15:  # TODO: Shape terminal inspection
+            print("Target Reached")
+            return True, 100
         else:
             return False, 0
 
