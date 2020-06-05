@@ -13,11 +13,11 @@ from random import sample, randint, uniform
 import numpy as np
 
 import rospy
+from pyrep import PyRep
+from assets.jaco import jaco
 from std_msgs.msg import Int8, Int8MultiArray, Float32MultiArray
 from sensor_msgs.msg import Image, JointState
 from trajectory_msgs.msg import JointTrajectory
-from pyrep import PyRep
-from assets.jaco import jaco
 
 
 def radtoangle(rad):
@@ -32,6 +32,7 @@ class JacoVrepEnvUtil(object):
         scene = rospy.get_param("/rl_controller/scene_file")
         self.pr = PyRep()
         self.pr.launch(scene, headless=False)
+        time.sleep(3)
         self.arm = jaco()
 
         ### ------------  JOINT HANDLES INITIALIZATION  ------------ ###
@@ -49,14 +50,14 @@ class JacoVrepEnvUtil(object):
         self._initJoints(
             vrepArmPrefix, vrepFingerPrefix, vrepFingerTipPrefix,
             urdfArmPrefix, urdfFingerPrefix, urdfFingerTipPrefix)
-        self.target_angle = []
+        self.target_angle = [0,0,0,0,0,0]
         self.gripper_pose = []
         self.gripper_angle_1 = 0.35    # finger 1, 2
         self.gripper_angle_2 = 0.35    # finger 3
 
         ### ------------  ROS INITIALIZATION  ------------ ###
         #self.rate = kwargs['rate']
-        self.rate = 50
+        self.rate = 50  #TODO remove
         # Subscribers / Publishers
         self.key_sub = rospy.Subscriber(
             "key_input", Int8, self._keys, queue_size=10)
@@ -101,6 +102,7 @@ class JacoVrepEnvUtil(object):
             self.reward_method = None
             self.reward_module = None
 
+
     def _initJoints(
             self,
             vrepArmPrefix, vrepFingerPrefix, vrepFingerTipPrefix,
@@ -126,14 +128,12 @@ class JacoVrepEnvUtil(object):
             self.jointState_.name.append(outname)
             self.jointState_.velocity.append(0)
             self.jointState_.effort.append(0)
-        #self.jointState_.position = list(
-        #    map(self.obj_get_joint_angle, jointHandles_))
+        self.jointState_.position = self.arm.get_joint_positions() # TODO: Find out what's the unit for positions
 
     def _jointState_CB(self, msg):
         self.jointState_.position = msg.position
 
     def _trajCB_raw(self, msg):
-        #print("traj received from moveit at: ", datetime.datetime.now())
         points = msg.points[-1]
         self.target_angle = points.positions[:6]
         position = self.jointState_.position
@@ -141,9 +141,8 @@ class JacoVrepEnvUtil(object):
             move_diff = np.linalg.norm(
                 np.array(points.positions[:6])-np.array(position[:6]))
             if (not move_diff > 1) or (not move_diff < 6):
-                for j in range(0, 6):
-                    self.obj_set_position_target(
-                        self.jointHandles_[j], radtoangle(-points.positions[j]))
+                # TODO: Find out what's the unit for positions / do we need to 
+                self.arm.set_joint_target_positions([radtoangle(-points.positions[i]) for i in range(6)])
         except Exception as e:
             print(e, file=sys.stderr)
         self.action_received = True
@@ -188,7 +187,7 @@ class JacoVrepEnvUtil(object):
             np.array(obs[:3]) - np.array(self.goal))
         self.base_position = np.array(self.obj_get_position(self.jointHandles_[0]))
         self.ref_reward = (3 - dist_diff*1.3)
-        #time.sleep(1)
+        time.sleep(1)
         return obs
 
     def _memory_check(self):

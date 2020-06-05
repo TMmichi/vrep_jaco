@@ -11,14 +11,8 @@ from env.env_vrep_pyrep_util import JacoVrepEnvUtil, radtoangle
 
 
 class JacoVrepEnv(JacoVrepEnvUtil):
-    def __init__(
-        self,
-        server_addr='127.0.0.1',
-        server_port=19997,
-            **kwargs):
+    def __init__(self, **kwargs):
         self.debug = kwargs['debug']
-        kwargs['server_addr'] = server_addr
-        kwargs['server_port'] = server_port
         super().__init__(**kwargs)
 
         ### ------------  RL SETUP  ------------ ###

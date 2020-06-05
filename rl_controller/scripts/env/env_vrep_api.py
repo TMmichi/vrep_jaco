@@ -4,6 +4,8 @@ import os
 import numpy as np
 import datetime
 
+import rospy
+
 from gym import spaces
 from gym.utils import seeding
 
@@ -67,36 +69,29 @@ class JacoVrepEnv(JacoVrepEnvUtil):
     def step(self, action):
         #then = datetime.datetime.now()
         #print("Within the step at: ",then)
-        '''
-            if not self.trajAS_.execute_thread.is_alive():
-                print("Thread Dead")
-            else:
-                print( "Thread alive")
-        '''
         # TODO: Determine how many time steps should be proceed when called
         # moveit trajectory planning (0.15) + target angle following (0.3 - 0.15?)
         # -> In real world, full timesteps are used for conducting action (No need for finding IK solution)
         num_step_pass = 2
-        # actions = np.clip(actions,-self.action _space_max, self.action_space_max)
-        assert self.action_space.contains(
-            action), "Action {} ({}) is invalid".format(action, type(action))
+        action = np.clip(action,-self.action_space_max, self.action_space_max)
+        #assert self.action_space.contains(
+        #    action), "Action {} ({}) is invalid".format(action, type(action))
+        #print("before take action: ",rospy.Time.now())
         self.take_action(action/2)
         for _ in range(num_step_pass):
             self.step_simulation()
+        #print("after take action: ",rospy.Time.now())
         #print("Sim stepping takes: ",datetime.datetime.now() - then)
         self.make_observation()
         #print("Making observation takes: ",datetime.datetime.now() - then)
         reward_val = self._get_reward()
         #print("Receiving rew takes: ",datetime.datetime.now() - then)
-        try:
-            #write_str = "Target: {0:.3f}, {1:.3f}, {2:.3f}, {3:.3f} {4:.3f}, {5:.3f} | Obs: {6:.3f}, {7:.3f}, {8:.3f}, {9:.3f}, {10:.3f}, {11:.3f} | {12:.3f}, {13:.3f}, {14:.3f}, {15:.3f}, {16:.3f}, {17:.3f}, {18:.3f}, {19:.3f}, {20:.3f} | \033[92m Reward: {21:.5f}\033[0m".format(
-            #    self.target[0], self.target[1], self.target[2], self.target[3], self.target[4], self.target[5], self.obs[0], self.obs[1], self.obs[2], self.obs[3], self.obs[4], self.obs[5], self.obs[6], self.obs[7], self.obs[8], self.obs[9], self.obs[10], self.obs[11], self.obs[12], self.obs[13], self.obs[14], reward_val)
-            write_str = "Target: {0:.3f}, {1:.3f}, {2:.3f}, {3:.3f} {4:.3f}, {5:.3f} | Obs: {6:.3f}, {7:.3f}, {8:.3f}, {9:.3f}, {10:.3f}, {11:.3f} | \033[92m Reward: {21:.5f}\033[0m".format(
-                self.target[0], self.target[1], self.target[2], self.target[3], self.target[4], self.target[5], self.obs[0], self.obs[1], self.obs[2], self.obs[3], self.obs[4], self.obs[5], self.obs[6], self.obs[7], self.obs[8], reward_val)
-            print(write_str, end='\r')
-            self.joint_angle_log.writelines(write_str+"\n")
-        except Exception:
-            pass
+        #write_str = "Target: {0:.3f}, {1:.3f}, {2:.3f}, {3:.3f} {4:.3f}, {5:.3f} | Obs: {6:.3f}, {7:.3f}, {8:.3f}, {9:.3f}, {10:.3f}, {11:.3f} | {12:.3f}, {13:.3f}, {14:.3f}, {15:.3f}, {16:.3f}, {17:.3f}, {18:.3f}, {19:.3f}, {20:.3f} | \033[92m Reward: {21:.5f}\033[0m".format(
+        #    self.target[0], self.target[1], self.target[2], self.target[3], self.target[4], self.target[5], self.obs[0], self.obs[1], self.obs[2], self.obs[3], self.obs[4], self.obs[5], self.obs[6], self.obs[7], self.obs[8], self.obs[9], self.obs[10], self.obs[11], self.obs[12], self.obs[13], self.obs[14], reward_val)
+        write_str = "Target: {0:.3f}, {1:.3f}, {2:.3f}, {3:.3f} {4:.3f}, {5:.3f} | Obs: {6:.3f}, {7:.3f}, {8:.3f}, {9:.3f}, {10:.3f}, {11:.3f}, {12:.3f}, {13:.3f}, {14:.3f} | \033[92m Reward: {15:.5f}\033[0m".format(
+            self.target[0], self.target[1], self.target[2], self.target[3], self.target[4], self.target[5], self.obs[0], self.obs[1], self.obs[2], self.obs[3], self.obs[4], self.obs[5], self.obs[6], self.obs[7], self.obs[8], reward_val)
+        print(write_str, end='\r')
+        self.joint_angle_log.writelines(write_str+"\n")
         #print("Printing takes: ",datetime.datetime.now() - then)
         done, additional_reward = self.terminal_inspection()
         #print("\033[31mWhole step takes: ",datetime.datetime.now() - then,"\033[0m")
@@ -104,16 +99,11 @@ class JacoVrepEnv(JacoVrepEnvUtil):
 
     def terminal_inspection(self):
         # TODO: terminal state definition
-        test = False
-        if test:
-            self.current_steps += 1
-            return False, 0 if self.current_steps < 32 else True, 0
+        self.current_steps += 1
+        if self.current_steps < self.max_steps:
+            return self._get_terminal_inspection()
         else:
-            self.current_steps += 1
-            if self.current_steps < self.max_steps:
-                return self._get_terminal_inspection()
-            else:
-                return True, 0
+            return True, 0
 
     def make_observation(self):
         self.obs, self.target = self._get_observation()

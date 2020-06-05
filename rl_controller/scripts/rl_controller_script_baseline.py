@@ -20,8 +20,8 @@ from argparser import ArgParser
 
 class RL_controller:
     def __init__(self, feedbackRate_=50):
-        rospy.init_node("RL_controller", anonymous=True)
         self.use_sim = rospy.get_param("/rl_controller/use_sim")
+        rospy.init_node("RL_controller", anonymous=True)
         self.trainig_srv = rospy.Service(
             'policy_train', InitTraining, self._train)
         self.learningkey_pub = rospy.Publisher(
@@ -81,7 +81,7 @@ class RL_controller:
         print("Training service init")
         with self.sess:
             for train_iter in range(self.train_num):
-                print("Training Iter: ", train_iter)
+                print("\033[91mTraining Iter: ", train_iter,"\033[0m")
                 model_dir=self.model_path + str(rospy.Time.now())
                 os.makedirs(model_dir, exist_ok = True)
                 learning_key=Int8()

@@ -21,8 +21,8 @@ JacoController::JacoController() : nh_(""), nh_local_("~")
   move_group = new moveit::planning_interface::MoveGroupInterface(PLANNING_GROUP_);
 
   move_group->setPlannerId(p_planner_ID);   //Planner Selection
-  execute_action_client_.reset(new actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>(
-      nh_, "j2n6s300/follow_joint_trajectory", false));
+  //execute_action_client_.reset(new actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>(
+  //    nh_, "j2n6s300/follow_joint_trajectory", false));
 
   printf(MOVEIT_CONSOLE_COLOR_BLUE "Move_group setup finished.\n" MOVEIT_CONSOLE_COLOR_RESET);
 
@@ -34,7 +34,7 @@ JacoController::JacoController() : nh_(""), nh_local_("~")
 
   teleop_sub_ = nh_.subscribe("key_input", 10, &JacoController::teleopCallback, this);
   spacenav_sub_ = nh_.subscribe("spacenav/joy", 2, &JacoController::spacenavCallback, this);
-  action_sub_ = nh_.subscribe("rl_action_output", 10, &JacoController::actionCallback, this);
+  action_sub_ = nh_.subscribe("rl_action_output", 1, &JacoController::actionCallback, this);
   //reset_sub_ = nh_.subscribe("reset_key", 10, &JacoController::resetCallback, this);
   learning_sub_ = nh_.subscribe("learning_key", 10, &JacoController::islearningCallback, this);
   traj_pub_ = nh_.advertise<trajectory_msgs::JointTrajectory>("j2n6s300/trajectory", 1);
@@ -367,7 +367,7 @@ void JacoController::islearningCallback(const std_msgs::Int8::ConstPtr& msg)
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "jaco_ros_controller");
-  ros::AsyncSpinner spinner(1);
+  ros::AsyncSpinner spinner(2);
   spinner.start();
   JacoController jc;
   ros::waitForShutdown();
