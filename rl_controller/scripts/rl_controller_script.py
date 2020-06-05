@@ -3,7 +3,8 @@
 from algo.trpo import TRPO
 from algo.trpotrainer import TRPOTrainer
 from env.env_real import Real
-from env.env_vrep import JacoVrepEnv
+from env.env_vrep_api import JacoVrepEnv as JacoVrepEnvApi
+from env.env_vrep_pyrep import JacoVrepEnv as JacoVrepEnvPyrep
 from state_gen.state_generator import State_generator
 from std_msgs.msg import Int8
 from rl_controller.srv import InitTraining
@@ -56,7 +57,7 @@ class RL_controller:
         self.period = rospy.Duration(1.0/feedbackRate_)
         args.rate = self.rate
         args.period = self.period
-        self.env = JacoVrepEnv(
+        self.env = JacoVrepEnvApi(
             **vars(args)) if self.use_sim else Real(**vars(args))
         args.env = self.env
 

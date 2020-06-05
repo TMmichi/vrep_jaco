@@ -12,7 +12,8 @@ from stable_baselines.common.policies import MlpPolicy
 from stable_baselines.sac import SAC
 from stable_baselines.sac.policies import MlpPolicy as MlpPolicy_sac, LnMlpPolicy as LnMlpPolicy_sac
 from state_gen.state_generator import State_generator
-from env.env_vrep import JacoVrepEnv
+from env.env_vrep_api import JacoVrepEnv as JacoVrepEnvApi
+#from env.env_vrep_pyrep import JacoVrepEnv as JacoVrepEnvPyrep
 from env.env_real import Real
 from argparser import ArgParser
 
@@ -66,7 +67,7 @@ class RL_controller:
         args.batches_per_episodes = self.batches_per_episodes
         self.num_episodes = 1000
         self.train_num = 1
-        self.env = JacoVrepEnv(
+        self.env = JacoVrepEnvApi(
             **vars(args)) if self.use_sim else Real(**vars(args))
         self.num_timesteps = self.steps_per_batch * self.batches_per_episodes * \
             math.ceil(self.num_episodes / self.train_num)

@@ -4,6 +4,7 @@ import rospy
 import time
 import subprocess
 
+'''
 subprocess.call(
     "rosparam set use_sim_time true",
     shell=True
@@ -29,4 +30,4 @@ subprocess.call(
     vrep_exec+scene+" &",
     shell=True
 )
-time.sleep(t_val)      
+time.sleep(t_val)'''

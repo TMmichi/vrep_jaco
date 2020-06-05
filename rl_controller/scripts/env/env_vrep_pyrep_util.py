@@ -11,70 +11,52 @@ from math import pi
 from random import sample, randint, uniform
 
 import numpy as np
-from matplotlib import pyplot as plt
 
 import rospy
-from env.vrep_env_rl import vrep_env
-from env.vrep_env_rl import vrep  # vrep.sim_handle_parent
-from env.SimpleActionServer_mod import SimpleActionServer_mod
-from std_msgs.msg import Int8
-from std_msgs.msg import Int8MultiArray
-from std_msgs.msg import Float32MultiArray
-from sensor_msgs.msg import Image
-from sensor_msgs.msg import JointState
-from control_msgs.msg import FollowJointTrajectoryAction
-from control_msgs.msg import FollowJointTrajectoryFeedback
-from control_msgs.msg import FollowJointTrajectoryResult
+from std_msgs.msg import Int8, Int8MultiArray, Float32MultiArray
+from sensor_msgs.msg import Image, JointState
 from trajectory_msgs.msg import JointTrajectory
+from pyrep import PyRep
+from assets.jaco import jaco
 
 
 def radtoangle(rad):
     return rad / pi * 180
 
 
-class JacoVrepEnvUtil(vrep_env.VrepEnv):
+class JacoVrepEnvUtil(object):
     def __init__(self, **kwargs):
-        ### ------------  V-REP API INITIALIZATION  ------------ ###
-        vrep_exec = rospy.get_param(
-            "/vrep_jaco_bringup_simulator/vrep_path")+"/coppeliaSim.sh -s "
-        scene = rospy.get_param("/vrep_jaco_bringup_simulator/scene_file")
-        self.exec_string = vrep_exec+scene+" &"
+        #self.debug = kwargs['debug']
 
-        self.debug = kwargs['debug']
-        self.addr = kwargs['server_addr']
-        self.port = kwargs['server_port']
-
-        vrep_env.VrepEnv.__init__(
-            self, self.addr, self.port)
+        ### ------------  PyRep INITIALIZATION  ------------ ###
+        scene = rospy.get_param("/rl_controller/scene_file")
+        self.pr = PyRep()
+        self.pr.launch(scene, headless=False)
+        self.arm = jaco()
 
         ### ------------  JOINT HANDLES INITIALIZATION  ------------ ###
         self.jointState_ = JointState()
         self.jointState_.position = [0,0,0,0,0,0,0,0,0,0,0,0]
-        self.feedback_ = FollowJointTrajectoryFeedback()
-        self.jointHandles_ = []
         self.base_position = []
         # Joint prefix setup
-        vrepArmPrefix = "jaco_joint_"
-        vrepFingerPrefix = "jaco_joint_finger_"
-        vrepFingerTipPrefix = "jaco_joint_finger_tip_"
+        vrepArmPrefix = "jaco_joint"
+        vrepFingerPrefix = "jaco_joint_finger"
+        vrepFingerTipPrefix = "jaco_joint_finger_tip"
         urdfArmPrefix = "j2n6s300_joint_"
         urdfFingerPrefix = "j2n6s300_joint_finger_"
         urdfFingerTipPrefix = "j2n6s300_joint_finger_tip_"
         # Handle init
-        self.jointHandles_ = self._initJoints(
+        self._initJoints(
             vrepArmPrefix, vrepFingerPrefix, vrepFingerTipPrefix,
             urdfArmPrefix, urdfFingerPrefix, urdfFingerTipPrefix)
-        # Feedback message initialization
-        for i in range(0, 6):
-            self.feedback_.joint_names.append(self.jointState_.name[i])
-            self.feedback_.actual.positions.append(0)
         self.target_angle = []
         self.gripper_pose = []
         self.gripper_angle_1 = 0.35    # finger 1, 2
         self.gripper_angle_2 = 0.35    # finger 3
 
         ### ------------  ROS INITIALIZATION  ------------ ###
-        self.rate = kwargs['rate']
+        #self.rate = kwargs['rate']
+        self.rate = 50
         # Subscribers / Publishers
         self.key_sub = rospy.Subscriber(
             "key_input", Int8, self._keys, queue_size=10)
@@ -92,15 +74,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             "rl_action_output", Float32MultiArray, queue_size=1)
         self.target_pub_ = rospy.Publisher(
             "test_target", Float32MultiArray, queue_size=1)
-        self.feedbackPub_ = rospy.Publisher(
-            "feedback_states", FollowJointTrajectoryFeedback, queue_size=1)
         self.worker_pause = False
-
-        ### ------------  ACTION LIBRARY INITIALIZATION  ------------ ###
-        self._action_name = "j2n6s300/follow_joint_trajectory"
-        self.trajAS_ = SimpleActionServer_mod(
-            self._action_name, FollowJointTrajectoryAction, self._trajCB, False)
-        self.trajAS_.start()
         self.action_received = False
 
         ### ------------  STATE GENERATION  ------------ ###
@@ -127,111 +101,6 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             self.reward_method = None
             self.reward_module = None
 
-    def _jointState_CB(self, msg):
-        self.jointState_.position = msg.position
-
-    def _trajCB(self, goal):
-        result = FollowJointTrajectoryResult()
-        points = goal.trajectory.points
-        startTime = rospy.Time.now()
-        position = []
-        try:
-            print(goal.trajectory.points[-1].positions[:6])
-        except Exception as e:
-            print(e, file=sys.stderr)
-        try:
-            then = datetime.datetime.now()
-            print("0: ", datetime.datetime.now()-then)
-            for i_jointhandle in self.jointHandles_:
-                position.append(self.obj_get_joint_angle(i_jointhandle))
-            print("0-1: ", datetime.datetime.now()-then)
-            self.jointState_.position = position
-            i = len(points)-2
-            move_diff = np.linalg.norm(
-                np.array(points[i].positions[:6])-np.array(position[:6]))
-            print("1", datetime.datetime.now()-then)
-            if (not move_diff > 1) or (not move_diff < 6):
-                while not rospy.is_shutdown():
-                    if self.trajAS_.is_preempt_requested():
-                        self.trajAS_.set_preempted()
-                        print("Preempted")
-                        break
-                    fromStart = rospy.Time.now() - startTime
-                    while i < len(points) - 1 and points[i+1].time_from_start.to_sec() - points[0].time_from_start.to_sec() < fromStart.to_sec():
-                        print("In While")
-                        i += 1
-                    print(len(points), i, points[i+1].time_from_start.to_sec(
-                    ) - points[0].time_from_start.to_sec(), fromStart.to_sec())
-                    if i == len(points)-1:
-                        self.reachedGoal = True
-                        for j in range(6):
-                            tolerance = 0.1
-                            if len(goal.goal_tolerance) > 0:
-                                tolerance = goal.goal_tolerance[j].position
-                            if abs(self.jointState_.position[j] - points[i].positions[j]) > tolerance:
-                                self.reachedGoal = False
-                                print("1-1", datetime.datetime.now()-then)
-                                break
-                        timeTolerance = rospy.Duration(
-                            max(goal.goal_time_tolerance.to_sec(), 0.1))
-                        if self.reachedGoal:
-                            result.error_code = result.SUCCESSFUL
-                            self.trajAS_.set_succeeded(result)
-                            print("2-1", datetime.datetime.now()-then)
-                            break
-                        elif fromStart > points[i].time_from_start + timeTolerance:
-                            result.error_code = result.GOAL_TOLERANCE_VIOLATED
-                            self.trajAS_.set_aborted(result)
-                            print("2-2", datetime.datetime.now()-then)
-                            break
-                        target = points[i].positions
-                    else:
-                        fromStart = rospy.Time.now() - startTime
-                        timeTolerance = rospy.Duration(
-                            max(goal.goal_time_tolerance.to_sec(), 0.7))
-                        if fromStart > points[i].time_from_start + timeTolerance or fromStart < rospy.Duration(0):
-                            result.error_code = result.GOAL_TOLERANCE_VIOLATED
-                            self.trajAS_.set_aborted(result)
-                            print("3-1", datetime.datetime.now()-then)
-                            break
-                        try:
-                            print("3-2", datetime.datetime.now()-then)
-                            target = points[i].positions
-                        except Exception as e:
-                            target = [0, 0, 0, 0, 0, 0]
-                            print("Error: ", e)
-                    for j in range(0, 6):
-                        self.obj_set_position_target(
-                            self.jointHandles_[j], radtoangle(-target[j]))
-                    time.sleep(0.02)
-                    print("4", datetime.datetime.now()-then)
-                if rospy.is_shutdown():
-                    print(9)
-            else:
-                result.error_code = result.GOAL_TOLERANCE_VIOLATED
-                self.trajAS_.set_aborted(result)
-        except Exception as e:
-            print(e, file=sys.stderr)
-
-    def _trajCB_raw(self, msg):
-        #print("traj received from moveit at: ", datetime.datetime.now())
-        points = msg.points[-1]
-        self.target_angle = points.positions[:6]
-        position = self.jointState_.position
-        try:
-            #for i_jointhandle in self.jointHandles_:
-            #    position.append(self.obj_get_joint_angle(i_jointhandle))
-            #self.jointState_.position = position
-            move_diff = np.linalg.norm(
-                np.array(points.positions[:6])-np.array(position[:6]))
-            if (not move_diff > 1) or (not move_diff < 6):
-                for j in range(0, 6):
-                    self.obj_set_position_target(
-                        self.jointHandles_[j], radtoangle(-points.positions[j]))
-        except Exception as e:
-            print(e, file=sys.stderr)
-        self.action_received = True
-
     def _initJoints(
             self,
             vrepArmPrefix, vrepFingerPrefix, vrepFingerTipPrefix,
@@ -257,10 +126,27 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             self.jointState_.name.append(outname)
             self.jointState_.velocity.append(0)
             self.jointState_.effort.append(0)
-        jointHandles_ = list(map(self.get_object_handle, in_names))
-        self.jointState_.position = list(
-            map(self.obj_get_joint_angle, jointHandles_))
-        return jointHandles_
+        #self.jointState_.position = list(
+        #    map(self.obj_get_joint_angle, jointHandles_))
+
+    def _jointState_CB(self, msg):
+        self.jointState_.position = msg.position
+
+    def _trajCB_raw(self, msg):
+        #print("traj received from moveit at: ", datetime.datetime.now())
+        points = msg.points[-1]
+        self.target_angle = points.positions[:6]
+        position = self.jointState_.position
+        try:
+            move_diff = np.linalg.norm(
+                np.array(points.positions[:6])-np.array(position[:6]))
+            if (not move_diff > 1) or (not move_diff < 6):
+                for j in range(0, 6):
+                    self.obj_set_position_target(
+                        self.jointHandles_[j], radtoangle(-points.positions[j]))
+        except Exception as e:
+            print(e, file=sys.stderr)
+        self.action_received = True
 
     def _keys(self, msg):
         self.key_input = msg.data
@@ -462,3 +348,10 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
                 self.pressure_trigger = False
         except Exception:
             pass
+
+if __name__ == "__main__":
+    try:
+        env_test_class=JacoVrepEnvUtil()
+        rospy.spin()
+    except rospy.ROSInternalException:
+        rospy.loginfo("node terminated.")

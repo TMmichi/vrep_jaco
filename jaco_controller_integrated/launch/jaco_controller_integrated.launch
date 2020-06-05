@@ -48,7 +48,7 @@
     - PRMstarkConfigDefault
     -->
 
-    <param name="/use_sim_time" value="true"/>
+    <param name="use_sim_time" value="true"/>
   </node>
 
   <!--

@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
-from env.env_vrep_util import JacoVrepEnvUtil, radtoangle
+import os
+import numpy as np
+import datetime
 
 from gym import spaces
 from gym.utils import seeding
 
-import os
-import numpy as np
-import datetime
+from env.env_vrep_api_util import JacoVrepEnvUtil, radtoangle
 
 
 class JacoVrepEnv(JacoVrepEnvUtil):
@@ -44,7 +44,6 @@ class JacoVrepEnv(JacoVrepEnvUtil):
         self.action_space = spaces.Box(-act, act)  # Action space: [-1.4, 1.4]
         self.target = [0,0,0,0,0,0]
         self.seed()
-        self.reset()
 
         ### ------------  LOGGING  ------------ ###
         log_dir ="/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/logs"

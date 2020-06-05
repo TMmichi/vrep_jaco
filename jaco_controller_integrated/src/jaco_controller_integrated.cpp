@@ -367,7 +367,7 @@ void JacoController::islearningCallback(const std_msgs::Int8::ConstPtr& msg)
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "jaco_ros_controller");
-  ros::AsyncSpinner spinner(2);
+  ros::AsyncSpinner spinner(1);
   spinner.start();
   JacoController jc;
   ros::waitForShutdown();
