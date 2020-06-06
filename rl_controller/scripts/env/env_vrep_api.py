@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
-import os
 import numpy as np
 import datetime
 
+import os
 import rospy
 
 from gym import spaces

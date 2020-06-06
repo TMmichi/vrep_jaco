@@ -29,9 +29,9 @@ class JacoVrepEnvUtil(object):
         #self.debug = kwargs['debug']
 
         ### ------------  PyRep INITIALIZATION  ------------ ###
-        scene = rospy.get_param("/rl_controller/scene_file")
+        self.scene = rospy.get_param("/rl_controller/scene_file")
         self.pr = PyRep()
-        self.pr.launch(scene, headless=False)
+        self.pr.launch(self.scene, headless=False)
         time.sleep(3)
         self.arm = jaco()
 
@@ -156,66 +156,46 @@ class JacoVrepEnvUtil(object):
         elif self.key_input in [ord('f'), ord('g'), ord('v'), ord('b'), ord('o'), ord('p')]:
             self._take_manual_action(self.key_input)
         elif self.key_input == ord('2'):
-            self.step_simulation()
+            self.pr.step()
 
     def _reset(self, target_angle=None, sync=False):
-        self.reset_pub.publish(Int8(data=ord('r')))
-        time.sleep(0.2)
         self.gripper_angle_1 = 0.35
         self.gripper_angle_2 = 0.35
-        self.trajAS_.reset()
         proc_reset = self._memory_check()
         self._vrep_process_reset() if proc_reset else None
-        if self.sim_running:
-            self.stop_simulation()
+        self.pr.stop()
         if target_angle == None:
-            random_init_angle = [sample(range(-180, 180), 1)[0], 150, sample(range(200, 270), 1)[0], sample(
-                range(50, 130), 1)[0], sample(range(50, 130), 1)[0], sample(range(50, 130), 1)[0]]
+            random_init_angle = [-1*sample(range(-180, 180), 1)[0], -150, -1*sample(range(200, 270), 1)[0], -1*sample(
+                range(50, 130), 1)[0], -1*sample(range(50, 130), 1)[0], -1*sample(range(50, 130), 1)[0]]
         else:
             random_init_angle = target_angle
-        for i, degree in enumerate(random_init_angle):
-            self.obj_set_position_inst(self.jointHandles_[i], -degree)
-            self.obj_set_position_target(self.jointHandles_[i], -degree)
-        self.start_simulation(sync=sync, time_step=0.05)
-        #time.sleep(0.5)
-        if sync:
-            for _ in range(10):
-                self.step_simulation()
+        self.arm.set_joint_positions(random_init_angle)
+        self.arm.set_joint_target_positions(random_init_angle)
+        self.pr.start()
+        for _ in range(10):
+            self.pr.step()
         obs = self._get_observation()[0]
         self.goal = self._sample_goal()
         dist_diff = np.linalg.norm(
             np.array(obs[:3]) - np.array(self.goal))
         self.base_position = np.array(self.obj_get_position(self.jointHandles_[0]))
         self.ref_reward = (3 - dist_diff*1.3)
+        self.reset_pub.publish(Int8(data=ord('r')))
         time.sleep(1)
         return obs
 
     def _memory_check(self):
         total = psutil.virtual_memory().total
         used = total - psutil.virtual_memory().available
-        '''
-            for proc in psutil.process_iter():
-                try:
-                    processName = proc.name()
-                    if processName in ['coppeliaSim','vrep']:
-                        print("vrep found")
-                except(psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                    pass
-        '''
         return True if (used/total*100) > 75 else False
 
     def _vrep_process_reset(self):
         print("Restarting Vrep")
         self.worker_pause = True
-        self.disconnect()
-        quit_signal = Int8()
-        quit_signal.data = 1
-        self.quit_pub.publish(quit_signal)
-        time.sleep(8)
-        subprocess.call(self.exec_string, shell=True)
+        self.pr.stop()
+        self.pr.shutdown()
+        self.pr.launch(self.scene, headless=False)
         time.sleep(3)
-        self.connect(self.addr, self.port)
-        time.sleep(1)
         self.worker_pause = False
 
     def _get_observation(self,):
