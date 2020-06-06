@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 
-import os
-import sys
 import numpy as np
 import datetime
 
+import os
 import rospy
 
 from gym import spaces
@@ -78,8 +77,8 @@ class JacoVrepEnv(JacoVrepEnvUtil):
         action = np.clip(action,-self.action_space_max, self.action_space_max)
         try:
             action[np.argwhere(np.isnan(action))[0][0]]=0
-        except Exception as e:
-            print(e, file=sys.stderr)
+        except Exception:
+            pass
 
         #assert self.action_space.contains(
         #    action), "Action {} ({}) is invalid".format(action, type(action))
