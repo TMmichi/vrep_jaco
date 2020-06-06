@@ -254,14 +254,14 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         gripper_pose = np.array(self.gripper_pose)
         if self.reward_method == "l2":
             wb = np.linalg.norm(gripper_pose[:3] - self.base_position)
-            if wb < 0.85:
-                if 3.14 - 0.15 < self.jointState_.position[2] < 3.14 + 0.15:
-                    reward = -1
+            if wb < 0.8:
+                if 3.14 - 0.2 < self.jointState_.position[2] < 3.14 + 0.2:
+                    reward = -0.5
                 else:
                     dist_diff = np.linalg.norm(gripper_pose[:3] - np.array(self.goal))
                     reward = ((3 - dist_diff*1.3) - self.ref_reward) * 0.1  # TODO: Shape reward
             else:
-                reward = -1
+                reward = -0.5
             return reward
         elif self.reward_method == "":
             return self.reward_module(gripper_pose, self.goal)

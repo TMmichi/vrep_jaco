@@ -78,7 +78,7 @@ class JacoVrepEnv(JacoVrepEnvUtil):
         #assert self.action_space.contains(
         #    action), "Action {} ({}) is invalid".format(action, type(action))
         #print("before take action: ",rospy.Time.now())
-        self.take_action(action/2)
+        penalty = self.take_action(action/2)
         for _ in range(num_step_pass):
             self.step_simulation()
         #print("after take action: ",rospy.Time.now())
@@ -96,7 +96,7 @@ class JacoVrepEnv(JacoVrepEnvUtil):
         #print("Printing takes: ",datetime.datetime.now() - then)
         done, additional_reward = self.terminal_inspection()
         #print("\033[31mWhole step takes: ",datetime.datetime.now() - then,"\033[0m")
-        return self.obs, reward_val + additional_reward, done, {0: 0}
+        return self.obs, reward_val + additional_reward + penalty, done, {0: 0}
 
     def terminal_inspection(self):
         # TODO: terminal state definition
@@ -120,10 +120,11 @@ class JacoVrepEnv(JacoVrepEnvUtil):
         while not self.action_received:
             if (datetime.datetime.now() - then).total_seconds() > 0.25: #Should be a bit greater than then moveit timeout, ELSE ERROR!
                 #print("\033[31mPlan not found\033[0m")
-                break
-            pass
+                action_not_found_penalty = -0.5
+                return action_not_found_penalty
         #print("action done at: ",datetime.datetime.now())
         self.action_received = False
+        return 0
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
