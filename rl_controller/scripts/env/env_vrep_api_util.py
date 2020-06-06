@@ -57,6 +57,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         self.jointHandles_ = self._initJoints(
             vrepArmPrefix, vrepFingerPrefix, vrepFingerTipPrefix,
             urdfArmPrefix, urdfFingerPrefix, urdfFingerTipPrefix)
+        self.base_position = np.array(self.obj_get_position(self.jointHandles_[0]))
         self.target_angle = [0,0,0,0,0,0]
         self.gripper_pose = []
         self.gripper_angle_1 = 0.35    # finger 1, 2
@@ -198,7 +199,6 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         self.goal = self._sample_goal()
         dist_diff = np.linalg.norm(
             np.array(obs[:3]) - np.array(self.goal))
-        self.base_position = np.array(self.obj_get_position(self.jointHandles_[0]))
         self.ref_reward = (3 - dist_diff*1.3)
         #print("Send reset signal to moveit at: ",rospy.Time.now())
         self.reset_pub.publish(Int8(data=ord('r')))
@@ -224,17 +224,24 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         time.sleep(1)
         self.worker_pause = False
 
-    def _get_observation(self,):
+    def _get_observation(self):
         # TODO: Use multiprocessing to generate state from parallel computation
         test = True  # TODO: Remove test
         if test:
-            self.gripper_pose = self.obj_get_position(self.jointHandles_[5])
+            self.gripper_pose = self._get_gripper_pose()
             observation = self.gripper_pose + self.obj_get_orientation(self.jointHandles_[5])
             observation += self.goal
         else:
             data_from_callback = []
             observation = self.state_gen.generate(data_from_callback)
         return np.array(observation), self.target_angle
+    
+    def _get_gripper_pose(self):
+        gripper_pose = self.obj_get_position(self.jointHandles_[5])
+        if not (True in np.isnan(gripper_pose)):
+            return gripper_pose
+        else:
+            return self._get_gripper_pose()
 
     def _get_reward(self):
         # TODO: Reward from IRL
