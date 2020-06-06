@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import sys
 import numpy as np
 import datetime
 
@@ -75,7 +76,11 @@ class JacoVrepEnv(JacoVrepEnvUtil):
         num_step_pass = 2
         
         action = np.clip(action,-self.action_space_max, self.action_space_max)
-        action[np.argwhere(np.isnan(action))[0][0]]=0
+        try:
+            action[np.argwhere(np.isnan(action))[0][0]]=0
+        except Exception as e:
+            print(e, file=sys.stderr)
+
         #assert self.action_space.contains(
         #    action), "Action {} ({}) is invalid".format(action, type(action))
         #print("before take action: ",rospy.Time.now())
