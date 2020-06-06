@@ -140,7 +140,11 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         return jointHandles_
 
     def _jointState_CB(self, msg):
-        self.jointState_.position = msg.position
+        if not (True in np.isnan(msg.position)):
+            self.jointState_.position = msg.position
+        else:
+            pass
+
 
     def _trajCB_raw(self, msg):
         #print("traj received from moveit at: ", datetime.datetime.now())
