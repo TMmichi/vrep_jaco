@@ -73,7 +73,9 @@ class JacoVrepEnv(JacoVrepEnvUtil):
         # moveit trajectory planning (0.15) + target angle following (0.3 - 0.15?)
         # -> In real world, full timesteps are used for conducting action (No need for finding IK solution)
         num_step_pass = 2
+        
         action = np.clip(action,-self.action_space_max, self.action_space_max)
+        action[np.argwhere(np.isnan(action))[0][0]]=0
         #assert self.action_space.contains(
         #    action), "Action {} ({}) is invalid".format(action, type(action))
         #print("before take action: ",rospy.Time.now())
