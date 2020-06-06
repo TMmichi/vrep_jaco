@@ -228,31 +228,37 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         # TODO: Use multiprocessing to generate state from parallel computation
         test = True  # TODO: Remove test
         if test:
-            self.gripper_pose = self._get_gripper_pose()
-            observation = self.gripper_pose + self.obj_get_orientation(self.jointHandles_[5])
-            observation += self.goal
+            self.gripper_pose = self._get_gripper_position() + self._get_gripper_orientation()
+            observation = self.gripper_pose + self.goal
         else:
             data_from_callback = []
             observation = self.state_gen.generate(data_from_callback)
         return np.array(observation), self.target_angle
     
-    def _get_gripper_pose(self):
-        gripper_pose = self.obj_get_position(self.jointHandles_[5])
-        if not (True in np.isnan(gripper_pose)):
-            return gripper_pose
+    def _get_gripper_position(self):
+        gripper_position = self.obj_get_position(self.jointHandles_[5])
+        if not (True in np.isnan(gripper_position)):
+            return gripper_position
         else:
-            return self._get_gripper_pose()
+            return self._get_gripper_position()
+    
+    def _get_gripper_orientation(self):
+        gripper_orientation = self.obj_get_orientation(self.jointHandles_[5])
+        if not (True in np.isnan(gripper_orientation)):
+            return gripper_orientation
+        else:
+            return self._get_gripper_orientation()
 
     def _get_reward(self):
         # TODO: Reward from IRL
         gripper_pose = np.array(self.gripper_pose)
         if self.reward_method == "l2":
-            wb = np.linalg.norm(gripper_pose - self.base_position)
+            wb = np.linalg.norm(gripper_pose[:3] - self.base_position)
             if wb < 0.85:
                 if 3.14 - 0.15 < self.jointState_.position[2] < 3.14 + 0.15:
                     reward = -1
                 else:
-                    dist_diff = np.linalg.norm(gripper_pose - np.array(self.goal))
+                    dist_diff = np.linalg.norm(gripper_pose[:3] - np.array(self.goal))
                     reward = ((3 - dist_diff*1.3) - self.ref_reward) * 0.1  # TODO: Shape reward
             else:
                 reward = -1
@@ -273,7 +279,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
 
     def _get_terminal_inspection(self):
         dist_diff = np.linalg.norm(
-            np.array(self.gripper_pose) - np.array(self.goal))
+            np.array(self.gripper_pose[:3]) - np.array(self.goal))
         if dist_diff < 0.15:  # TODO: Shape terminal inspection
             print("Target Reached")
             return True, 100
