@@ -29,7 +29,8 @@ class JacoVrepEnvUtil(object):
         #self.debug = kwargs['debug']
 
         ### ------------  PyRep INITIALIZATION  ------------ ###
-        self.scene = rospy.get_param("/rl_controller/scene_file")
+        #self.scene = rospy.get_param("/rl_controller/scene_file")
+        self.scene = "/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco_bringup/scene/jaco_table_simple.ttt"
         self.pr = PyRep()
         self.pr.launch(self.scene, headless=False)
         time.sleep(3)
