@@ -87,16 +87,16 @@ class JacoVrepEnv(JacoVrepEnvUtil):
         #print("Making observation takes: ",datetime.datetime.now() - then)
         reward_val = self._get_reward()
         #print("Receiving rew takes: ",datetime.datetime.now() - then)
+        done, additional_reward = self.terminal_inspection()
+        total_reward = reward_val + additional_reward + penalty
+        #print("\033[31mWhole step takes: ",datetime.datetime.now() - then,"\033[0m")
         #write_str = "Target: {0:.3f}, {1:.3f}, {2:.3f}, {3:.3f} {4:.3f}, {5:.3f} | Obs: {6:.3f}, {7:.3f}, {8:.3f}, {9:.3f}, {10:.3f}, {11:.3f} | {12:.3f}, {13:.3f}, {14:.3f}, {15:.3f}, {16:.3f}, {17:.3f}, {18:.3f}, {19:.3f}, {20:.3f} | \033[92m Reward: {21:.5f}\033[0m".format(
         #    self.target[0], self.target[1], self.target[2], self.target[3], self.target[4], self.target[5], self.obs[0], self.obs[1], self.obs[2], self.obs[3], self.obs[4], self.obs[5], self.obs[6], self.obs[7], self.obs[8], self.obs[9], self.obs[10], self.obs[11], self.obs[12], self.obs[13], self.obs[14], reward_val)
         write_str = "Target: {0:.3f}, {1:.3f}, {2:.3f}, {3:.3f} {4:.3f}, {5:.3f} | Obs: {6:.3f}, {7:.3f}, {8:.3f}, {9:.3f}, {10:.3f}, {11:.3f}, {12:.3f}, {13:.3f}, {14:.3f} | \033[92m Reward: {15:.5f}\033[0m".format(
-            self.target[0], self.target[1], self.target[2], self.target[3], self.target[4], self.target[5], self.obs[0], self.obs[1], self.obs[2], self.obs[3], self.obs[4], self.obs[5], self.obs[6], self.obs[7], self.obs[8], reward_val)
+            self.target[0], self.target[1], self.target[2], self.target[3], self.target[4], self.target[5], self.obs[0], self.obs[1], self.obs[2], self.obs[3], self.obs[4], self.obs[5], self.obs[6], self.obs[7], self.obs[8], total_reward)
         print(write_str, end='\r')
         self.joint_angle_log.writelines(write_str+"\n")
-        #print("Printing takes: ",datetime.datetime.now() - then)
-        done, additional_reward = self.terminal_inspection()
-        #print("\033[31mWhole step takes: ",datetime.datetime.now() - then,"\033[0m")
-        return self.obs, reward_val + additional_reward + penalty, done, {0: 0}
+        return self.obs, total_reward, done, {0: 0}
 
     def terminal_inspection(self):
         # TODO: terminal state definition
