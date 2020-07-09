@@ -218,7 +218,7 @@ Consists:
 `rl_controller` is the main work scheme script, where it encodes states, produce action from policy, and trains via RL and IRL.
 
 Should build ROS package for python3 in order to use moveit!. Follow instructions given in hyperlink: 
-[Instructions](https://www.miguelalonsojr.com/blog/robotics/ros/python3/2019/08/20/ros-melodic-python-3-build.html)
+[Instructions](https://medium.com/@beta_b0t/how-to-setup-ros-with-python-3-44a69ca36674)
 
 #### Reference
 
