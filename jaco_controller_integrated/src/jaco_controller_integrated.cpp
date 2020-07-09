@@ -35,6 +35,7 @@ JacoController::JacoController() : nh_(""), nh_local_("~")
   teleop_sub_ = nh_.subscribe("key_input", 10, &JacoController::teleopCallback, this);
   spacenav_sub_ = nh_.subscribe("spacenav/joy", 2, &JacoController::spacenavCallback, this);
   action_sub_ = nh_.subscribe("rl_action_output", 1, &JacoController::actionCallback, this);
+  pose_action_sub_ = nh_.subscribe("pose_action_output", 1, &JacoController::poseActionCallback, this);
   //reset_sub_ = nh_.subscribe("reset_key", 10, &JacoController::resetCallback, this);
   learning_sub_ = nh_.subscribe("learning_key", 10, &JacoController::islearningCallback, this);
   traj_pub_ = nh_.advertise<trajectory_msgs::JointTrajectory>("j2n6s300/trajectory", 1);
@@ -338,6 +339,75 @@ void JacoController::actionCallback(const std_msgs::Float32MultiArray &msg)
   else
   {
   }
+}
+
+void JacoController::poseActionCallback(const std_msgs::Float32MultiArray &msg)
+{
+  printf(MOVEIT_CONSOLE_COLOR_BLUE "Action In: [\t");
+  for (auto it = msg.data.begin(); it != msg.data.end(); it++)
+  {
+    printf("%.2f\t", *it);
+  }
+  printf("]\n");
+  printf(MOVEIT_CONSOLE_COLOR_RESET);
+
+  current_pose = move_group->getCurrentPose().pose;
+  tf2::Quaternion q(current_pose.orientation.x, current_pose.orientation.y, current_pose.orientation.z, current_pose.orientation.w);
+  tf2::Matrix3x3 m(q);
+  double roll, pitch, yaw;
+  m.getRPY(roll, pitch, yaw);
+
+  ROS_INFO("pose_x: %f", current_pose.position.x);
+  ROS_INFO("pose_y: %f", current_pose.position.y);
+  ROS_INFO("pose_z: %f", current_pose.position.z);
+  ROS_INFO("orientation_r: %f", roll);
+  ROS_INFO("orientation_p: %f", pitch);
+  ROS_INFO("orientation_y: %f", yaw);
+
+  target_pose = current_pose;
+  target_pose.position.x = msg.data[0];
+  target_pose.position.y = msg.data[1];
+  target_pose.position.z = msg.data[2];
+  roll = msg.data[3];
+  pitch = msg.data[4];
+  yaw = msg.data[5];
+
+  //moveit_msgs::RobotTrajectory trajectory;
+  trajectory_msgs::JointTrajectory trajectory;
+  if (!p_cartesian)
+  {
+    ROS_DEBUG_NAMED("","Pose planning");
+    tf2::Quaternion orientation;
+    orientation.setRPY(roll, pitch, yaw);
+    target_pose.orientation = tf2::toMsg(orientation);
+
+    move_group->setPoseTarget(target_pose); //motion planning to a desired pose of the end-effector
+    ROS_DEBUG_NAMED("","Planning Goal");
+    move_group->plan(my_plan, p_timeout);
+    ROS_DEBUG_NAMED("","Planning Finished");
+
+    //trajectory = my_plan.trajectory_;
+    trajectory.points = my_plan.trajectory_.joint_trajectory.points;
+    traj_pub_.publish(trajectory);
+    //control_msgs::FollowJointTrajectoryGoal goal;
+    //goal.trajectory = trajectory.joint_trajectory;
+    //ROS_DEBUG_NAMED("","Goal Sending");
+    //execute_action_client_->sendGoal(goal);
+  }
+  else if (p_cartesian)
+  {
+    ROS_DEBUG_NAMED("","Cartesian planning\n");
+    waypoints.push_back(target_pose);
+    //fraction = move_group->computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
+    //control_msgs::FollowJointTrajectoryGoal goal;
+    //goal.trajectory = trajectory.joint_trajectory;
+    //ROS_DEBUG_NAMED("","Goal Sending");
+    //execute_action_client_->sendGoal(goal);
+  }
+  else
+  {
+  }
+
 }
 
 void JacoController::resetCallback(const std_msgs::Int8::ConstPtr& msg)

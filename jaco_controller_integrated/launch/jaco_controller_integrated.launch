@@ -31,8 +31,8 @@
   <node name="jaco_ros_controller" pkg="jaco_controller_integrated" type="jaco_controller_integrated" respawn="false" output="screen">
     <param name="speed_constant" value="0.01"/>
     <param name="cartesian" value="false"/>
-    <param name="timeout" value="0.25"/>
-    <param name="plannerID" value="RRTConnectkConfigDefault"/>
+    <param name="timeout" value="30"/> <!--0.25-->
+    <param name="plannerID" value="RRTstarkConfigDefault"/>
     <!--
       planner_configs:
     - SBLkConfigDefault

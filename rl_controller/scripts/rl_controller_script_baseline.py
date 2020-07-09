@@ -3,6 +3,7 @@
 import os
 import math
 import rospy
+import numpy as np
 from rl_controller.srv import InitTraining
 from std_msgs.msg import Int8
 
@@ -24,6 +25,8 @@ class RL_controller:
         rospy.init_node("RL_controller", anonymous=True)
         self.trainig_srv = rospy.Service(
             'policy_train', InitTraining, self._train)
+        self.cip_test_srv = rospy.Service(
+            'cip_test', InitTraining, self._CIP_test)
         self.learningkey_pub = rospy.Publisher(
             "learning_key", Int8, queue_size=1)
 
@@ -90,6 +93,20 @@ class RL_controller:
                 self.trainer.learn(total_timesteps = self.num_timesteps)
                 print("Train Finished")
                 self.trainer.save(model_dir)
+
+    def _CIP_test(self, req):
+        roll = True
+        while roll:
+            cmd = input("Action/quit (pose[m/rad] / q): ")
+            try:
+                cmd = np.array(cmd.split(","),dtype=np.float16)
+                assert len(cmd) == 6, "Input command should be in a size of 6"
+                self.env.take_pose_action(cmd)
+            except Exception:
+                if cmd == 'q':
+                    break
+                else:
+                    print("[ERROR] Input: pose action / q for quit")
 
 
 if __name__ == "__main__":

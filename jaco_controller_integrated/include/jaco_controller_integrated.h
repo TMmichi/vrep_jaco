@@ -31,6 +31,7 @@ private:
     void teleopCallback(const std_msgs::Int8::ConstPtr& msg);
     void spacenavCallback(const sensor_msgs::Joy::ConstPtr& msg);
     void actionCallback(const std_msgs::Float32MultiArray& msg);
+    void poseActionCallback(const std_msgs::Float32MultiArray& msg);
     void resetCallback(const std_msgs::Int8::ConstPtr& msg);
     void islearningCallback(const std_msgs::Int8::ConstPtr& msg);
 
@@ -43,6 +44,7 @@ private:
     ros::Subscriber teleop_sub_;
     ros::Subscriber spacenav_sub_;
     ros::Subscriber action_sub_;
+    ros::Subscriber pose_action_sub_;
     ros::Subscriber reset_sub_;
     ros::Subscriber learning_sub_;
     ros::Publisher key_check_pub_;

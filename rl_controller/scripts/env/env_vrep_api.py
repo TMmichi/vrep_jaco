@@ -125,6 +125,9 @@ class JacoVrepEnv(JacoVrepEnvUtil):
         #print("action done at: ",datetime.datetime.now())
         self.action_received = False
         return 0
+    
+    def take_pose_action(self, a):
+        self._take_pose_action(a)
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)

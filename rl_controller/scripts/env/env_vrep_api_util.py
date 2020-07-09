@@ -80,6 +80,8 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         self.quit_pub = rospy.Publisher("quit_key", Int8, queue_size=1)
         self.action_pub = rospy.Publisher(
             "rl_action_output", Float32MultiArray, queue_size=10)
+        self.pose_action_pub = rospy.Publisher(
+            "pose_action_output", Float32MultiArray, queue_size=10)
         self.target_pub_ = rospy.Publisher(
             "test_target", Float32MultiArray, queue_size=1)
         self.worker_pause = False
@@ -151,6 +153,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         #print("traj received from moveit at: ", datetime.datetime.now())
         points = msg.points[-1]
         self.target_angle = points.positions[:6]
+        '''
         position = self.jointState_.position
         try:
             move_diff = np.linalg.norm(
@@ -161,6 +164,10 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
                         self.jointHandles_[j], radtoangle(-points.positions[j]))
         except Exception as e:
             print(e, file=sys.stderr)
+        '''
+        for j in range(0, 6):
+            self.obj_set_position_target(
+                self.jointHandles_[j], radtoangle(-points.positions[j]))
         self.action_received = True
 
     def _keys(self, msg):
@@ -301,6 +308,11 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             self.jointHandles_[7], radtoangle(self.gripper_angle_1))
         self.obj_set_position_target(
             self.jointHandles_[8], radtoangle(self.gripper_angle_2))
+    
+    def _take_pose_action(self,a):
+        key_out = Float32MultiArray()  # a = [-1,0,1] * 8
+        key_out.data = np.array(a[:6], dtype=np.float32)
+        self.pose_action_pub.publish(key_out)
 
     def _take_manual_action(self, key):
         if key == ord("f"):
