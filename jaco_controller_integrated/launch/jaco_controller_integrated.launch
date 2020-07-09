@@ -32,7 +32,7 @@
     <param name="speed_constant" value="0.01"/>
     <param name="cartesian" value="false"/>
     <param name="timeout" value="30"/> <!--0.25-->
-    <param name="plannerID" value="RRTstarkConfigDefault"/>
+    <param name="plannerID" value="RRTConnectkConfigDefault"/>
     <!--
       planner_configs:
     - SBLkConfigDefault

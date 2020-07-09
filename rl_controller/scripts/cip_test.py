@@ -23,8 +23,6 @@ class RL_controller:
     def __init__(self, feedbackRate_=50):
         self.use_sim = rospy.get_param("/rl_controller/use_sim")
         rospy.init_node("RL_controller", anonymous=True)
-        self.trainig_srv = rospy.Service(
-            'policy_train', InitTraining, self._train)
         self.cip_test_srv = rospy.Service(
             'cip_test', InitTraining, self._CIP_test)
         self.learningkey_pub = rospy.Publisher(
@@ -58,41 +56,9 @@ class RL_controller:
         args.rate = self.rate
         args.period = self.period
 
-        # If resume training on pre-trained models with episodes, else None
-        self.model_path = "/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/models_baseline/"
-        args.model_path = self.model_path
-        self.tb_dir = "/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/tensorboard_log"
-        args.tb_dir = self.tb_dir
-
-        self.steps_per_batch = 100
-        self.batches_per_episodes = 5
-        args.steps_per_batch = self.steps_per_batch
-        args.batches_per_episodes = self.batches_per_episodes
-        self.num_episodes = 1000
-        self.train_num = 1
         self.env = JacoVrepEnvApi(
             **vars(args)) if self.use_sim else Real(**vars(args))
-        self.num_timesteps = self.steps_per_batch * self.batches_per_episodes * \
-            math.ceil(self.num_episodes / self.train_num)
-        # self.trainer = TRPO(MlpPolicy, self.env, cg_damping=0.1, vf_iters=5, vf_stepsize=1e-3, timesteps_per_batch=self.steps_per_batch,
-        #                    tensorboard_log=args.tb_dir, full_tensorboard_log=True)
-        self.trainer = SAC(
-            LnMlpPolicy_sac, self.env, tensorboard_log=args.tb_dir, full_tensorboard_log=True)
-        
 
-    def _train(self, req):
-        print("Training service init")
-        with self.sess:
-            for train_iter in range(self.train_num):
-                print("\033[91mTraining Iter: ", train_iter,"\033[0m")
-                model_dir=self.model_path + str(rospy.Time.now())
-                os.makedirs(model_dir, exist_ok = True)
-                learning_key=Int8()
-                learning_key.data=1
-                self.learningkey_pub.publish(learning_key)
-                self.trainer.learn(total_timesteps = self.num_timesteps)
-                print("Train Finished")
-                self.trainer.save(model_dir)
 
     def _CIP_test(self, req):
         roll = True
