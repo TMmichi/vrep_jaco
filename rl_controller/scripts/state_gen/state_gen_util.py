@@ -466,7 +466,7 @@ class DeConvBlock(layers.Layer):
         return x
 
 
-class CNN_Encoder(tf.keras.Model):
+class CNN_Encoder(layers.Layer):
     def __init__(self,**kwargs):
         super().__init__()
         self.num_conv_blocks = kwargs.get('num_conv_blocks',5)
@@ -540,7 +540,7 @@ class CNN_Encoder(tf.keras.Model):
                         gammas=gammas,
                         betas=betas,
                         training=training)
-                elif not isfilm:
+                elif isfilm == False:
                     x = block(
                         x, 
                         training=training)
@@ -550,7 +550,7 @@ class CNN_Encoder(tf.keras.Model):
         return mean, logvar
 
 
-class CNN_Decoder(tf.keras.Model):
+class CNN_Decoder(layers.Layer):
     def __init__(self,**kwargs):
         super().__init__()
         self.num_deconv_blocks = kwargs.get('num_deconv_blocks',5)
@@ -606,7 +606,7 @@ class CNN_Decoder(tf.keras.Model):
         for [block,isfilm,block_id] in self._blocks:
             #Conv Blocks (FiLMed or Not)
             with tf.compat.v1.variable_scope(block_id):
-                if not isfilm:
+                if isfilm == False:
                     x_hat = block(
                         x_hat, 
                         training=training)
@@ -633,7 +633,6 @@ class Autoencoder(tf.keras.Model):
             self.fushionencoder = fushion_Encoder(**kwargs)
             self.decoder = CNN_Decoder(**kwargs)
         else:
-            
 
             self.encoder = CNN_Encoder(**kwargs)
             self.decoder = CNN_Decoder(**kwargs)
@@ -678,21 +677,22 @@ class Autoencoder(tf.keras.Model):
     def compute_loss(self,x,x_hat):
         print('loss')
         print(x.shape)
-        print('loss2')
 
         if self.isfushion:
             print("inputs shape in loss: ",x.shape)
             mean, logvar = self.fushionencoder(x[0],x[1],x[2],x[3])
         else:
+            div, div1, div2, div3 = tf.split(x, num_or_size_splits=4)
+            div_hat, div_hat1, div_hat2, div_hat3 = tf.split(x_hat, num_or_size_splits=4)
             # mean, logvar = self.encoder(x)
             # mean, logvar = self.encoder(x)
-            mean, logvar = self.encoder(x[0])
+            mean, logvar = self.encoder(div)
             # mean1, logvar1 = self.encoder1(x)
-            mean1, logvar1 = self.encoder1(x[1])
+            mean1, logvar1 = self.encoder1(div1)
             # mean2, logvar2 = self.encoder2(x)
-            mean2, logvar2 = self.encoder2(x[2])
+            mean2, logvar2 = self.encoder2(div2)
             # mean3, logvar3 = self.encoder3(x)
-            mean3, logvar3 = self.encoder3(x[3])
+            mean3, logvar3 = self.encoder3(div3)
         z = self.reparameterize(mean, logvar)
         z1 = self.reparameterize(mean1, logvar1)
         z2 = self.reparameterize(mean2, logvar2)
@@ -707,10 +707,10 @@ class Autoencoder(tf.keras.Model):
         x_logit2 = self.decoder2(mean_f)
         x_logit3 = self.decoder3(mean_f)
         # cross_ent = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit, labels=x)
-        cross_ent = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit, labels=x[0])
-        cross_ent1 = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit1, labels=x[1])
-        cross_ent2 = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit2, labels=x[2])
-        cross_ent3 = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit3, labels=x[3])
+        cross_ent = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit, labels=div_hat)
+        cross_ent1 = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit1, labels=div_hat1)
+        cross_ent2 = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit2, labels=div_hat2)
+        cross_ent3 = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit3, labels=div_hat3)
         logpx_z = -tf.reduce_sum(cross_ent, axis=[1, 2, 3])
         logpx_z1 = -tf.reduce_sum(cross_ent1, axis=[1, 2, 3])
         logpx_z2 = -tf.reduce_sum(cross_ent2, axis=[1, 2, 3])

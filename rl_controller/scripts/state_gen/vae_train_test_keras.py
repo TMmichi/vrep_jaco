@@ -23,10 +23,11 @@ tf.enable_eager_execution(config=config)
 #############################
 """ Image data """
 data = [0,0,0,0]
-data[0] = np.load(ros_path.get_path('vrep_jaco_data')+"/data/dummy_data.npy",allow_pickle=True)
-data[1] = np.load(ros_path.get_path('vrep_jaco_data')+"/data/dummy_data.npy",allow_pickle=True)
-data[2] = np.load(ros_path.get_path('vrep_jaco_data')+"/data/dummy_data.npy",allow_pickle=True)
-data[3] = np.load(ros_path.get_path('vrep_jaco_data')+"/data/dummy_data.npy",allow_pickle=True)
+vrep_jaco_data_path = "../../../vrep_jaco_data"
+data[0] = np.load(vrep_jaco_data_path+"/data/dummy_data.npy",allow_pickle=True)
+data[1] = np.load(vrep_jaco_data_path+"/data/dummy_data.npy",allow_pickle=True)
+data[2] = np.load(vrep_jaco_data_path+"/data/dummy_data.npy",allow_pickle=True)
+data[3] = np.load(vrep_jaco_data_path+"/data/dummy_data.npy",allow_pickle=True)
 data = np.array(data)
 
 train_dataset = []
@@ -64,7 +65,7 @@ if train:
     autoencoder = state_gen_util.Autoencoder(debug=False)
     optimizer = tf.keras.optimizers.Adam(1e-4)
     autoencoder.compile(optimizer=optimizer,
-                        loss = autoencoder.compute_loss)
+                        loss=autoencoder.compute_loss)
     autoencoder.fit(train_dataset,train_dataset,batch_size=20,epochs=100)
     autoencoder.save_weights('weights/autoencoder_weights2')
 else:
@@ -149,5 +150,4 @@ else:
     ax42 = fig.add_subplot(4,2,8)
     ax42.imshow(gt_pic_1)
     #plt.show()'''
-
 
