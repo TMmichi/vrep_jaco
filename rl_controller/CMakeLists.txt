@@ -11,11 +11,6 @@ find_package(catkin REQUIRED COMPONENTS
 
 catkin_python_setup()
 
-add_service_files(
-  FILES
-  InitTraining.srv
-)
-
 generate_messages(
   DEPENDENCIES
   std_msgs
@@ -32,7 +27,7 @@ include_directories(
 )
 
 catkin_install_python(PROGRAMS
-  scripts/rl_controller_script.py
+  scripts/rl_controller.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

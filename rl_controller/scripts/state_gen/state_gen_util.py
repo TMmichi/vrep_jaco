@@ -525,6 +525,8 @@ class CNN_Encoder(tf.keras.Model):
             betas=None,
             training=True):
         x = inputs
+        # print('x time')
+        # print(x)
         for idx, [block,isfilm,block_id] in enumerate(self._blocks):
             #Conv Blocks (FiLMed or Not)
             with tf.compat.v1.variable_scope(block_id):
@@ -540,9 +542,8 @@ class CNN_Encoder(tf.keras.Model):
                         training=training)
                 elif not isfilm:
                     x = block(
-                        x)
-                        # , 
-                        # training=training)
+                        x, 
+                        training=training)
                 elif isfilm is None:
                     x = block(x)
         mean, logvar = tf.split(x, num_or_size_splits=2, axis=1)
@@ -607,9 +608,8 @@ class CNN_Decoder(tf.keras.Model):
             with tf.compat.v1.variable_scope(block_id):
                 if not isfilm:
                     x_hat = block(
-                        x_hat)
-                        # , 
-                        # training=training)
+                        x_hat, 
+                        training=training)
                 elif isfilm is None:
                     x_hat = block(x_hat)
         if apply_sigmoid:
@@ -633,13 +633,29 @@ class Autoencoder(tf.keras.Model):
             self.fushionencoder = fushion_Encoder(**kwargs)
             self.decoder = CNN_Decoder(**kwargs)
         else:
+            
+
             self.encoder = CNN_Encoder(**kwargs)
             self.decoder = CNN_Decoder(**kwargs)
+
+            self.encoder1 = CNN_Encoder(**kwargs)
+            self.decoder1 = CNN_Decoder(**kwargs)
+
+            self.encoder2 = CNN_Encoder(**kwargs)
+            self.decoder2 = CNN_Decoder(**kwargs)
+
+            self.encoder3 = CNN_Encoder(**kwargs)
+            self.decoder3 = CNN_Decoder(**kwargs)
+            
     
-    @tf.function
-    def state(self,x):
-        mean,_ = self.encoder(x)
-        return mean
+    # @tf.function
+    # def state(self,x):
+    #     # mean,_ = self.encoder(x)
+    #     mean,_ = self.encoder(x[0])
+    #     mean1,_ = self.encoder1(x[1])
+    #     mean2,_ = self.encoder2(x[2])
+    #     mean3,_ = self.encoder3(x[3])
+    #     return mean,mean1,mean2,mean3
     
     def reparameterize(self,mean,logvar):
         #eps = tf.random.normal(shape=mean.shape)
@@ -651,7 +667,7 @@ class Autoencoder(tf.keras.Model):
         if eps is None:
             #eps = tf.random.normal(shape=(sample_num, self.latent_dim))
             eps = tf.random.normal(shape=(sample_num, self.latent_dim))
-        return self.decoder(eps, apply_sigmoid=True, training=False)
+        return self.decoder(eps, apply_sigmoid=True, training=False) # ,self.decoder1(eps, apply_sigmoid=True, training=False),self.decoder2(eps, apply_sigmoid=True, training=False),self.decoder3(eps, apply_sigmoid=True, training=False)
 
     def _log_normal_pdf(self,sample, mean, logvar, raxis=1):
         log2pi = tf.math.log(2. * np.pi)
@@ -660,22 +676,59 @@ class Autoencoder(tf.keras.Model):
             axis=raxis)
 
     def compute_loss(self,x,x_hat):
+        print('loss')
+        print(x.shape)
+        print('loss2')
+
         if self.isfushion:
             print("inputs shape in loss: ",x.shape)
             mean, logvar = self.fushionencoder(x[0],x[1],x[2],x[3])
         else:
-            mean, logvar = self.encoder(x)
+            # mean, logvar = self.encoder(x)
+            # mean, logvar = self.encoder(x)
+            mean, logvar = self.encoder(x[0])
+            # mean1, logvar1 = self.encoder1(x)
+            mean1, logvar1 = self.encoder1(x[1])
+            # mean2, logvar2 = self.encoder2(x)
+            mean2, logvar2 = self.encoder2(x[2])
+            # mean3, logvar3 = self.encoder3(x)
+            mean3, logvar3 = self.encoder3(x[3])
         z = self.reparameterize(mean, logvar)
-        x_logit = self.decoder(mean)
-        cross_ent = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit, labels=x)
+        z1 = self.reparameterize(mean1, logvar1)
+        z2 = self.reparameterize(mean2, logvar2)
+        z3 = self.reparameterize(mean3, logvar3)
+        mean_f = tf.concat([mean,mean1,mean2,mean3],0)
+        # x_logit = self.decoder(mean)
+        # x_logit1 = self.decoder1(mean1)
+        # x_logit2 = self.decoder2(mean2)
+        # x_logit3 = self.decoder3(mean3)
+        x_logit = self.decoder(mean_f)
+        x_logit1 = self.decoder1(mean_f)
+        x_logit2 = self.decoder2(mean_f)
+        x_logit3 = self.decoder3(mean_f)
+        # cross_ent = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit, labels=x)
+        cross_ent = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit, labels=x[0])
+        cross_ent1 = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit1, labels=x[1])
+        cross_ent2 = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit2, labels=x[2])
+        cross_ent3 = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit3, labels=x[3])
         logpx_z = -tf.reduce_sum(cross_ent, axis=[1, 2, 3])
+        logpx_z1 = -tf.reduce_sum(cross_ent1, axis=[1, 2, 3])
+        logpx_z2 = -tf.reduce_sum(cross_ent2, axis=[1, 2, 3])
+        logpx_z3 = -tf.reduce_sum(cross_ent3, axis=[1, 2, 3])
         logpz = self._log_normal_pdf(z, 0., 0.)
+        logpz1 = self._log_normal_pdf(z1, 0., 0.)
+        logpz2 = self._log_normal_pdf(z2, 0., 0.)
+        logpz3 = self._log_normal_pdf(z3, 0., 0.)
         logqz_x = self._log_normal_pdf(z, mean, logvar)
-        result = -tf.reduce_mean(logpx_z + logpz - logqz_x)
+        logqz_x1 = self._log_normal_pdf(z1, mean1, logvar1)
+        logqz_x2 = self._log_normal_pdf(z2, mean2, logvar2)
+        logqz_x3 = self._log_normal_pdf(z3, mean3, logvar3)
+        result = -tf.reduce_mean(logpx_z+logpx_z1+logpx_z2+logpx_z3 + logpz+logpz1+logpz2+logpz3 - logqz_x-logqz_x1-logqz_x2-logqz_x3)
         return result
     
     @tf.function
     def compute_apply_gradients(self, x, optimizer):
+        print('here????')
         with tf.GradientTape() as tape:
             loss = self.compute_loss(x,x)
         gradients = tape.gradient(loss, self.trainable_variables)
@@ -688,7 +741,12 @@ class Autoencoder(tf.keras.Model):
             gammas=None,
             betas=None,
             training=True):
+        print(inputs.get_shape())
         print("inputs shape in call: ",inputs[0].shape)
+        print("inputs shape in call: ",inputs[1].shape)
+        print("inputs shape in call: ",inputs[2].shape)
+        print("inputs shape in call: ",inputs[3].shape)
+
         if self.isfushion:
             inputs_img = inputs[0]
             inputs_joint = inputs[1]
@@ -704,9 +762,23 @@ class Autoencoder(tf.keras.Model):
             z = self.reparameterize(mean, logvar)
             probs = self.decoder(z)
         else:
-            mean, logvar = self.encoder(inputs,gammas,betas)
+            div, div1, div2, div3 = tf.split(inputs, num_or_size_splits=4, axis=1)
+            div = tf.squeeze(div,[1])
+            div1 = tf.squeeze(div1,[1])
+            div2 = tf.squeeze(div2,[1])
+            div3 = tf.squeeze(div3,[1])
+            mean, logvar = self.encoder(div,gammas,betas)
+            mean1, logvar1 = self.encoder1(div1,gammas,betas)
+            mean2, logvar2 = self.encoder2(div2,gammas,betas)
+            mean3, logvar3 = self.encoder3(div3,gammas,betas)
             z = self.reparameterize(mean, logvar)
+            z1 = self.reparameterize(mean1, logvar1)
+            z2 = self.reparameterize(mean2, logvar2)
+            z3 = self.reparameterize(mean3, logvar3)
+            z = tf.concat([z,z1,z2,z3],0)
+            print(z)
             probs = self.decoder(z)
+            print("hi")
         return probs
 
 class dataFusionGraph(tf.keras.Model):
