@@ -1,5 +1,4 @@
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL']='3'
 import time
 import state_gen_util as state_gen_util
 import tensorflow as tf
@@ -9,6 +8,10 @@ import cv2 as cv
 from tqdm import tqdm
 import rospkg
 
+###############################################
+##### tensorflow setting gpu and ros path #####
+###############################################
+
 ros_path = rospkg.RosPack()
 
 fig = plt.figure()
@@ -16,40 +19,43 @@ tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth = True
 tf.enable_eager_execution(config=config)
+os.environ['TF_CPP_MIN_LOG_LEVEL']='0'
 
 
 #############################
 ##### preparing dataset #####
 #############################
+
 """ Image data """
 data = [0,0,0,0]
-data[0] = np.load(ros_path.get_path('vrep_jaco_data')+"/data/dummy_data.npy",allow_pickle=True)
-data[1] = np.load(ros_path.get_path('vrep_jaco_data')+"/data/dummy_data.npy",allow_pickle=True)
-data[2] = np.load(ros_path.get_path('vrep_jaco_data')+"/data/dummy_data.npy",allow_pickle=True)
-data[3] = np.load(ros_path.get_path('vrep_jaco_data')+"/data/dummy_data.npy",allow_pickle=True)
+vrep_jaco_data_path = "../../../vrep_jaco_data"
+data[0] = np.load(vrep_jaco_data_path+"/data/dummy_data.npy",allow_pickle=True)
+data[1] = np.load(vrep_jaco_data_path+"/data/dummy_data.npy",allow_pickle=True)
+data[2] = np.load(vrep_jaco_data_path+"/data/dummy_data.npy",allow_pickle=True)
+data[3] = np.load(vrep_jaco_data_path+"/data/dummy_data.npy",allow_pickle=True)
 data = np.array(data)
 
-train_dataset = []
+train_x = []
 test_x = []
 
-for j in range(len(data[0])):
-    test_data_temp = []
-    train_data_temp = []
-    for i in range(len(data)):
-        '''
-        if j % 10 ==0:
-            img = data[i][j]/5000
+for num in range(data[0].shape[0]):
+    train_tmp = []
+    test_tmp = []
+    if num%10==0:
+        for idx, cam in enumerate(data):
+            img = cam[num]/5000
             img = np.reshape(img,[480,640,1])
-            test_data_temp.append(img)
-        else:'''
-        img = data[i][j]/5000
-        img = np.reshape(img,[480,640,1])
-        train_data_temp.append(img)
-    test_x.append(np.copy(test_data_temp))
-    train_dataset.append(np.copy(train_data_temp))
-
-train_dataset = np.array(train_dataset)
+            test_tmp.append(img)
+        test_x.append(test_tmp)
+    else:
+        for idx, cam in enumerate(data):
+            img = cam[num]/5000
+            img = np.reshape(img,[480,640,1])
+            train_tmp.append(img)
+        train_x.append(train_tmp)
+train_x = np.array(train_x)
 test_x = np.array(test_x)
+
 
 ####################
 ##### training #####
@@ -64,15 +70,15 @@ if train:
     autoencoder = state_gen_util.Autoencoder(debug=False)
     optimizer = tf.keras.optimizers.Adam(1e-4)
     autoencoder.compile(optimizer=optimizer,
-                        loss = autoencoder.compute_loss)
-    autoencoder.fit(train_dataset,train_dataset,batch_size=20,epochs=100)
-    autoencoder.save_weights('weights/autoencoder_weights2')
+                        loss=autoencoder.compute_loss)
+    autoencoder.fit(train_x,train_x,batch_size=1,epochs=100)
+    autoencoder.save_weights('weights/mvae_autoencoder_weights')
 else:
     autoencoder_load = state_gen_util.Autoencoder(debug=False)
     optimizer = tf.keras.optimizers.Adam(1e-4)
     autoencoder_load.compile(optimizer=optimizer,
                         loss = autoencoder_load.compute_loss)
-    autoencoder_load.load_weights('weights/autoencoder_weights2',)
+    autoencoder_load.load_weights('weights/mvae_autoencoder_weights')
     autoencoder_load.summary()
     
     def onChange(hey):
@@ -149,5 +155,4 @@ else:
     ax42 = fig.add_subplot(4,2,8)
     ax42.imshow(gt_pic_1)
     #plt.show()'''
-
 
