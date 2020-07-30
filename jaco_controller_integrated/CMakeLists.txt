@@ -24,7 +24,6 @@ find_package(catkin REQUIRED
     tf2_geometry_msgs
 )
 
-find_package(Poco REQUIRED COMPONENTS Foundation)
 find_package(Eigen3 REQUIRED)
 find_package(Boost REQUIRED system filesystem date_time thread)
 
@@ -33,7 +32,7 @@ set(THIS_PACKAGE_INCLUDE_DIRS
 )
 
 catkin_package(
-  LIBRARIES jaco_controller_integrated ${Poco_LIBRARIES}
+  LIBRARIES jaco_controller_integrated
   INCLUDE_DIRS include
   CATKIN_DEPENDS
     moveit_core
@@ -48,18 +47,17 @@ catkin_package(
     tf2_geometry_msgs
     action_client
   DEPENDS
-    Poco
     EIGEN3
 )
 
-include_directories(include ${THIS_PACKAGE_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS} ${Poco_INCLUDE_DIRS} ${Boost_INCLUDE_DIR} ${EIGEN3_INCLUDE_DIRS})
+include_directories(include ${THIS_PACKAGE_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIR} ${EIGEN3_INCLUDE_DIRS})
 
 add_executable(jaco_controller_integrated 
   #src/jaco_controller_integrated_jog.cpp
   #src/low_pass_filter.cpp
   src/jaco_controller_integrated.cpp
 )
-target_link_libraries(jaco_controller_integrated ${catkin_LIBRARIES} ${Poco_LIBRARIES} ${Boost_LIBRARIES})
+target_link_libraries(jaco_controller_integrated ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 
 add_dependencies(
   jaco_controller_integrated

@@ -71,7 +71,7 @@ if train:
     optimizer = tf.keras.optimizers.Adam(1e-4)
     autoencoder.compile(optimizer=optimizer,
                         loss=autoencoder.compute_loss)
-    autoencoder.fit(train_x,train_x,batch_size=1,epochs=100)
+    autoencoder.fit(train_x,train_x,batch_size=2,epochs=100)
     autoencoder.save_weights('weights/mvae_autoencoder_weights')
 else:
     autoencoder_load = state_gen_util.Autoencoder(debug=False)
