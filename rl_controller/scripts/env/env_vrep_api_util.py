@@ -11,8 +11,10 @@ from math import pi
 from random import sample, randint, uniform
 
 import numpy as np
+from matplotlib import pyplot as plt
 
 import rospy
+import rospkg
 from env.vrep_env_rl import vrep_env
 from env.vrep_env_rl import vrep  # vrep.sim_handle_parent
 from std_msgs.msg import Int8, Int8MultiArray, Float32MultiArray
@@ -72,6 +74,8 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             "/j2n6s300/joint_states", JointState, self._jointState_CB, queue_size=10)
         self.rs_image_sub = rospy.Subscriber(
             "/vrep/depth_image", Image, self._depth_CB, queue_size=1)
+        self.rgb_image_sub = rospy.Subscriber(
+            "/vrep/rgb_image", Image, self._rgb_CB, queue_size=1)
         self.pressure_sub = rospy.Subscriber(
             "/vrep/pressure_data", Float32MultiArray, self._pressure_CB, queue_size=1)
         self.traj_sub = rospy.Subscriber(
@@ -92,6 +96,7 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             self.state_gen = kwargs['stateGen']
         except Exception:
             self.state_gen = None
+        self.rospack = rospkg.RosPack()
         self.image_buffersize = 5
         self.image_buff = []
         self.pressure_buffersize = 100
@@ -148,7 +153,6 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         else:
             pass
 
-
     def _trajCB_raw(self, msg):
         #print("traj received from moveit at: ", datetime.datetime.now())
         points = msg.points[-1]
@@ -180,6 +184,8 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
             self._take_manual_action(self.key_input)
         elif self.key_input == ord('2'):
             self.step_simulation()
+        elif self.key_input == ord('c'):
+            self._run_cip()
 
     def _reset(self, target_angle=None, sync=False):
         #print("Entered reset at: ",rospy.Time.now())
@@ -343,9 +349,13 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         self.obj_set_position_target(
             self.jointHandles_[8], radtoangle(self.gripper_angle_2))
 
+    def _run_cip(self):
+        
+        pass
+
     # TODO: data saving method
     def _depth_CB(self, msg):
-        self.depth_trigger = True
+        """ self.depth_trigger = True
         self.pressure_trigger = True
 
         msg_time = round(msg.header.stamp.to_sec(), 2)
@@ -358,10 +368,24 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
         try:
             self.data_buff_temp[0] = self.image_buff
         except Exception:
-            pass
+            pass """
+        width = msg.width
+        height = msg.height
+        data = np.fromstring(msg.data,dtype=np.uint16)
+        data = np.reshape(data,(height,width))
+        data = np.flip(data,0)
+        np.save(self.rospack.get_path('rl_controller')+'/scripts/cip_data/figure_depth0', data)
+
+    def _rgb_CB(self, msg):
+        width = msg.width
+        height = msg.height
+        data = np.fromstring(msg.data,dtype=np.uint8)
+        data = np.reshape(data,(height,width,3))
+        data = np.flip(data,0)
+        plt.imsave(self.rospack.get_path('rl_controller')+'/scripts/cip_data/figure_rgb0.jpg',data)
 
     def _pressure_CB(self, msg):
-        try:
+        """ try:
             if self.pressure_trigger:
                 msg_time = round(msg.data[0], 2)
                 self.pressure_state.append([msg.data[1:], msg_time])
@@ -371,4 +395,4 @@ class JacoVrepEnvUtil(vrep_env.VrepEnv):
                 self.data_buff_temp[2] = self.pressure_state[-1]
                 self.pressure_trigger = False
         except Exception:
-            pass
+            pass """

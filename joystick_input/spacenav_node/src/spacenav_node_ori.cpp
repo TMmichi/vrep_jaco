@@ -54,19 +54,19 @@ bool ensureThreeComponents(std::vector<double>& param)
     param.push_back(1);
     param.push_back(1);
     param.push_back(1);
-    return True;
+    return true;
   }
   if (param.size() == 3)
   {
-    return True;
+    return true;
   }
   if (param.size() == 1)
   {
     param.push_back(param[0]);
     param.push_back(param[0]);
-    return True;
+    return true;
   }
-  return False;
+  return false;
 }
 
 int main(int argc, char **argv)

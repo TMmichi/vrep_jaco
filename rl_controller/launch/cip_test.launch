@@ -2,7 +2,7 @@
 <launch>
   <param name="use_sim_time" value="True"/>-
   <arg name="use_sim" default="True"/>
-  <arg name="vrep_path" value="/home/ljh/Downloads/coppelia"/>
+  <arg name="vrep_path" value="/opt/coppelia"/>
   <!--<arg name="scene_file" value="$(find vrep_jaco_bringup)/scene/multi_cam2.ttt"/>-->
   <!--<arg name="scene_file" value="$(find vrep_jaco_bringup)/scene/jaco_table_simple.ttt"/>-->
   <arg name="scene_file" value="$(find vrep_jaco_bringup)/scene/jaco_table2_cip.ttt"/>

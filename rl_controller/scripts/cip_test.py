@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 
 import os
+import os.path as path
 import math
-import rospy
 import numpy as np
+
+import rospy
+import rospkg
 from rl_controller.srv import InitTraining
 from std_msgs.msg import Int8
 
@@ -12,10 +15,12 @@ from stable_baselines.trpo_mpi import TRPO
 from stable_baselines.common.policies import MlpPolicy
 from stable_baselines.sac import SAC
 from stable_baselines.sac.policies import MlpPolicy as MlpPolicy_sac, LnMlpPolicy as LnMlpPolicy_sac
+
 from state_gen.state_generator import State_generator
 from env.env_vrep_api import JacoVrepEnv as JacoVrepEnvApi
 #from env.env_vrep_pyrep import JacoVrepEnv as JacoVrepEnvPyrep
 from env.env_real import Real
+from cip_data.gqcnn import calc_grasping_point
 from argparser import ArgParser
 
 
@@ -29,6 +34,7 @@ class RL_controller:
             "learning_key", Int8, queue_size=1)
 
         # Arguments
+        self.rospack = rospkg.RosPack()
         parser = ArgParser(isbaseline=True)
         args = parser.parse_args()
 
@@ -59,10 +65,12 @@ class RL_controller:
         self.env = JacoVrepEnvApi(
             **vars(args)) if self.use_sim else Real(**vars(args))
 
+        self.iter = 0
+
 
     def _CIP_test(self, req):
         roll = True
-        manual = True
+        manual = False
         if manual:
             while roll:
                 cmd = input("Action/quit (pose[m/rad] / q): ")
@@ -76,7 +84,19 @@ class RL_controller:
                     else:
                         print("[ERROR] Input: pose action / q for quit")
         else:
-            pass
+            self.iter += 1
+            rgb_path = self.rospack.get_path('rl_controller')+'/scripts/cip_data/figure_rgb0.jpg'.format(self.iter)
+            depth_path = self.rospack.get_path('rl_controller')+'/scripts/cip_data/figure_depth0.npy'.format(self.iter)
+            txt_path = self.rospack.get_path('rl_controller')+'/scripts/cip_data/grasping_result{}.txt'.format(self.iter)
+            image_path = self.rospack.get_path('rl_controller')+'/scripts/cip_data/grasping_result{}.jpg'.format(self.iter)
+            while True:
+                if path.isfile(rgb_path) and path.isfile(depth_path):
+                    grasping_point = calc_grasping_point(rgb_path, depth_path, txt_path, image_path)
+                    break
+                else:
+                    print("No file")
+                    pass
+            print(grasping_point)
 
 
 if __name__ == "__main__":
