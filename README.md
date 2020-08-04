@@ -14,21 +14,16 @@ Installation in Ubuntu 18.04 with ROS melodic is recommended (since other versio
 
 #### 1-1-1. V-rep (Coppelia) installation
 
-V-rep source can be downloaded from [here](https://www.coppeliarobotics.com/downloads) and should be installed within the `/opt` folder. Installed location can be varied, but should be matched with the vrep_path argument within the launch file: `vrep_jaco_bringup/launch/bringup.launch: vrep_path`
+V-rep source can be downloaded from [here](https://www.coppeliarobotics.com/downloads) and required to be installed within the `/opt` folder. Installed location can be varied, but should be matched with the vrep_path argument within the launch file: `vrep_jaco_bringup/launch/bringup.launch: vrep_path`. If the extracted folder is named `CoppeliaSim_Edu_V4_0_Ubuntu` in `~/Downloads` folder, then the vrep_path argument should be `~/Downloads/CoppeliaSim_Edu_V4_0_Ubuntu`.
 
-
------------------------------------------------------------------
-Correction: If there is no folder named compiledRosPlugins, then these will not be of your case. It is already done for you.
-
-If have you install Coppelia (v4.0.0) instead of V-rep (v3.6.n), you need to move file:`libsimExtROSInterface.so` from folder:`compiledRosPlugins` to the source folder.
+If have you install Coppelia (v4.0.0) instead of V-rep (v3.6.n), you need to move file:`libsimExtROSInterface.so` from folder:`compiledRosPlugins` to the source folder. If there is no such folder named compiledRosPlugins, then the below will not be of your case. It has already done for you. (This applies to v4.1.0 or later)
 
 Within the source file:
+
 ```bash
 cd compiledRosPlugins
 mv libsimExtROSInterface.so ..
-
 ```
------------------------------------------------------------------
 
 #### 1-1-2. Create workspace with individual folders for vrep_jaco and moveit
 
@@ -56,10 +51,10 @@ It is assumed that the one is capable of installing ROS with full compatibility.
 
 ```bash
 sudo apt-get install python3-pip python3-yaml
-sudo pip3 install rospkg catkin_pkg
+pip3 install rospkg catkin_pkg
 
 sudo apt-get install python-catkin-tools    // if using Ubuntu
-sudo pip install -U catkin_tools            // if using other OS
+pip install -U catkin_tools            // if using other OS
 ```
 
 ### 1-2. Clone and install dependencies, build & source repo for Moveit installation
@@ -130,8 +125,9 @@ cd /opt/ros/${ROS_DISTRO}/lib/python2.7/dist-packages/rospy
 ```
 
 ### 1.6 Post installation
-```
-pip install pyyaml matplotlib
+
+```bash
+pip install -r requirements.txt
 ```
 
 ## 2. Usage (WIP)
@@ -140,7 +136,9 @@ Manipulation of a real machine and one in the simulation are much alike from eac
 
 ### 2-1. Manipulator control within the V-rep simulation
 
-#### 2-1-1. Simulation environment bringup
+#### 2-1-1. Simulation environment bringup (Deprecated)
+
+##### The below is deprecated. You can head directly to the section 2-1-2
 
 ```bash
 roslaunch vrep_jaco_bringup bringup.launch
@@ -182,7 +180,9 @@ Calling `sendgoal()` method within the action_client will publish rostopic with 
 roslaunch kinova_bringup kinova_robot.launch
 ```
 
-#### 2-2-2. Manipulator control node with moveit! in ROS node (real machine)
+#### 2-2-2. Manipulator control node with moveit! in ROS node (real machine) (Deprecated)
+
+##### The below is deprecated. You can head directly to the section 2-2-3
 
 ```bash
 roslaunch jaco_controller_kinova jaco_controller_kinova.launch
