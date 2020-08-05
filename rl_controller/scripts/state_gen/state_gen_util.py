@@ -260,6 +260,7 @@ class CNN_Decoder(layers.Layer):
                         training=training)
                 elif isfilm is None:
                     x_hat = block(x_hat)
+        
         if apply_sigmoid:
             probs = tf.sigmoid(x_hat)
             return probs
@@ -272,9 +273,9 @@ class Autoencoder_encoder():
 
     def _build(self,**kwargs):
         self.encoder = CNN_Encoder(**kwargs)
-        # self.encoder2 = CNN_Encoder(**kwargs)
-        # self.encoder3 = CNN_Encoder(**kwargs)
-        # self.encoder4 = CNN_Encoder(**kwargs)
+        self.encoder2 = CNN_Encoder(**kwargs)
+        self.encoder3 = CNN_Encoder(**kwargs)
+        self.encoder4 = CNN_Encoder(**kwargs)
 
         self.input1 = tf.keras.Input(shape=(480,640,1))
         self.input2 = tf.keras.Input(shape=(480,640,1))
@@ -282,9 +283,9 @@ class Autoencoder_encoder():
         self.input4 = tf.keras.Input(shape=(480,640,1))
 
         self.en1 = self.encoder(self.input1)
-        self.en2 = self.encoder(self.input2)
-        self.en3 = self.encoder(self.input3)
-        self.en4 = self.encoder(self.input4)
+        self.en2 = self.encoder2(self.input2)
+        self.en3 = self.encoder3(self.input3)
+        self.en4 = self.encoder4(self.input4)
 
         self.encoder_model1 = tf.keras.Model(self.input1,self.en1,name='encoder1')
         self.encoder_model2 = tf.keras.Model(self.input2,self.en2,name='encoder2')
@@ -298,9 +299,9 @@ class Autoencoder_decoder():
 
     def _build(self,**kwargs):
         self.decoder = CNN_Decoder(**kwargs)
-        # self.decoder2 = CNN_Decoder(**kwargs)
-        # self.decoder3 = CNN_Decoder(**kwargs)
-        # self.decoder4 = CNN_Decoder(**kwargs)
+        self.decoder2 = CNN_Decoder(**kwargs)
+        self.decoder3 = CNN_Decoder(**kwargs)
+        self.decoder4 = CNN_Decoder(**kwargs)
 
         self.input1 = tf.keras.Input(shape=(32,))
         self.input2 = tf.keras.Input(shape=(32,))
@@ -309,9 +310,9 @@ class Autoencoder_decoder():
 
         self.inputs = tf.concat([self.input1,self.input2,self.input3,self.input4],1)
         self.de1 = self.decoder(self.inputs)
-        self.de2 = self.decoder(self.inputs)
-        self.de3 = self.decoder(self.inputs)
-        self.de4 = self.decoder(self.inputs)
+        self.de2 = self.decoder2(self.inputs)
+        self.de3 = self.decoder3(self.inputs)
+        self.de4 = self.decoder4(self.inputs)
 
         self.decoder_model1 = tf.keras.Model([self.input1,self.input2,self.input3,self.input4],self.de1,name='decoder1')
         self.decoder_model2 = tf.keras.Model([self.input1,self.input2,self.input3,self.input4],self.de2,name='decoder2')
@@ -367,7 +368,6 @@ class Autoencoder():
         return eps * tf.exp(logvar * .5) + mean
 
     def _log_normal_pdf(self,sample, mean, logvar, raxis=1):
-        print('why??')
         log2pi = tf.math.log(2. * np.pi)
         return tf.reduce_sum(
             -.5 * ((sample - mean) ** 2. * tf.exp(-logvar) + logvar + log2pi),
@@ -414,64 +414,23 @@ class Autoencoder():
         return K.mean(reconstruction_loss + kl_loss)
     
     def compute_loss(self,x,x_hat):
-        # print(x_hat.shape)
-        # # quit()
-        # div, div1, div2, div3 = tf.split(x, num_or_size_splits=4,axis=1)
-        # div_hat, div_hat1, div_hat2, div_hat3 = tf.split(x_hat, num_or_size_splits=4)
-        # if len(div.shape)==5:
-        #     div = tf.squeeze(div,[1])
-        # if len(div1.shape)==5:
-        #     div1 = tf.squeeze(div1,[1])
-        # if len(div2.shape)==5:
-        #     div2 = tf.squeeze(div2,[1])
-        # if len(div3.shape)==5:
-        #     div3 = tf.squeeze(div3,[1])
         
         mean, logvar = self.encoder.encoder_model4(x_hat)
-        # mean1, logvar1 = self.encoder.encoder_model2(div1)
-        # mean2, logvar2 = self.encoder.encoder_model3(div2)
-        # mean3, logvar3 = self.encoder.encoder_model4(div3)
-        print(mean.shape)
         z = self.reparameterize(mean, logvar)
-        # z1 = self.reparameterize(mean1, logvar1)
-        # z2 = self.reparameterize(mean2, logvar2)
-        # z3 = self.reparameterize(mean3, logvar3)
-
-        # mean_f = tf.concat([mean,mean1,mean2,mean3],1)
-        print(self.en1_mean)
         x_logit = self.decoder.decoder_model4([self.en1_mean,self.en2_mean,self.en3_mean,self.en4_mean])
-        # x_logit1 = self.decoder.decoder_model1([mean,mean1,mean2,mean3])
-        # x_logit2 = self.decoder.decoder_model1([mean,mean1,mean2,mean3])
-        # x_logit3 = self.decoder.decoder_model1([mean,mean1,mean2,mean3])
-
         cross_ent = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit, labels=x_hat)
-        # cross_ent1 = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit1, labels=div_hat1)
-        # cross_ent2 = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit2, labels=div_hat2)
-        # cross_ent3 = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit3, labels=div_hat3)
-       
         logpx_z = -tf.reduce_sum(cross_ent, axis=[1, 2, 3])
-        # logpx_z1 = -tf.reduce_sum(cross_ent1, axis=[1, 2, 3])
-        # logpx_z2 = -tf.reduce_sum(cross_ent2, axis=[1, 2, 3])
-        # logpx_z3 = -tf.reduce_sum(cross_ent3, axis=[1, 2, 3])
-       
         logpz = self._log_normal_pdf(z, 0., 0.)
-        # logpz1 = self._log_normal_pdf(z1, 0., 0.)
-        # logpz2 = self._log_normal_pdf(z2, 0., 0.)
-        # logpz3 = self._log_normal_pdf(z3, 0., 0.)
-       
         logqz_x = self._log_normal_pdf(z, mean, logvar)
-        # logqz_x1 = self._log_normal_pdf(z1, mean1, logvar1)
-        # logqz_x2 = self._log_normal_pdf(z2, mean2, logvar2)
-        # logqz_x3 = self._log_normal_pdf(z3, mean3, logvar3)
-       
+        
         result = -tf.reduce_mean(logpx_z + logpz - logqz_x)
         return result
     
     def sample(self, sample_num=1,eps=None):
         if eps is None:
-            #eps = tf.random.normal(shape=(sample_num, self.latent_dim))
-            eps = tf.random.normal(shape=(sample_num, self.latent_dim))
-        return self.decoder.decoder_model1(eps) #, apply_sigmoid=True, training=False) # ,self.decoder1(eps, apply_sigmoid=True, training=False),self.decoder2(eps, apply_sigmoid=True, training=False),self.decoder3(eps, apply_sigmoid=True, training=False)
+            print('here?')
+            eps = tf.random.normal(shape=(sample_num, 128))
+        return self.decoder.decoder_model1.predict(eps),self.decoder.decoder_model2.predict(eps),self.decoder.decoder_model3.predict(eps),self.decoder.decoder_model4.predict(eps)
 
 
     @tf.function
