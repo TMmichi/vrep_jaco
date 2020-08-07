@@ -1,7 +1,0 @@
-tensorflow==1.14.0
-matplotlib
-gym
-pyyaml
-tqdm
-defusedxml
-stable-baselines

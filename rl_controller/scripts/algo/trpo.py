@@ -54,7 +54,7 @@ class TRPO(NeuralNetwork):
         self.ksi = 10
         self.reward_discount = 0.995
         self.gae_discount = 0.975
-        self.traj_batch_size = 8
+        self.traj_batch_size = 10
         self.activation = 'tanh'
         '''
         Policy Type: 'MLP' or 'RBF'
@@ -87,11 +87,11 @@ class TRPO(NeuralNetwork):
             ''' action mean network '''
             mu_model_input = Input(tensor=self.input_ph)
             mu_model = Dense(units=256, activation=self.activation,
-                            kernel_initializer=RandomNormal(0, 0.1))(mu_model_input)
+                            kernel_initializer=RandomNormal(0, 0.01))(mu_model_input)
             mu_model = Dense(units=128, activation=self.activation,
-                            kernel_initializer=RandomNormal(0, 0.1))(mu_model)
+                            kernel_initializer=RandomNormal(0, 0.01))(mu_model)
             mu_model = Dense(units=128, activation=self.activation,
-                            kernel_initializer=RandomNormal(0, 0.1))(mu_model)
+                            kernel_initializer=RandomNormal(0, 0.01))(mu_model)
             mean = Dense(units=self.env_action_number, activation=None,
                         kernel_initializer=RandomNormal())(mu_model)
         elif self.policy_action_type == 'Discrete':
@@ -230,7 +230,6 @@ class TRPO(NeuralNetwork):
         self.value_model.save_weights(self.model_path+"value_model_"+str(index)+".h5")
 
     def load_network(self, index):
-        print("LOADING MODEL")
         ''' load model '''
         with open(self.model_path+"policy_mu_model_"+str(index)+".json") as policy_json:
             self.policy_mu_model = model_from_json(policy_json.read())

@@ -3,6 +3,7 @@
   <!--<env name="ROSCONSOLE_CONFIG_FILE" value="$(find jaco_controller_integrated)/logger.conf"/>-->
   <arg name="use_sim" value="true"/>
   <arg     if="$(arg use_sim)" name="joint_state" value="j2n6s300/joint_states"/>
+  <!--<arg     if="$(arg use_sim)" name="joint_state" value="vrep/joint_states"/>-->
   <arg unless="$(arg use_sim)" name="joint_state" value="j2n6s300_driver/out/joint_state"/>
   <param name="robot_type" value="j2n6s300"/>
   <remap from="joint_states" to="$(arg joint_state)"/>
@@ -11,15 +12,13 @@
   <include     if="$(arg use_sim)" file="$(find j2n6s300_moveit_config)/launch/planning_context.launch"/>
   <include unless="$(arg use_sim)" file="$(find j2n6s300_moveit_config)/launch/action_server.launch"/>
 
-  <!--
   <include file="$(find j2n6s300_moveit_config)/launch/move_group.launch">
     <arg name="allow_trajectory_execution" value="true"/>
     <arg name="fake_execution" value="false"/>
-    <arg name="info" value="false"/>
+    <arg name="info" value="true"/>
     <arg name="debug" value="false"/>
-  </include>-->
-    <!--
-      ㅡ moveit_simple_controllers.yaml -> controllers.yaml
+    
+   <!--   ㅡ moveit_simple_controllers.yaml -> controllers.yaml
         name: jaco -> j2n6s300
         action_ns: joint_trajectory_action -> follow_joint_trajectory
         type: unchanged
@@ -27,33 +26,18 @@
 
         + New controller for gripper
     -->
+  </include>
 
   <node name="jaco_ros_controller" pkg="jaco_controller_integrated" type="jaco_controller_integrated" respawn="false" output="screen">
-    <param name="speed_constant" value="0.01"/>
+    <param name="speed_constant" value="0.03"/>
     <param name="cartesian" value="false"/>
-    <param name="timeout" value="30"/> <!--0.25-->
-    <param name="plannerID" value="RRTConnectkConfigDefault"/>
-    <!--
-      planner_configs:
-    - SBLkConfigDefault
-    - ESTkConfigDefault
-    - LBKPIECEkConfigDefault
-    - BKPIECEkConfigDefault
-    - KPIECEkConfigDefault
-    - RRTkConfigDefault
-    - RRTConnectkConfigDefault
-    - RRTstarkConfigDefault
-    - TRRTkConfigDefault
-    - PRMkConfigDefault
-    - PRMstarkConfigDefault
-    -->
 
-    <param name="use_sim_time" value="true"/>
+    <param name="/use_sim_time" value="true"/>
   </node>
 
-  <!--
   <include file="$(find j2n6s300_moveit_config)/launch/moveit_rviz.launch">
     <arg name="config" value="true"/>
-    <arg name="debug" value="false"/>
-  </include>-->
+    <arg name="debug" value="false"/>    
+  </include>
+  <!--<include file="$(find spacenav_node)/launch/classic.launch"/>-->
 </launch>

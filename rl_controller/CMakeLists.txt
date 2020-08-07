@@ -6,26 +6,15 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   message_generation
   std_msgs
-  sensor_msgs
   geometry_msgs
-  nav_msgs
 )
 
 catkin_python_setup()
 
-add_service_files(
-  FILES
-  InitTraining.srv
-  ViewCollect.srv
-  TrajCollect.srv
-)
-
 generate_messages(
   DEPENDENCIES
   std_msgs
-  sensor_msgs
   geometry_msgs
-  nav_msgs
 )
 
 catkin_package(CATKIN_DEPENDS
@@ -38,7 +27,7 @@ include_directories(
 )
 
 catkin_install_python(PROGRAMS
-  scripts/rl_controller_script.py
+  scripts/rl_controller.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

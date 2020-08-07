@@ -54,7 +54,7 @@ class VrepEnv(gym.Env):
 		if self.connected:
 			raise RuntimeError('Client is already connected.')
 		attempts = 0
-		max_attempts = 10
+		max_attempts = 16
 		while True:
 			self.cID = vrep.simxStart(
 				connectionAddress              = server_addr,
