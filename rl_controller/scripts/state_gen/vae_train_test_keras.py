@@ -20,7 +20,7 @@ tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth = True
 tf.enable_eager_execution(config=config)
-os.environ['TF_CPP_MIN_LOG_LEVEL']='0'
+os.environ['TF_CPP_MIN_LOG_LEVEL']='3'
 
 
 #############################
@@ -30,11 +30,20 @@ os.environ['TF_CPP_MIN_LOG_LEVEL']='0'
 """ Image data """
 data = [0,0,0,0]
 vrep_jaco_data_path = "../../../vrep_jaco_data"
-data[0] = np.load(vrep_jaco_data_path+"/data/dummy_data1.npy",allow_pickle=True)
-data[1] = np.load(vrep_jaco_data_path+"/data/dummy_data2.npy",allow_pickle=True)
-data[2] = np.load(vrep_jaco_data_path+"/data/dummy_data3.npy",allow_pickle=True)
-data[3] = np.load(vrep_jaco_data_path+"/data/dummy_data4.npy",allow_pickle=True)
+data[0] = np.load(vrep_jaco_data_path+"/data/data_new1.npy",allow_pickle=True)
+print(data[0].shape)
+data[1] = np.load(vrep_jaco_data_path+"/data/data_new2.npy",allow_pickle=True)
+print(data[1].shape)
+data[2] = np.load(vrep_jaco_data_path+"/data/data_new3.npy",allow_pickle=True)
+print(data[2].shape)
+data[3] = np.load(vrep_jaco_data_path+"/data/data_new4.npy",allow_pickle=True)
+print(data[3].shape)
 data = np.array(data)
+
+# data1 = np.load(vrep_jaco_data_path+"/data/dummy_data0602_2.npy",allow_pickle=True)
+# data2 = np.load(vrep_jaco_data_path+"/data/dummy_data0602_3.npy",allow_pickle=True)
+# data3 = np.load(vrep_jaco_data_path+"/data/dummy_data0602_6.npy",allow_pickle=True)
+# data = np.array([data1,data2,data3])
 
 train_x = []
 test_x = []
@@ -90,15 +99,15 @@ if train:
                         loss=[a.kl_reconstruction_loss1,a.kl_reconstruction_loss2,a.kl_reconstruction_loss3,a.kl_reconstruction_loss4])
     autoencoder.load_weights('weights/mvae_autoencoder_weights')
     
-    autoencoder.fit(x=[input1,input2,input3,input4],y=[input1,input2,input3,input4],batch_size=2,epochs=100,callbacks=[tensorboard_callback])
-    autoencoder.save_weights('weights/mvae_autoencoder_weights')
+    autoencoder.fit(x=[input1,input2,input3,input4],y=[input1,input2,input3,input4],batch_size=20,epochs=100,callbacks=[tensorboard_callback])
+    autoencoder.save_weights('weights/mvae_autoencoder_weights_150')
 else:
     a = state_gen_util.Autoencoder(debug=False,training=False)
     autoencoder_load = a.autoencoder
     optimizer = tf.keras.optimizers.Adam(1e-4)
     autoencoder_load.compile(optimizer=optimizer,
                         loss=[a.kl_reconstruction_loss1,a.kl_reconstruction_loss2,a.kl_reconstruction_loss3,a.kl_reconstruction_loss4])
-    autoencoder_load.load_weights('weights/mvae_autoencoder_weights')
+    autoencoder_load.load_weights('weights/mvae_autoencoder_weights_150')
     
     def onChange(hey):
         pass
@@ -109,7 +118,8 @@ else:
     ### drawing ###
     ###############
     
-    fig=plt.figure(figsize=(640, 480))
+    print('this1?')
+    fig=plt.figure(figsize=(100, 60))
 
     
 
@@ -123,10 +133,10 @@ else:
     haha3_ = np.array([train_x[2][0]])
     haha4_ = np.array([train_x[3][0]])
 
-    z1 , _ = a.encoder.encoder_model1.predict([haha1])
-    z2 , _ = a.encoder.encoder_model2.predict([haha2])
-    z3 , _ = a.encoder.encoder_model3.predict([haha3])
-    z4 , _ = a.encoder.encoder_model4.predict([haha4])
+    z1 , _ = a.encoder.encoder_model1.predict([haha1_])
+    z2 , _ = a.encoder.encoder_model2.predict([haha2_])
+    z3 , _ = a.encoder.encoder_model3.predict([haha3_])
+    z4 , _ = a.encoder.encoder_model4.predict([haha4_])
 
     sampled_pic1,sampled_pic2,sampled_pic3,sampled_pic4 = a.sample(1,[z1,z2,z3,z4])
     sampled_pic1 = np.reshape(sampled_pic1,(480,640))
@@ -149,6 +159,7 @@ else:
     pics = [sampled_pic1,sampled_pic2,sampled_pic3,sampled_pic4]
     # plt.imshow(np.reshape(haha1,(480,640)))
     # plt.imshow(sampled_pic)
+    print('this2?')
 
     rows = 2
     columns = 4
@@ -157,10 +168,13 @@ else:
             fig.add_subplot(rows, columns, i)
             plt.imshow(haha[i-1])
             # plt.imshow(haha_[i-1])
+            print('thi31?')
+
         else:
             fig.add_subplot(rows, columns, i)
             plt.imshow(pics[i-5])
     plt.show()
+    print('this4?')
 
     quit()
     
