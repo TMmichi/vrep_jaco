@@ -29,9 +29,6 @@ class FCBlock(layers.Layer):
             training = True):
         x = self.fc(inputs)
         x = self.dropout(x)
-        # x = self.dropout(x,training)
-
-        print(x.shape) if self.debug else None
         return x
 
 class ConvBlock(layers.Layer):
