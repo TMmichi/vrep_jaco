@@ -16,8 +16,7 @@ paused = rospy.get_param("/vrep_jaco_bringup_simulator/paused")
 auto_quit = rospy.get_param("/vrep_jaco_bringup_simulator/auto_quit")
 
 if gui:
-    # vrep_exec = vrep_path+"/coppeliaSim.sh "
-    vrep_exec = vrep_path+"/vrep.sh "
+    vrep_exec = vrep_path+"/coppeliaSim.sh "
     t_val = 5.0
 else:
     vrep_exec = vrep_path+"/vrep.sh -h "
@@ -30,4 +29,4 @@ subprocess.call(
     vrep_exec+scene+" &",
     shell=True
 )
-time.sleep(t_val)      
+time.sleep(t_val)

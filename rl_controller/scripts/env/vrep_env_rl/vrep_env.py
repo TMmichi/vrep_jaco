@@ -46,7 +46,8 @@ class VrepEnv(gym.Env):
 		istuple = isinstance(ret_tuple, tuple)
 		ret = ret_tuple[0] if istuple else ret_tuple
 		if (ret != vrep.simx_return_ok) and (ret != tolerance):
-			raise RuntimeError('Remote API return code: ('+str(ret)+': '+self.str_simx_return[ret.bit_length()]+')')
+			pass
+			#raise RuntimeError('Remote API return code: ('+str(ret)+': '+self.str_simx_return[ret.bit_length()]+')')
 		
 		return ret_tuple[1:] if istuple else None
 	
@@ -54,7 +55,7 @@ class VrepEnv(gym.Env):
 		if self.connected:
 			raise RuntimeError('Client is already connected.')
 		attempts = 0
-		max_attempts = 16
+		max_attempts = 10
 		while True:
 			self.cID = vrep.simxStart(
 				connectionAddress              = server_addr,
