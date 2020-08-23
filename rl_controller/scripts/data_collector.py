@@ -129,34 +129,58 @@ class Data_collector:
         #self.net3 = yolo.load_net(b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.cfg", b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/yolov3.weights", 0)
         #self.meta = yolo.load_meta(b"/home/ljh/Project/vrep_jaco/vrep_jaco/src/vrep_jaco/rl_controller/scripts/darknet/cfg/coco.data")
 
+        # gripper_pose_list = []
+        # joint_angle_list = []
+        # sample_num = 1
+        # for i_1 in range(sample_num):
+        #     for i_2 in range(4):
+        #         for i_3 in range(sample_num):
+        #             for i_4 in range(sample_num):
+        #                 for i_5 in range(sample_num):
+        #                     for i_6 in range(sample_num):
+        #                         proc_reset = self.env._memory_check()
+        #                         self.env._vrep_process_reset() if proc_reset else None
+        #                         if self.env.sim_running:
+        #                             self.env.stop_simulation()
+        #                         i = [120,150,210,240]  
+        #                         sample_angle = [-180+360/sample_num*i_1,i[i_2],200+70*i_3,50+80*i_4,50+80*i_5,50+80*i_6]
+        #                         joint_angle = []
+        #                         for i, degree in enumerate(sample_angle):
+        #                             # angle = -degree + randint(-20, 20)
+
+        #                             # set no random angle
+        #                             angle = -degree # + randint(-20, 20)
+                                    
+        #                             self.env.obj_set_position_inst(self.env.jointHandles_[i], angle)
+        #                             self.env.obj_set_position_target(self.env.jointHandles_[i], angle)
+        #                             joint_angle.append(angle)
+
+        #                         joint_angle_list.append(joint_angle)
+        #                         self.env.start_simulation(sync=True, time_step=0.05)
+        #                         gripper_pose_list.append(self.env.obj_get_position(
+        #                             self.env.jointHandles_[5]) + self.env.obj_get_orientation(self.env.jointHandles_[5]))
+
         gripper_pose_list = []
         joint_angle_list = []
-        sample_num = 5
+        sample_num = 10
         for i in range(sample_num):
             proc_reset = self.env._memory_check()
-            print("0")
             self.env._vrep_process_reset() if proc_reset else None
             if self.env.sim_running:
-                print("1")
                 self.env.stop_simulation()
-            print("2")
-            sample_angle = [sample(range(-180, 180), 1)[0], 150, sample(range(200, 270), 1)[0], sample(
+            sample_angle = [sample(range(-180, 180), 1)[0], sample(range(120, 240), 1)[0], sample(range(90, 270), 1)[0], sample(
                 range(50, 130), 1)[0], sample(range(50, 130), 1)[0], sample(range(50, 130), 1)[0]]
             joint_angle = []
             for i, degree in enumerate(sample_angle):
                 angle = -degree + randint(-20, 20)
-                
                 self.env.obj_set_position_inst(self.env.jointHandles_[i], angle)
-                print("3")
                 self.env.obj_set_position_target(self.env.jointHandles_[i], angle)
-                print("4")
                 joint_angle.append(angle)
             joint_angle_list.append(joint_angle)
-            
             self.env.start_simulation(sync=True, time_step=0.05)
-            print("5")
             gripper_pose_list.append(self.env.obj_get_position(
                 self.env.jointHandles_[5]) + self.env.obj_get_orientation(self.env.jointHandles_[5]))
+
         for k in range(sample_num-1):
             for j in range(k+1,sample_num):
                 proc_reset = self.env._memory_check()
@@ -171,6 +195,7 @@ class Data_collector:
                     #self.env.obj_set_position_inst(self.env.jointHandles_[i], joint_angle_list[j][i])
                     self.env.obj_set_position_target(self.env.jointHandles_[i], joint_angle_list[j][i])
                 prev_position = [0,0,0,0,0,0]
+
                 while True:
                     position = []
                     for i_jointhandle in self.env.jointHandles_:
@@ -316,3 +341,4 @@ if __name__ == "__main__":
     except rospy.ROSInternalException:
         rospy.loginfo("node terminated.")
         collector_class.sess.close()
+
