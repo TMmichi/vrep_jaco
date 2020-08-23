@@ -1,3 +1,5 @@
+import warnings
+warnings.filterwarnings('ignore',category=FutureWarning)
 import os
 import time
 import state_gen_util as state_gen_util
@@ -8,13 +10,31 @@ import cv2 as cv
 from tqdm import tqdm
 import rospkg
 import datetime
+import argparse
+
+######################################
+##### argparse for setting value #####
+######################################
+parser = argparse.ArgumentParser(description="epochs과 train여부를 입력해주세요")
+parser.add_argument('--epochs',required=False,default=1000,help='epochs 수')
+parser.add_argument('--train',required=False,default=True,help='train 여부')
+parser.add_argument('--drawing',required=False,default=False,help='drawing 여부')
+parser.add_argument('--filter',required=False,default=1.0,help='filter 비율')
+parser.add_argument('--load',required=False,default=False,help='weight load 여부')
+parser.add_argument('--weight_name',required=False,default='weights/mvae_autoencoder_weights',help='weight load 이름')
+
+args = parser.parse_args()
+epochs = args.epochs
+train = args.train
+drawing = args.drawing
+filter_rate = args.filter
+load = args.load
+weight_name = args.weight_name
 
 ###############################################
 ##### tensorflow setting gpu and ros path #####
 ###############################################
-ros_path = rospkg.RosPack()
 fig = plt.figure()
-# with tf.device('/device:GPU:0'):
 
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 config = tf.compat.v1.ConfigProto()
@@ -27,13 +47,20 @@ os.environ['TF_CPP_MIN_LOG_LEVEL']='0'
 ##### preparing dataset #####
 #############################
 
+print("###########################################################################")
+print("##########################     preprocessing     ##########################")
+print("###########################################################################")
+print("                                                                           ")
+print("                                                                           ")
+print("                                                                           ")
+
 """ Image data """
 data = [0,0,0,0]
 vrep_jaco_data_path = "../../../vrep_jaco_data"
-data[0] = np.load(vrep_jaco_data_path+"/data/dummy_data1.npy",allow_pickle=True)
-data[1] = np.load(vrep_jaco_data_path+"/data/dummy_data2.npy",allow_pickle=True)
-data[2] = np.load(vrep_jaco_data_path+"/data/dummy_data3.npy",allow_pickle=True)
-data[3] = np.load(vrep_jaco_data_path+"/data/dummy_data4.npy",allow_pickle=True)
+data[0] = np.load(vrep_jaco_data_path+"/data/data/cam0_total.npy",allow_pickle=True)
+data[1] = np.load(vrep_jaco_data_path+"/data/data/cam1_total.npy",allow_pickle=True)
+data[2] = np.load(vrep_jaco_data_path+"/data/data/cam2_total.npy",allow_pickle=True)
+data[3] = np.load(vrep_jaco_data_path+"/data/data/cam3_total.npy",allow_pickle=True)
 data = np.array(data)
 
 train_x = []
@@ -44,10 +71,12 @@ for idx, cam in enumerate(data):
     test_tmp = []
     for num in range(data[0].shape[0]):
         if num%10==0:
+            np.where(cam[num]>5000*filter_rate,0,cam[num])
             img = cam[num]/5000
             img = np.reshape(img,[480,640,1])
             test_tmp.append(img)
         else:
+            np.where(cam[num]>5000*filter_rate,0,cam[num])
             img = cam[num]/5000
             img = np.reshape(img,[480,640,1])
             train_tmp.append(img)
@@ -61,23 +90,19 @@ input1 = train_x[0]
 input2 = train_x[1]
 input3 = train_x[2]
 input4 = train_x[3]
-# a = np.reshape(input1[0],(480,640))
-# plt.imshow(a)
-# plt.show()
-# print('end?')
-# quit()
 
 
 ####################
 ##### training #####
 ####################
+print("###########################################################################")
+print("##########################   train    learning   ##########################")
+print("###########################################################################")
+print("                                                                           ")
+print("                                                                           ")
+print("                                                                           ")
+
 """ training """
-# train
-epochs = 1000
-
-train = False
-# train = True
-
 if train:
     """ build graph """
     log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -85,11 +110,12 @@ if train:
 
     a = state_gen_util.Autoencoder(debug=False,training=False)
     autoencoder = a.autoencoder
-    optimizer = tf.keras.optimizers.Adam(1e-5)
+    optimizer = tf.keras.optimizers.Adam(1e-3)
     autoencoder.compile(optimizer=optimizer,
                         loss=[a.kl_reconstruction_loss1,a.kl_reconstruction_loss2,a.kl_reconstruction_loss3,a.kl_reconstruction_loss4])
-    autoencoder.load_weights('weights/mvae_autoencoder_weights')
-    
+    if load == True:
+        autoencoder.load_weights(weight_name)
+    print(autoencoder.summary())
     autoencoder.fit(x=[input1,input2,input3,input4],y=[input1,input2,input3,input4],batch_size=2,epochs=100,callbacks=[tensorboard_callback])
     autoencoder.save_weights('weights/mvae_autoencoder_weights')
 else:
@@ -100,96 +126,57 @@ else:
                         loss=[a.kl_reconstruction_loss1,a.kl_reconstruction_loss2,a.kl_reconstruction_loss3,a.kl_reconstruction_loss4])
     autoencoder_load.load_weights('weights/mvae_autoencoder_weights')
     
-    def onChange(hey):
-        pass
-
-
-
     ###############
     ### drawing ###
     ###############
+    if drawing==True:
+        fig=plt.figure(figsize=(640, 480))
+
+        haha1 = np.array([test_x[0][0]])
+        haha2 = np.array([test_x[1][0]])
+        haha3 = np.array([test_x[2][0]])
+        haha4 = np.array([test_x[3][0]])
+
+        haha1_ = np.array([train_x[0][0]])
+        haha2_ = np.array([train_x[1][0]])
+        haha3_ = np.array([train_x[2][0]])
+        haha4_ = np.array([train_x[3][0]])
+
+        z1 , _ = a.encoder.encoder_model1.predict([haha1])
+        z2 , _ = a.encoder.encoder_model2.predict([haha2])
+        z3 , _ = a.encoder.encoder_model3.predict([haha3])
+        z4 , _ = a.encoder.encoder_model4.predict([haha4])
+
+        sampled_pic1,sampled_pic2,sampled_pic3,sampled_pic4 = a.sample(1,[z1,z2,z3,z4])
+        sampled_pic1 = np.reshape(sampled_pic1,(480,640))
+        sampled_pic2 = np.reshape(sampled_pic2,(480,640))
+        sampled_pic3 = np.reshape(sampled_pic3,(480,640))
+        sampled_pic4 = np.reshape(sampled_pic4,(480,640))
+
+        haha1 = np.reshape(haha1,(480,640))
+        haha2 = np.reshape(haha2,(480,640))
+        haha3 = np.reshape(haha3,(480,640))
+        haha4 = np.reshape(haha4,(480,640))
     
-    fig=plt.figure(figsize=(640, 480))
+        haha1_ = np.reshape(haha1_,(480,640))
+        haha2_ = np.reshape(haha2_,(480,640))
+        haha3_ = np.reshape(haha3_,(480,640))
+        haha4_ = np.reshape(haha4_,(480,640))
 
-    
+        haha = [haha1,haha2,haha3,haha4]
+        haha_ = [haha1_,haha2_,haha3_,haha4_]
+        pics = [sampled_pic1,sampled_pic2,sampled_pic3,sampled_pic4]
+        # plt.imshow(np.reshape(haha1,(480,640)))
+        # plt.imshow(sampled_pic)
 
-    haha1 = np.array([test_x[0][0]])
-    haha2 = np.array([test_x[1][0]])
-    haha3 = np.array([test_x[2][0]])
-    haha4 = np.array([test_x[3][0]])
-
-    haha1_ = np.array([train_x[0][0]])
-    haha2_ = np.array([train_x[1][0]])
-    haha3_ = np.array([train_x[2][0]])
-    haha4_ = np.array([train_x[3][0]])
-
-    z1 , _ = a.encoder.encoder_model1.predict([haha1])
-    z2 , _ = a.encoder.encoder_model2.predict([haha2])
-    z3 , _ = a.encoder.encoder_model3.predict([haha3])
-    z4 , _ = a.encoder.encoder_model4.predict([haha4])
-
-    sampled_pic1,sampled_pic2,sampled_pic3,sampled_pic4 = a.sample(1,[z1,z2,z3,z4])
-    sampled_pic1 = np.reshape(sampled_pic1,(480,640))
-    sampled_pic2 = np.reshape(sampled_pic2,(480,640))
-    sampled_pic3 = np.reshape(sampled_pic3,(480,640))
-    sampled_pic4 = np.reshape(sampled_pic4,(480,640))
-
-    haha1 = np.reshape(haha1,(480,640))
-    haha2 = np.reshape(haha2,(480,640))
-    haha3 = np.reshape(haha3,(480,640))
-    haha4 = np.reshape(haha4,(480,640))
-   
-    haha1_ = np.reshape(haha1_,(480,640))
-    haha2_ = np.reshape(haha2_,(480,640))
-    haha3_ = np.reshape(haha3_,(480,640))
-    haha4_ = np.reshape(haha4_,(480,640))
-
-    haha = [haha1,haha2,haha3,haha4]
-    haha_ = [haha1_,haha2_,haha3_,haha4_]
-    pics = [sampled_pic1,sampled_pic2,sampled_pic3,sampled_pic4]
-    # plt.imshow(np.reshape(haha1,(480,640)))
-    # plt.imshow(sampled_pic)
-
-    rows = 2
-    columns = 4
-    for i in range(1, columns*rows +1):
-        if i<5:
-            fig.add_subplot(rows, columns, i)
-            plt.imshow(haha[i-1])
-            # plt.imshow(haha_[i-1])
-        else:
-            fig.add_subplot(rows, columns, i)
-            plt.imshow(pics[i-5])
-    plt.show()
-
-    quit()
-    
-    sampled_pic_1 = np.tile(sampled_pic_1[0],(1,1,3))
-
-    window_name = 'latent vector to img'
-    cv.namedWindow(window_name)
-    for i in range(16):
-        tkbar_name = 'idx:'+str(i*2)
-        cv.createTrackbar(tkbar_name,window_name, -30, 30, onChange)
-    
-    while True:
-        cv.imshow(window_name, sampled_pic_1)
-        k = cv.waitKey(1) & 0xFF
-        if k == 27:
-            break
-        
-        for i in range(int(len(eval_state_1[0])/2)):
-            tkbar_name = 'idx:'+str(2*i)
-            value = cv.getTrackbarPos(tkbar_name, window_name)/10
-            eval_state_1[0][2*i] = value
-            eval_state_1[0][2*i+1] = value
-        
-        sampled_pic_1 = a.sample(1,eval_state_1).numpy()
-        sampled_pic_2 = a.sample(1,eval_state_2).numpy()
-        sampled_pic_3 = a.sample(1,eval_state_3).numpy()
-        sampled_pic_4 = a.sample(1,eval_state_4).numpy()
-
-        sampled_pic_1 = np.tile(sampled_pic_1[0],(1,1,3))
-        sampled_pic_2 = np.tile(sampled_pic_2[0],(1,1,3))
-        sampled_pic_3 = np.tile(sampled_pic_3[0],(1,1,3))
-        sampled_pic_4 = np.tile(sampled_pic_4[0],(1,1,3))
+        rows = 2
+        columns = 4
+        for i in range(1, columns*rows +1):
+            if i<5:
+                fig.add_subplot(rows, columns, i)
+                plt.imshow(haha[i-1])
+                # plt.imshow(haha_[i-1])
+            else:
+                fig.add_subplot(rows, columns, i)
+                plt.imshow(pics[i-5])
+        plt.show()

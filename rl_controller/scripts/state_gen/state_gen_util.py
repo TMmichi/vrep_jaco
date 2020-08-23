@@ -11,26 +11,21 @@ from state_gen.config import block_setting
 class FCBlock(layers.Layer):
     def __init__(self,**kwargs):
         super().__init__()
-        self.units = kwargs['units'] #Raise error when not defined
+        self.units = kwargs['units']
         self.activation = kwargs.get('activation','relu')
         self.survival_prob = kwargs.get('survival_prob',0.8)
         self.debug = kwargs.get('debug',False)
         self._build()
         
     def _build(self):
-        #FC layer
         self.fc = tf.keras.layers.Dense(units=self.units, activation=self.activation)
-        #Dropout layer
         self.dropout = tf.keras.layers.Dropout(1-self.survival_prob)
-
      
     def call(self,
             inputs,
             training = True):
         x = self.fc(inputs)
         x = self.dropout(x)
-        # x = self.dropout(x,training)
-
         print(x.shape) if self.debug else None
         return x
 
@@ -85,7 +80,6 @@ class ConvBlock(layers.Layer):
         if self.with_batch_norm:
             x = self.bn(x)
         x = self.nonlin(x) if not self.nonlin is None else x
-        # x = self.dropout(x,training)
         x = self.dropout(x)
         print(x.shape) if self.debug else None
         return x
@@ -142,8 +136,62 @@ class DeConvBlock(layers.Layer):
             x = self.bn(x)
         x = self.nonlin(x) if not self.nonlin is None else x
         x = self.dropout(x)
-        # x = self.dropout(x,training)
+        print(x.shape) if self.debug else None
+        return x
 
+class DeConvBlock_fin(layers.Layer):
+    def __init__(self,**kwargs):
+        super().__init__()
+        self.with_batch_norm = kwargs.get('with_batch_norm',True)
+        if self.with_batch_norm:
+            self._batch_norm_momentum = kwargs.get('batch_norm_momentum',0.99)
+            self._batch_norm_epsilon = kwargs.get('batch_norm_epsilon',0.001)
+        self.n_features = kwargs['n_features'] #Raise error when not defined
+        self.kernel_size = kwargs.get('kernel_size',3)
+        self.stride = kwargs.get('stride',(2,2))
+        self.padding = kwargs.get('padding','SAME')
+        self.activation = kwargs.get('activation','relu')
+        self.survival_prob = kwargs.get('survival_prob',0.8)
+        self.debug = kwargs.get('debug',False)
+        self._build()
+
+    def _build(self):
+        #DeConv layer
+        self.deconv = tf.keras.layers.Conv2DTranspose(
+            filters=self.n_features, 
+            kernel_size=self.kernel_size, 
+            strides=self.stride,
+            padding=self.padding)
+            # activation='relu')
+        #BN layer
+        if self.with_batch_norm:
+            self.bn = tf.keras.layers.BatchNormalization(
+                momentum=self._batch_norm_momentum, 
+                epsilon=self._batch_norm_epsilon)
+        #Non-linearity layer
+        if self.activation == 'relu':
+            self.nonlin = tf.keras.layers.ReLU()
+        elif self.activation == 'elu':
+            self.nonlin = tf.keras.layers.ELU()
+        elif self.activation == 'Leakyrelu':
+            self.nonlin = tf.keras.layers.LeakyReLU()
+        elif self.activation == 'none':
+            self.nonlin = None
+        else:
+            raise NotImplementedError("Unidentified Activation Layer")
+        #Dropout layer
+        self.dropout = tf.keras.layers.Dropout(1-self.survival_prob)
+    
+     
+    def call(self,
+            inputs,            
+            training=True):
+        x = inputs
+        x = self.deconv(x)
+        # if self.with_batch_norm:
+        #     x = self.bn(x)
+        # x = self.nonlin(x) if not self.nonlin is None else x
+        # x = self.dropout(x)
         print(x.shape) if self.debug else None
         return x
 
@@ -171,6 +219,7 @@ class CNN_Encoder(layers.Layer):
             setting['survival_prob'] = 1.0 - self.drop_rate * float(idx) / self.num_conv_blocks
             block = ConvBlock(**setting)
             self._blocks.append([block,False,block_id])
+        
         #Flatten layer
         block = tf.keras.layers.Flatten()
         self._blocks.append([block,None,'flatten'])
@@ -202,8 +251,7 @@ class CNN_Encoder(layers.Layer):
                         training=training)
                 elif isfilm is None:
                     x = block(x)
-        mean, logvar = tf.split(x, num_or_size_splits=2, axis=1)
-        return mean, logvar
+        return x
 
 class CNN_Decoder(layers.Layer):
     def __init__(self,**kwargs):
@@ -243,7 +291,109 @@ class CNN_Decoder(layers.Layer):
             setting['survival_prob'] = 1.0 - self.drop_rate * float(idx) / len(self._blocks)
             block = DeConvBlock(**setting)
             self._blocks.append([block,False,block_id])
+            
+        setting = block_setting['deconv_output']
+        setting['survival_prob'] = 1.0
+        block = DeConvBlock_fin(**setting)
+        self._blocks.append([block,False,block_id])
 
+    def call(self,
+            z,
+            gammas=None,
+            betas=None,
+            training=True,
+            apply_sigmoid=False):
+        x_hat = z
+        for [block,isfilm,block_id] in self._blocks:
+            #Conv Blocks (FiLMed or Not)
+            with tf.compat.v1.variable_scope(block_id):
+                if isfilm == False:
+                    x_hat = block(
+                        x_hat, 
+                        training=training)
+                elif isfilm is None:
+                    x_hat = block(x_hat)
+        
+        if apply_sigmoid:
+            probs = tf.sigmoid(x_hat)
+            return probs
+        
+        
+        # x_hat = tf.keras.activations.sigmoid(x_hat)
+        return x_hat
+
+class CNN_Encoder_latent(layers.Layer):
+    def __init__(self,**kwargs):
+        super().__init__()
+        self.num_conv_blocks = kwargs.get('num_conv_blocks',5)
+        self.num_fc_blocks = kwargs.get('num_fc_blocks',2)
+        self.latent_dim2 = kwargs.get('latent_dim2',32)
+        self.survival_prob = kwargs.get('survival_prob',0.8)
+        self.drop_rate = 1.0 - self.survival_prob
+        self.debug = kwargs.get('debug',False)
+        random.seed(dt.now())
+        self.seed = random.randint(0,12345)
+        self._build()
+        
+    def _build(self):
+        # return mean, logvar
+        #Building blocks
+        self._blocks = []
+        #FC layer
+        for idx in range(self.num_fc_blocks):
+            block_id = 'latent_fc_block%s' % str(idx+1)
+            print(block_id) if self.debug else None
+            setting = block_setting[block_id]
+            setting['units'] = (2-idx) * 2 * self.latent_dim2
+            block = FCBlock(**setting)
+            self._blocks.append([block,False,block_id])
+        block = FCBlock(**setting)
+        self._blocks.append([block,False,block_id])
+     
+    def call(self,
+            inputs,
+            gammas=None,
+            betas=None,
+            training=True):
+        x = inputs
+        for idx, [block,isfilm,block_id] in enumerate(self._blocks):
+            #Conv Blocks (FiLMed or Not)
+            with tf.compat.v1.variable_scope(block_id):
+                if isfilm == False:
+                    x = block(
+                        x, 
+                        training=training)
+                elif isfilm is None:
+                    x = block(x)
+        mean, logvar = tf.split(x, num_or_size_splits=2, axis=1)
+        return mean, logvar
+
+class CNN_Decoder_latent(layers.Layer):
+    def __init__(self,**kwargs):
+        super().__init__()
+        self.num_deconv_blocks = kwargs.get('num_deconv_blocks',5)
+        self.num_defc_blocks = kwargs.get('num_defc_blocks',2)
+        self.survival_prob = kwargs.get('survival_prob',0.8)
+        self.latent_dim2 = kwargs.get('latent_dim2',32)
+        self.drop_rate = 1.0 - self.survival_prob
+        self.debug = kwargs.get('debug',False)
+
+        random.seed(dt.now())
+        self.seed = random.randint(0,12345)
+        self._build()
+        
+    def _build(self):
+        #Building blocks
+        self._blocks = []
+        #DeFC layer
+        for idx in range(self.num_defc_blocks):
+            block_id = 'latent_defc_block%s' % str(idx+1)
+            print(block_id) if self.debug else None
+            setting = block_setting[block_id]
+            setting['units'] = (2-idx) * 2 * self.latent_dim2
+            block = FCBlock(**setting)
+            self._blocks.append([block,False,block_id])     
+    
     def call(self,
             z,
             gammas=None,
@@ -276,6 +426,8 @@ class Autoencoder_encoder():
         self.encoder2 = CNN_Encoder(**kwargs)
         self.encoder3 = CNN_Encoder(**kwargs)
         self.encoder4 = CNN_Encoder(**kwargs)
+        
+        self.encoder_latent = CNN_Encoder_latent(**kwargs)
 
         self.input1 = tf.keras.Input(shape=(480,640,1))
         self.input2 = tf.keras.Input(shape=(480,640,1))
@@ -286,39 +438,42 @@ class Autoencoder_encoder():
         self.en2 = self.encoder2(self.input2)
         self.en3 = self.encoder3(self.input3)
         self.en4 = self.encoder4(self.input4)
-
-        self.encoder_model1 = tf.keras.Model(self.input1,self.en1,name='encoder1')
-        self.encoder_model2 = tf.keras.Model(self.input2,self.en2,name='encoder2')
-        self.encoder_model3 = tf.keras.Model(self.input3,self.en3,name='encoder3')
-        self.encoder_model4 = tf.keras.Model(self.input4,self.en4,name='encoder4')
-
+        
+        self.concate_latent = tf.keras.layers.Concatenate(axis=1)([self.en1, self.en2, self.en3, self.en4])
+        
+        self.en_latent = self.encoder_latent(self.concate_latent)
+        
+        self.encoder_model = tf.keras.Model([self.input1,self.input2,self.input3,self.input4],self.en_latent,name='encoder')
+        
 class Autoencoder_decoder():
     def __init__(self,**kwargs):
         self.debug = kwargs.get('debug',False)
         self._build(**kwargs)
+        self.latent_dim = kwargs.get('latent_dim',32)
+        self.latent_dim2 = kwargs.get('latent_dim2',32)
 
     def _build(self,**kwargs):
-        self.decoder = CNN_Decoder(**kwargs)
+        
+        self.inputs = tf.keras.Input(shape=(32,))
+        
+        self.decoder_latent = CNN_Decoder_latent(**kwargs)
+                
+        self.decoder1 = CNN_Decoder(**kwargs)
         self.decoder2 = CNN_Decoder(**kwargs)
         self.decoder3 = CNN_Decoder(**kwargs)
         self.decoder4 = CNN_Decoder(**kwargs)
+        
+        self.de_latent = self.decoder_latent(self.inputs)
+        
+        self.de1 = self.decoder1(self.de_latent)
+        self.de2 = self.decoder2(self.de_latent)
+        self.de3 = self.decoder3(self.de_latent)
+        self.de4 = self.decoder4(self.de_latent)
 
-        self.input1 = tf.keras.Input(shape=(32,))
-        self.input2 = tf.keras.Input(shape=(32,))
-        self.input3 = tf.keras.Input(shape=(32,))
-        self.input4 = tf.keras.Input(shape=(32,))
-
-        self.inputs = tf.concat([self.input1,self.input2,self.input3,self.input4],1)
-        self.de1 = self.decoder(self.inputs)
-        self.de2 = self.decoder2(self.inputs)
-        self.de3 = self.decoder3(self.inputs)
-        self.de4 = self.decoder4(self.inputs)
-
-        self.decoder_model1 = tf.keras.Model([self.input1,self.input2,self.input3,self.input4],self.de1,name='decoder1')
-        self.decoder_model2 = tf.keras.Model([self.input1,self.input2,self.input3,self.input4],self.de2,name='decoder2')
-        self.decoder_model3 = tf.keras.Model([self.input1,self.input2,self.input3,self.input4],self.de3,name='decoder3')
-        self.decoder_model4 = tf.keras.Model([self.input1,self.input2,self.input3,self.input4],self.de4,name='decoder4')
-
+        self.decoder_model1 = tf.keras.Model(self.inputs,self.de1,name='decoder1')
+        self.decoder_model2 = tf.keras.Model(self.inputs,self.de2,name='decoder2')
+        self.decoder_model3 = tf.keras.Model(self.inputs,self.de3,name='decoder3')
+        self.decoder_model4 = tf.keras.Model(self.inputs,self.de4,name='decoder4')
 
 class Autoencoder():
     def __init__(self,**kwargs):
@@ -335,35 +490,22 @@ class Autoencoder():
         self.encoder = Autoencoder_encoder()
         self.decoder = Autoencoder_decoder()
    
-        self.en1_mean, self.en1_var = self.encoder.encoder_model1(self.input1)
-        self.en2_mean, self.en2_var = self.encoder.encoder_model2(self.input2)
-        self.en3_mean, self.en3_var = self.encoder.encoder_model3(self.input3)
-        self.en4_mean, self.en4_var = self.encoder.encoder_model4(self.input4)
-   
-        self.z1 = self.reparameterize(self.en1_mean,self.en1_var)
-        self.z2 = self.reparameterize(self.en2_mean,self.en2_var)
-        self.z3 = self.reparameterize(self.en3_mean,self.en3_var)
-        self.z4 = self.reparameterize(self.en4_mean,self.en4_var)
-
-        self.logpz1 = self._log_normal_pdf(self.z1,0.,0.)
-        self.logpz2 = self._log_normal_pdf(self.z2,0.,0.)
-        self.logpz3 = self._log_normal_pdf(self.z3,0.,0.)
-        self.logpz4 = self._log_normal_pdf(self.z4,0.,0.)
-
-        self.logqz_x1 = self._log_normal_pdf(self.z1,self.en1_mean,self.en1_var)
-        self.logqz_x2 = self._log_normal_pdf(self.z2,self.en2_mean,self.en2_var)
-        self.logqz_x3 = self._log_normal_pdf(self.z3,self.en3_mean,self.en3_var)
-        self.logqz_x4 = self._log_normal_pdf(self.z4,self.en4_mean,self.en4_var)
+        self.en_mean, self.en_var = self.encoder.encoder_model([self.input1,self.input2,self.input3,self.input4])
         
-        self.prob1 = self.decoder.decoder_model1([self.z1,self.z2,self.z3,self.z4])
-        self.prob2 = self.decoder.decoder_model2([self.z1,self.z2,self.z3,self.z4])
-        self.prob3 = self.decoder.decoder_model3([self.z1,self.z2,self.z3,self.z4])
-        self.prob4 = self.decoder.decoder_model4([self.z1,self.z2,self.z3,self.z4])
+        self.z = self.reparameterize(self.en_mean,self.en_var)
+
+        self.logpz = self._log_normal_pdf(self.z,0.,0.)
+
+        self.logqz_x = self._log_normal_pdf(self.z,self.en_mean,self.en_var)
+        
+        self.prob1 = tf.keras.activations.sigmoid(self.decoder.decoder_model1(self.z))
+        self.prob2 = tf.keras.activations.sigmoid(self.decoder.decoder_model2(self.z))
+        self.prob3 = tf.keras.activations.sigmoid(self.decoder.decoder_model3(self.z))
+        self.prob4 = tf.keras.activations.sigmoid(self.decoder.decoder_model4(self.z))
 
         self.autoencoder = tf.keras.Model(inputs=[self.input1,self.input2,self.input3,self.input4],outputs=[self.prob1,self.prob2,self.prob3,self.prob4],name='multimodal_variational_autoencoder')
 
     def reparameterize(self,mean,logvar):
-        #eps = tf.random.normal(shape=mean.shape)
         eps = tf.random.normal(shape=tf.shape(mean))
         return eps * tf.exp(logvar * .5) + mean
 
@@ -376,202 +518,56 @@ class Autoencoder():
     def kl_reconstruction_loss1(self, true, pred):
         # Reconstruction loss
         reconstruction_loss = tf.keras.losses.binary_crossentropy(K.flatten(true), K.flatten(pred))
+        # reconstruction_loss = tf.keras.losses.MSE(K.flatten(true), K.flatten(pred))
+
         # KL divergence loss
-        mean , var = self.encoder.encoder_model1(true)
-        kl_loss = 1 + K.sum(var - K.square(mean) - K.exp(var),axis=-1)
-        kl_loss *= -0.5
+        # mean , var = self.encoder.encoder_model1(true)
+        # kl_loss = 1 + K.sum(var - K.square(mean) - K.exp(var),axis=-1)
+        # kl_loss *= -0.5
         # Total loss = 50% rec + 50% KL divergence loss
-        return K.mean(reconstruction_loss + kl_loss)
+
+        return K.mean(reconstruction_loss) # + kl_loss)
+        # return 100 * K.mean(reconstruction_loss) # + kl_loss)
 
     def kl_reconstruction_loss2(self, true, pred):
         # Reconstruction loss
         reconstruction_loss = tf.keras.losses.binary_crossentropy(K.flatten(true), K.flatten(pred))
+        # reconstruction_loss = tf.keras.losses.MSE(K.flatten(true), K.flatten(pred))
+
         # KL divergence loss
-        mean , var = self.encoder.encoder_model2(true)
-        kl_loss = 1 + K.sum(var - K.square(mean) - K.exp(var),axis=-1)
-        kl_loss *= -0.5
+        # mean , var = self.encoder.encoder_model2(true)
+        # kl_loss = 1 + K.sum(var - K.square(mean) - K.exp(var),axis=-1)
+        # kl_loss *= -0.5
         # Total loss = 50% rec + 50% KL divergence loss
-        return K.mean(reconstruction_loss + kl_loss)
+
+        return K.mean(reconstruction_loss) # + kl_loss)
+        # return 100 * K.mean(reconstruction_loss) # + kl_loss)
 
     def kl_reconstruction_loss3(self, true, pred):
         # Reconstruction loss
         reconstruction_loss = tf.keras.losses.binary_crossentropy(K.flatten(true), K.flatten(pred))
+        # reconstruction_loss = tf.keras.losses.MSE(K.flatten(true), K.flatten(pred))
+
         # KL divergence loss
-        mean , var = self.encoder.encoder_model3(true)
-        kl_loss = 1 + K.sum(var - K.square(mean) - K.exp(var),axis=-1)
-        kl_loss *= -0.5
+        # mean , var = self.encoder.encoder_model3(true)
+        # kl_loss = 1 + K.sum(var - K.square(mean) - K.exp(var),axis=-1)
+        # kl_loss *= -0.5
         # Total loss = 50% rec + 50% KL divergence loss
-        return K.mean(reconstruction_loss + kl_loss)
+
+        return K.mean(reconstruction_loss) # + kl_loss)
+        # return 100 * K.mean(reconstruction_loss) # + kl_loss)
 
     def kl_reconstruction_loss4(self, true, pred):
         # Reconstruction loss
         reconstruction_loss = tf.keras.losses.binary_crossentropy(K.flatten(true), K.flatten(pred))
+        # reconstruction_loss = tf.keras.losses.MSE(K.flatten(true), K.flatten(pred))
+
         # KL divergence loss
-        mean , var = self.encoder.encoder_model4(true)
-        kl_loss = 1 + K.sum(var - K.square(mean) - K.exp(var),axis=-1)
+        # mean , var = self.encoder.encoder_model4(true)
+        kl_loss = K.sum(1 + self.en_var - K.square(self.en_mean) - K.exp(self.en_var),axis=-1)
         kl_loss *= -0.5
+        
         # Total loss = 50% rec + 50% KL divergence loss
+
         return K.mean(reconstruction_loss + kl_loss)
-    
-    def compute_loss(self,x,x_hat):
-        
-        mean, logvar = self.encoder.encoder_model4(x_hat)
-        z = self.reparameterize(mean, logvar)
-        x_logit = self.decoder.decoder_model4([self.en1_mean,self.en2_mean,self.en3_mean,self.en4_mean])
-        cross_ent = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit, labels=x_hat)
-        logpx_z = -tf.reduce_sum(cross_ent, axis=[1, 2, 3])
-        logpz = self._log_normal_pdf(z, 0., 0.)
-        logqz_x = self._log_normal_pdf(z, mean, logvar)
-        
-        result = -tf.reduce_mean(logpx_z + logpz - logqz_x)
-        return result
-    
-    def sample(self, sample_num=1,eps=None):
-        if eps is None:
-            print('here?')
-            eps = tf.random.normal(shape=(sample_num, 128))
-        return self.decoder.decoder_model1.predict(eps),self.decoder.decoder_model2.predict(eps),self.decoder.decoder_model3.predict(eps),self.decoder.decoder_model4.predict(eps)
-
-
-    @tf.function
-    def compute_apply_gradients(self, x, optimizer):
-        print('here????')
-        with tf.GradientTape() as tape:
-            loss = self.compute_loss(x,x)
-        gradients = tape.gradient(loss, self.trainable_variables)
-        optimizer.apply_gradients(zip(gradients, self.trainable_variables))
-        return loss
-
-# class Autoencoder(tf.keras.Model):
-#     def __init__(self,*args,**kwargs):
-#         super(Autoencoder, self).__init__()
-#         self.latent_dim = kwargs.get('latent_dim',32)
-#         kwargs['num_deconv_blocks'] = kwargs.get('num_conv_blocks',5)
-#         kwargs['num_defc_blocks'] = kwargs.get('num_fc_blocks',2)
-#         self.isfushion = kwargs.get('isfushion') #Raise Error if not defined
-#         self.debug = kwargs.get('debug',False)
-#         self._build(**kwargs)
-
-#         self.input1 = kwargs.get('input1')
-#         self.input2 = kwargs.get('input2')
-#         self.input3 = kwargs.get('input3')
-#         self.input4 = kwargs.get('input4')
-        
-
-#     def _build(self,**kwargs):
-#         self.encoder = CNN_Encoder(**kwargs)
-#         self.decoder = CNN_Decoder(**kwargs)
-
-#         self.encoder1 = CNN_Encoder(**kwargs)
-#         self.decoder1 = CNN_Decoder(**kwargs)
-
-#         self.encoder2 = CNN_Encoder(**kwargs)
-#         self.decoder2 = CNN_Decoder(**kwargs)
-
-#         self.encoder3 = CNN_Encoder(**kwargs)
-#         self.decoder3 = CNN_Decoder(**kwargs)
-
-#     def reparameterize(self,mean,logvar):
-#         #eps = tf.random.normal(shape=mean.shape)
-#         eps = tf.random.normal(shape=tf.shape(mean))
-#         return eps * tf.exp(logvar * .5) + mean
-    
-#     @tf.function
-    
-#     def _log_normal_pdf(self,sample, mean, logvar, raxis=1):
-#         log2pi = tf.math.log(2. * np.pi)
-#         return tf.reduce_sum(
-#             -.5 * ((sample - mean) ** 2. * tf.exp(-logvar) + logvar + log2pi),
-#             axis=raxis)
-
-#     def compute_loss(self,x,x_hat):
-
-#         div, div1, div2, div3 = tf.split(x, num_or_size_splits=4,axis=1)
-#         div_hat, div_hat1, div_hat2, div_hat3 = tf.split(x_hat, num_or_size_splits=4)
-#         if len(div.shape)==5:
-#             div = tf.squeeze(div,[1])
-#         if len(div1.shape)==5:
-#             div1 = tf.squeeze(div1,[1])
-#         if len(div2.shape)==5:
-#             div2 = tf.squeeze(div2,[1])
-#         if len(div3.shape)==5:
-#             div3 = tf.squeeze(div3,[1])
-        
-#         mean, logvar = self.encoder(div)
-#         mean1, logvar1 = self.encoder1(div1)
-#         mean2, logvar2 = self.encoder2(div2)
-#         mean3, logvar3 = self.encoder3(div3)
-
-#         z = self.reparameterize(mean, logvar)
-#         z1 = self.reparameterize(mean1, logvar1)
-#         z2 = self.reparameterize(mean2, logvar2)
-#         z3 = self.reparameterize(mean3, logvar3)
-
-#         mean_f = tf.concat([mean,mean1,mean2,mean3],1)
-
-#         x_logit = self.decoder(mean_f)
-#         x_logit1 = self.decoder1(mean_f)
-#         x_logit2 = self.decoder2(mean_f)
-#         x_logit3 = self.decoder3(mean_f)
-
-#         cross_ent = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit, labels=div_hat)
-#         cross_ent1 = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit1, labels=div_hat1)
-#         cross_ent2 = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit2, labels=div_hat2)
-#         cross_ent3 = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit3, labels=div_hat3)
-       
-#         logpx_z = -tf.reduce_sum(cross_ent, axis=[1, 2, 3])
-#         logpx_z1 = -tf.reduce_sum(cross_ent1, axis=[1, 2, 3])
-#         logpx_z2 = -tf.reduce_sum(cross_ent2, axis=[1, 2, 3])
-#         logpx_z3 = -tf.reduce_sum(cross_ent3, axis=[1, 2, 3])
-       
-#         logpz = self._log_normal_pdf(z, 0., 0.)
-#         logpz1 = self._log_normal_pdf(z1, 0., 0.)
-#         logpz2 = self._log_normal_pdf(z2, 0., 0.)
-#         logpz3 = self._log_normal_pdf(z3, 0., 0.)
-       
-#         logqz_x = self._log_normal_pdf(z, mean, logvar)
-#         logqz_x1 = self._log_normal_pdf(z1, mean1, logvar1)
-#         logqz_x2 = self._log_normal_pdf(z2, mean2, logvar2)
-#         logqz_x3 = self._log_normal_pdf(z3, mean3, logvar3)
-       
-#         result = -tf.reduce_mean(logpx_z+logpx_z1+logpx_z2+logpx_z3 + logpz+logpz1+logpz2+logpz3 - logqz_x-logqz_x1-logqz_x2-logqz_x3)
-#         return result
-    
-#     @tf.function
-#     def compute_apply_gradients(self, x, optimizer):
-#         print('here????')
-#         with tf.GradientTape() as tape:
-#             loss = self.compute_loss(x,x)
-#         gradients = tape.gradient(loss, self.trainable_variables)
-#         optimizer.apply_gradients(zip(gradients, self.trainable_variables))
-#         return loss
-
-#     @tf.function
-#     def call(self,
-#             inputs,
-#             gammas=None,
-#             betas=None,
-#             training=True):
-#         print("inputs shape in call: ",inputs.shape)
-#         quit()
-#         div, div1, div2, div3 = tf.split(inputs, num_or_size_splits=4, axis=1)
-
-#         div = tf.squeeze(div,[1])
-#         div1 = tf.squeeze(div1,[1])
-#         div2 = tf.squeeze(div2,[1])
-#         div3 = tf.squeeze(div3,[1])
-#         mean, logvar = self.encoder(div,gammas,betas)
-#         mean1, logvar1 = self.encoder1(div1,gammas,betas)
-#         mean2, logvar2 = self.encoder2(div2,gammas,betas)
-#         mean3, logvar3 = self.encoder3(div3,gammas,betas)
-#         z = self.reparameterize(mean, logvar)
-#         z1 = self.reparameterize(mean1, logvar1)
-#         z2 = self.reparameterize(mean2, logvar2)
-#         z3 = self.reparameterize(mean3, logvar3)
-#         z = tf.concat([z,z1,z2,z3],1)
-#         probs = self.decoder(z)
-#         probs1 = self.decoder1(z)
-#         probs2 = self.decoder2(z)
-#         probs3 = self.decoder3(z)
-#         probs = tf.concat([probs,probs1,probs2,probs3],axis=0)
-#         return probs #, probs1, probs2, probs3
+        # return K.mean(100 * reconstruction_loss + kl_loss)
