@@ -11,6 +11,7 @@ from tqdm import tqdm
 import rospkg
 import datetime
 import argparse
+import tensorwatch as tw
 
 ######################################
 ##### argparse for setting value #####
@@ -22,6 +23,7 @@ parser.add_argument('--drawing',required=False,default=False,help='drawing 여�
 parser.add_argument('--filter',required=False,default=1.0,help='filter 비율')
 parser.add_argument('--load',required=False,default=False,help='weight load 여부')
 parser.add_argument('--weight_name',required=False,default='weights/mvae_autoencoder_weights',help='weight load 이름')
+parser.add_argument('--only_vae',required=False,default=False,help='vae로 학습')
 
 args = parser.parse_args()
 epochs = args.epochs
@@ -30,6 +32,7 @@ drawing = args.drawing
 filter_rate = args.filter
 load = args.load
 weight_name = args.weight_name
+only_vae = args.only_vae
 
 ###############################################
 ##### tensorflow setting gpu and ros path #####
@@ -57,10 +60,10 @@ print("                                                                         
 """ Image data """
 data = [0,0,0,0]
 vrep_jaco_data_path = "../../../vrep_jaco_data"
-data[0] = np.load(vrep_jaco_data_path+"/data/data/cam0_total.npy",allow_pickle=True)
-data[1] = np.load(vrep_jaco_data_path+"/data/data/cam1_total.npy",allow_pickle=True)
-data[2] = np.load(vrep_jaco_data_path+"/data/data/cam2_total.npy",allow_pickle=True)
-data[3] = np.load(vrep_jaco_data_path+"/data/data/cam3_total.npy",allow_pickle=True)
+data[0] = np.load(vrep_jaco_data_path+"/data/data/dummy_data1.npy",allow_pickle=True)
+data[1] = np.load(vrep_jaco_data_path+"/data/data/dummy_data2.npy",allow_pickle=True)
+data[2] = np.load(vrep_jaco_data_path+"/data/data/dummy_data3.npy",allow_pickle=True)
+data[3] = np.load(vrep_jaco_data_path+"/data/data/dummy_data4.npy",allow_pickle=True)
 data = np.array(data)
 
 train_x = []
@@ -104,20 +107,36 @@ print("                                                                         
 
 """ training """
 if train:
-    """ build graph """
-    log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+    if only_vae:
+        """ build graph """
+        log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
 
-    a = state_gen_util.Autoencoder(debug=False,training=False)
-    autoencoder = a.autoencoder
-    optimizer = tf.keras.optimizers.Adam(1e-3)
-    autoencoder.compile(optimizer=optimizer,
-                        loss=[a.kl_reconstruction_loss1,a.kl_reconstruction_loss2,a.kl_reconstruction_loss3,a.kl_reconstruction_loss4])
-    if load == True:
-        autoencoder.load_weights(weight_name)
-    print(autoencoder.summary())
-    autoencoder.fit(x=[input1,input2,input3,input4],y=[input1,input2,input3,input4],batch_size=2,epochs=100,callbacks=[tensorboard_callback])
-    autoencoder.save_weights('weights/mvae_autoencoder_weights')
+        model_ = state_gen_util.VAE_model(debug=False)
+        model = model_.vae_model
+        optimizer = tf.keras.optimizers.Adam(1e-3)
+        model.compile(optimizer=optimizer, loss=model_.loss_)
+        if load == True:
+            model.load_weights(weight_name)
+        print(model.summary())
+        model.fit(x=input1,y=input1,batch_size=20,epochs=100,callbacks=[tensorboard_callback])
+        model.save_weights('weights/only_vae_autoencoder_weights')
+    
+    else:
+        """ build graph """
+        log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+
+        a = state_gen_util.Autoencoder(debug=False,training=False)
+        autoencoder = a.autoencoder
+        optimizer = tf.keras.optimizers.Adam(1e-3)
+        autoencoder.compile(optimizer=optimizer,
+                            loss=[a.kl_reconstruction_loss1,a.kl_reconstruction_loss2,a.kl_reconstruction_loss3,a.kl_reconstruction_loss4])
+        if load == True:
+            autoencoder.load_weights(weight_name)
+        print(autoencoder.summary())
+        autoencoder.fit(x=[input1,input2,input3,input4],y=[input1,input2,input3,input4],batch_size=2,epochs=100,callbacks=[tensorboard_callback])
+        autoencoder.save_weights('weights/mvae_autoencoder_weights')
 else:
     a = state_gen_util.Autoencoder(debug=False,training=False)
     autoencoder_load = a.autoencoder
@@ -125,7 +144,7 @@ else:
     autoencoder_load.compile(optimizer=optimizer,
                         loss=[a.kl_reconstruction_loss1,a.kl_reconstruction_loss2,a.kl_reconstruction_loss3,a.kl_reconstruction_loss4])
     autoencoder_load.load_weights('weights/mvae_autoencoder_weights')
-    
+
     ###############
     ### drawing ###
     ###############
@@ -157,7 +176,7 @@ else:
         haha2 = np.reshape(haha2,(480,640))
         haha3 = np.reshape(haha3,(480,640))
         haha4 = np.reshape(haha4,(480,640))
-    
+
         haha1_ = np.reshape(haha1_,(480,640))
         haha2_ = np.reshape(haha2_,(480,640))
         haha3_ = np.reshape(haha3_,(480,640))

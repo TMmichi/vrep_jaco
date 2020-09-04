@@ -8,6 +8,10 @@ from datetime import datetime as dt
 
 from state_gen.config import block_setting
 
+############################################################################
+########################   basic block gernerator   ########################
+############################################################################
+
 class FCBlock(layers.Layer):
     def __init__(self,**kwargs):
         super().__init__()
@@ -15,17 +19,18 @@ class FCBlock(layers.Layer):
         self.activation = kwargs.get('activation','relu')
         self.survival_prob = kwargs.get('survival_prob',0.8)
         self.debug = kwargs.get('debug',False)
+        self.is_dropout = kwargs.get('is_dropout',True)
         self._build()
         
     def _build(self):
-        self.fc = tf.keras.layers.Dense(units=self.units, activation=self.activation)
+        self.fc = tf.keras.layers.Dense(units=self.units, activation=self.activation, )
         self.dropout = tf.keras.layers.Dropout(1-self.survival_prob)
      
     def call(self,
-            inputs,
-            training = True):
+            inputs):
         x = self.fc(inputs)
-        x = self.dropout(x)
+        if self.is_dropout:
+            x = self.dropout(x)
         print(x.shape) if self.debug else None
         return x
 
@@ -43,6 +48,7 @@ class ConvBlock(layers.Layer):
         self.activation = kwargs.get('activation','relu')
         self.survival_prob = kwargs.get('survival_prob',0.8)
         self.debug = kwargs.get('debug',False)
+        self.is_dropout = kwargs.get('is_dropout',True)
         self._build()
 
     def _build(self):
@@ -69,18 +75,19 @@ class ConvBlock(layers.Layer):
         else:
             raise NotImplementedError("Unidentified Activation Layer")
         #Dropout layer
-        self.dropout = tf.keras.layers.Dropout(1-self.survival_prob)
+        if self.is_dropout:
+            self.dropout = tf.keras.layers.Dropout(1-self.survival_prob)
     
      
     def call(self,
-            inputs,            
-            training=True):
+            inputs):
         x = inputs
         x = self.conv(x)
         if self.with_batch_norm:
             x = self.bn(x)
         x = self.nonlin(x) if not self.nonlin is None else x
-        x = self.dropout(x)
+        if self.is_dropout:
+            x = self.dropout(x)
         print(x.shape) if self.debug else None
         return x
 
@@ -98,6 +105,7 @@ class DeConvBlock(layers.Layer):
         self.activation = kwargs.get('activation','relu')
         self.survival_prob = kwargs.get('survival_prob',0.8)
         self.debug = kwargs.get('debug',False)
+        self.is_dropout = kwargs.get('is_dropout',True)
         self._build()
 
     def _build(self):
@@ -128,79 +136,29 @@ class DeConvBlock(layers.Layer):
     
      
     def call(self,
-            inputs,            
-            training=True):
+            inputs):
         x = inputs
         x = self.deconv(x)
         if self.with_batch_norm:
             x = self.bn(x)
         x = self.nonlin(x) if not self.nonlin is None else x
-        x = self.dropout(x)
+        if self.is_dropout:
+            x = self.dropout(x)
         print(x.shape) if self.debug else None
         return x
 
-class DeConvBlock_fin(layers.Layer):
-    def __init__(self,**kwargs):
-        super().__init__()
-        self.with_batch_norm = kwargs.get('with_batch_norm',True)
-        if self.with_batch_norm:
-            self._batch_norm_momentum = kwargs.get('batch_norm_momentum',0.99)
-            self._batch_norm_epsilon = kwargs.get('batch_norm_epsilon',0.001)
-        self.n_features = kwargs['n_features'] #Raise error when not defined
-        self.kernel_size = kwargs.get('kernel_size',3)
-        self.stride = kwargs.get('stride',(2,2))
-        self.padding = kwargs.get('padding','SAME')
-        self.activation = kwargs.get('activation','relu')
-        self.survival_prob = kwargs.get('survival_prob',0.8)
-        self.debug = kwargs.get('debug',False)
-        self._build()
 
-    def _build(self):
-        #DeConv layer
-        self.deconv = tf.keras.layers.Conv2DTranspose(
-            filters=self.n_features, 
-            kernel_size=self.kernel_size, 
-            strides=self.stride,
-            padding=self.padding)
-            # activation='relu')
-        #BN layer
-        if self.with_batch_norm:
-            self.bn = tf.keras.layers.BatchNormalization(
-                momentum=self._batch_norm_momentum, 
-                epsilon=self._batch_norm_epsilon)
-        #Non-linearity layer
-        if self.activation == 'relu':
-            self.nonlin = tf.keras.layers.ReLU()
-        elif self.activation == 'elu':
-            self.nonlin = tf.keras.layers.ELU()
-        elif self.activation == 'Leakyrelu':
-            self.nonlin = tf.keras.layers.LeakyReLU()
-        elif self.activation == 'none':
-            self.nonlin = None
-        else:
-            raise NotImplementedError("Unidentified Activation Layer")
-        #Dropout layer
-        self.dropout = tf.keras.layers.Dropout(1-self.survival_prob)
-    
-     
-    def call(self,
-            inputs,            
-            training=True):
-        x = inputs
-        x = self.deconv(x)
-        # if self.with_batch_norm:
-        #     x = self.bn(x)
-        # x = self.nonlin(x) if not self.nonlin is None else x
-        # x = self.dropout(x)
-        print(x.shape) if self.debug else None
-        return x
+
+############################################################################
+########################   middle block gernerator   #######################
+############################################################################
 
 class CNN_Encoder(layers.Layer):
     def __init__(self,**kwargs):
         super().__init__()
         self.num_conv_blocks = kwargs.get('num_conv_blocks',5)
-        self.num_fc_blocks = kwargs.get('num_fc_blocks',2)
-        self.latent_dim = kwargs.get('latent_dim',32)
+        self.num_fc_bm_blocks = kwargs.get('num_fc_bm_blocks',2)
+        self.num_fc_am_blocks = kwargs.get('num_fc_am_blocks',2)
         self.survival_prob = kwargs.get('survival_prob',0.8)
         self.drop_rate = 1.0 - self.survival_prob
         self.debug = kwargs.get('debug',False)
@@ -212,53 +170,120 @@ class CNN_Encoder(layers.Layer):
         #Building blocks
         self._blocks = []
         #Stack Conv Blocks
-        for idx in range(self.num_conv_blocks):
+        for idx in range(self.num_conv_blocks-1):
             block_id = 'conv_block%s' % str(idx+1)
             print(block_id) if self.debug else None
             setting = block_setting[block_id]
             setting['survival_prob'] = 1.0 - self.drop_rate * float(idx) / self.num_conv_blocks
             block = ConvBlock(**setting)
-            self._blocks.append([block,False,block_id])
+            self._blocks.append([block,block_id])
         
+        block_id = 'conv_block_final'
+        print(block_id) if self.debug else None
+        setting = block_setting[block_id]
+        setting['survival_prob'] = 1.0 - self.drop_rate * float(idx) / self.num_conv_blocks
+        block = ConvBlock(**setting)
+        self._blocks.append([block,block_id])
+
         #Flatten layer
+        block_id = 'flatten'
         block = tf.keras.layers.Flatten()
-        self._blocks.append([block,None,'flatten'])
+        self._blocks.append([block,block_id])
+
         #FC layer
-        for idx in range(self.num_fc_blocks):
-            block_id = 'fc_block%s' % str(idx+1)
+        for idx in range(self.num_fc_bm_blocks):
+            block_id = 'conv_fc_bm_%s' % str(idx+1)
             print(block_id) if self.debug else None
             setting = block_setting[block_id]
             block = FCBlock(**setting)
-            self._blocks.append([block,False,block_id])
-        #Latent Vector Encoder
-        setting = block_setting['latent_layer']
-        setting['units'] = 2 * self.latent_dim
-        block = FCBlock(**setting)
-        self._blocks.append([block,False,block_id])
-     
+            self._blocks.append([block,block_id])
+                 
     def call(self,
             inputs,
             gammas=None,
-            betas=None,
-            training=True):
+            betas=None):
         x = inputs
-        for idx, [block,isfilm,block_id] in enumerate(self._blocks):
-            #Conv Blocks (FiLMed or Not)
-            with tf.compat.v1.variable_scope(block_id):
-                if isfilm == False:
-                    x = block(
-                        x, 
-                        training=training)
-                elif isfilm is None:
-                    x = block(x)
+        for idx, [block,block_id] in enumerate(self._blocks):
+            x = block(x)
+        return x
+
+class CNN_Encoder_latent(layers.Layer):
+    def __init__(self,**kwargs):
+        super().__init__()
+        self.num_conv_blocks = kwargs.get('num_conv_blocks',5)
+        self.num_fc_bm_blocks = kwargs.get('num_fc_bm_blocks',2)
+        self.num_fc_am_blocks = kwargs.get('num_fc_am_blocks',2)
+        self.survival_prob = kwargs.get('survival_prob',0.8)
+        self.debug = kwargs.get('debug',False)
+        self.drop_rate = 1.0 - self.survival_prob
+        random.seed(dt.now())
+        self.seed = random.randint(0,12345)
+        self._build()
+        
+    def _build(self):
+        #Building blocks
+        self._blocks = []
+        
+        #FC layer
+        for idx in range(self.num_fc_am_blocks):
+            block_id = 'conv_fc_am_%s' % str(idx+1)
+            print(block_id) if self.debug else None
+            setting = block_setting[block_id]
+            block = FCBlock(**setting)
+            self._blocks.append([block,block_id])
+                 
+    def call(self,
+            inputs,
+            gammas=None,
+            betas=None):
+        x = inputs
+        for idx, [block,block_id] in enumerate(self._blocks):
+            x = block(x)
+        mean_, logvar_ = tf.split(x, num_or_size_splits=2, axis=1, name='split')
+        return mean_, logvar_
+
+class CNN_Decoder_latent(layers.Layer):
+    def __init__(self,**kwargs):
+        super().__init__()
+        self.num_conv_blocks = kwargs.get('num_deconv_blocks',5)
+        self.num_fc_bd_blocks = kwargs.get('num_fc_bd_blocks',2)
+        self.num_fc_ad_blocks = kwargs.get('num_fc_ad_blocks',2)
+        self.survival_prob = kwargs.get('survival_prob',0.8)
+        self.drop_rate = 1.0 - self.survival_prob
+        self.debug = kwargs.get('debug',False)
+        random.seed(dt.now())
+        self.seed = random.randint(0,12345)
+        self._build()
+        
+    def _build(self):
+        #Building blocks
+        self._blocks = []
+        
+        #FC layer
+        for idx in range(self.num_fc_bd_blocks):
+            block_id = 'deconv_fc_bd_%s' % str(idx+1)
+            print(block_id) if self.debug else None
+            setting = block_setting[block_id]
+            block = FCBlock(**setting)
+            self._blocks.append([block,block_id])
+                 
+    def call(self,
+            inputs,
+            gammas=None,
+            betas=None):
+        x = inputs
+        for idx, [block,block_id] in enumerate(self._blocks):
+            x = block(x)
         return x
 
 class CNN_Decoder(layers.Layer):
     def __init__(self,**kwargs):
         super().__init__()
         self.num_deconv_blocks = kwargs.get('num_deconv_blocks',5)
-        self.num_defc_blocks = kwargs.get('num_defc_blocks',2)
+        self.num_fc_bd_blocks = kwargs.get('num_fc_bd_blocks',2)
+        self.num_fc_ad_blocks = kwargs.get('num_fc_ad_blocks',2)
         self.survival_prob = kwargs.get('survival_prob',0.8)
+        self.apply_sigmoid = kwargs.get('apply_sigmoid',True)
         self.drop_rate = 1.0 - self.survival_prob
         self.debug = kwargs.get('debug',False)
 
@@ -270,19 +295,16 @@ class CNN_Decoder(layers.Layer):
         #Building blocks
         self._blocks = []
         #DeFC layer
-        for idx in range(self.num_defc_blocks):
-            block_id = 'defc_block%s' % str(idx+1)
+        for idx in range(self.num_fc_ad_blocks):
+            block_id = 'deconv_fc_ad_%s' % str(idx+1)
             print(block_id) if self.debug else None
             setting = block_setting[block_id]
             block = FCBlock(**setting)
-            self._blocks.append([block,False,block_id])     
-        #Deflatten layer
-        block_id = "reshape"
-        setting = block_setting[block_id]
-        block = FCBlock(**setting)
-        self._blocks.append([block,False,block_id])
+            self._blocks.append([block,block_id])   
+        #Reshape Tensor    
+        block_id = 'reshape'
         block = tf.keras.layers.Reshape(target_shape=(15,20,128))
-        self._blocks.append([block,None,"deflatten"])
+        self._blocks.append([block,block_id])
         #Stack DeConv Blocks
         for idx in range(self.num_deconv_blocks):
             block_id = 'deconv_block%s' % str(idx+1)
@@ -290,131 +312,73 @@ class CNN_Decoder(layers.Layer):
             setting = block_setting[block_id]
             setting['survival_prob'] = 1.0 - self.drop_rate * float(idx) / len(self._blocks)
             block = DeConvBlock(**setting)
-            self._blocks.append([block,False,block_id])
+            self._blocks.append([block,block_id])
             
-        setting = block_setting['deconv_output']
-        setting['survival_prob'] = 1.0
-        block = DeConvBlock_fin(**setting)
-        self._blocks.append([block,False,block_id])
-
     def call(self,
             z,
             gammas=None,
-            betas=None,
-            training=True,
-            apply_sigmoid=False):
+            betas=None):
         x_hat = z
-        for [block,isfilm,block_id] in self._blocks:
-            #Conv Blocks (FiLMed or Not)
-            with tf.compat.v1.variable_scope(block_id):
-                if isfilm == False:
-                    x_hat = block(
-                        x_hat, 
-                        training=training)
-                elif isfilm is None:
-                    x_hat = block(x_hat)
-        
-        if apply_sigmoid:
+        for [block,block_id] in self._blocks:
+            x_hat = block(x_hat)
+        if self.apply_sigmoid:
             probs = tf.sigmoid(x_hat)
             return probs
-        
-        
-        # x_hat = tf.keras.activations.sigmoid(x_hat)
         return x_hat
 
-class CNN_Encoder_latent(layers.Layer):
-    def __init__(self,**kwargs):
-        super().__init__()
-        self.num_conv_blocks = kwargs.get('num_conv_blocks',5)
-        self.num_fc_blocks = kwargs.get('num_fc_blocks',2)
-        self.latent_dim2 = kwargs.get('latent_dim2',32)
-        self.survival_prob = kwargs.get('survival_prob',0.8)
-        self.drop_rate = 1.0 - self.survival_prob
-        self.debug = kwargs.get('debug',False)
-        random.seed(dt.now())
-        self.seed = random.randint(0,12345)
-        self._build()
-        
-    def _build(self):
-        # return mean, logvar
-        #Building blocks
-        self._blocks = []
-        #FC layer
-        for idx in range(self.num_fc_blocks):
-            block_id = 'latent_fc_block%s' % str(idx+1)
-            print(block_id) if self.debug else None
-            setting = block_setting[block_id]
-            setting['units'] = (2-idx) * 2 * self.latent_dim2
-            block = FCBlock(**setting)
-            self._blocks.append([block,False,block_id])
-        block = FCBlock(**setting)
-        self._blocks.append([block,False,block_id])
-     
-    def call(self,
-            inputs,
-            gammas=None,
-            betas=None,
-            training=True):
-        x = inputs
-        for idx, [block,isfilm,block_id] in enumerate(self._blocks):
-            #Conv Blocks (FiLMed or Not)
-            with tf.compat.v1.variable_scope(block_id):
-                if isfilm == False:
-                    x = block(
-                        x, 
-                        training=training)
-                elif isfilm is None:
-                    x = block(x)
-        mean, logvar = tf.split(x, num_or_size_splits=2, axis=1)
-        return mean, logvar
 
-class CNN_Decoder_latent(layers.Layer):
-    def __init__(self,**kwargs):
-        super().__init__()
-        self.num_deconv_blocks = kwargs.get('num_deconv_blocks',5)
-        self.num_defc_blocks = kwargs.get('num_defc_blocks',2)
-        self.survival_prob = kwargs.get('survival_prob',0.8)
-        self.latent_dim2 = kwargs.get('latent_dim2',32)
-        self.drop_rate = 1.0 - self.survival_prob
-        self.debug = kwargs.get('debug',False)
 
-        random.seed(dt.now())
-        self.seed = random.randint(0,12345)
-        self._build()
-        
-    def _build(self):
-        #Building blocks
-        self._blocks = []
-        #DeFC layer
-        for idx in range(self.num_defc_blocks):
-            block_id = 'latent_defc_block%s' % str(idx+1)
-            print(block_id) if self.debug else None
-            setting = block_setting[block_id]
-            setting['units'] = (2-idx) * 2 * self.latent_dim2
-            block = FCBlock(**setting)
-            self._blocks.append([block,False,block_id])     
+##########################################################################
+########################   full model gernerator   #######################
+##########################################################################
+class VAE_model():
+    def __init__(self,**kwargs):
+        self.debug = kwargs.get('debug',False)
+        self._build(**kwargs)
     
-    def call(self,
-            z,
-            gammas=None,
-            betas=None,
-            training=True,
-            apply_sigmoid=False):
-        x_hat = z
-        for [block,isfilm,block_id] in self._blocks:
-            #Conv Blocks (FiLMed or Not)
-            with tf.compat.v1.variable_scope(block_id):
-                if isfilm == False:
-                    x_hat = block(
-                        x_hat, 
-                        training=training)
-                elif isfilm is None:
-                    x_hat = block(x_hat)
+    def _build(self,**kwargs):
+        self.inputs = tf.keras.Input(shape=(480,640,1),name='input')
         
-        if apply_sigmoid:
-            probs = tf.sigmoid(x_hat)
-            return probs
-        return x_hat
+        #Build FULL VAE model frame
+        self.encoder = CNN_Encoder()
+        self.encoder_latent = CNN_Encoder_latent()
+        self.decoder_latent = CNN_Decoder_latent()
+        self.decoder = CNN_Decoder()
+   
+        #parameters for loss
+        self.mean, self.logvar = self.encoder_latent(self.encoder(self.inputs))
+        
+        self.z = self.reparameterize(self.mean,self.logvar)
+
+        self.logpz = self._log_normal_pdf(self.z,0.,0.)
+
+        self.logqz_x = self._log_normal_pdf(self.z,self.mean,self.logvar)
+        
+        self.prob = self.decoder(self.decoder_latent(self.z))
+
+        #complete vae model
+        self.vae_model = tf.keras.Model(inputs=self.inputs,outputs=self.prob,name='variational_autoencoder')
+    
+    def reparameterize(self,mean,logvar):
+        eps = tf.random.normal(shape=tf.shape(mean))
+        return eps * tf.exp(logvar * .5) + mean
+
+    def _log_normal_pdf(self,sample, mean, logvar, raxis=1):
+        log2pi = tf.math.log(2. * np.pi)
+        return tf.reduce_sum(
+            -.5 * ((sample - mean) ** 2. * tf.exp(-logvar) + logvar + log2pi),
+            axis=raxis)
+
+    def loss_(self, true, pred):
+        reconstruction_loss = tf.reduce_mean(
+            tf.keras.losses.binary_crossentropy(true, pred)
+        )
+        reconstruction_loss *= 640 * 480
+        kl_loss = 1 + self.logvar - tf.square(self.mean) - tf.exp(self.logvar)
+        kl_loss = tf.reduce_mean(kl_loss)
+        kl_loss *= -0.5
+        total_loss = reconstruction_loss + kl_loss
+        return total_loss
 
 class Autoencoder_encoder():
     def __init__(self,**kwargs):
@@ -442,7 +406,7 @@ class Autoencoder_encoder():
         self.concate_latent = tf.keras.layers.Concatenate(axis=1)([self.en1, self.en2, self.en3, self.en4])
         
         self.en_latent = self.encoder_latent(self.concate_latent)
-        
+        tf.summary.histogram("latent",self.en_latent)
         self.encoder_model = tf.keras.Model([self.input1,self.input2,self.input3,self.input4],self.en_latent,name='encoder')
         
 class Autoencoder_decoder():
@@ -571,3 +535,11 @@ class Autoencoder():
 
         return K.mean(reconstruction_loss + kl_loss)
         # return K.mean(100 * reconstruction_loss + kl_loss)
+
+
+if __name__=="__main__":
+    sample = tf.keras.Input(shape=(480,640,1),name='input')
+    model = VAE_model(debug=True)
+    result = model(sample)
+    model_f = tf.keras.Model(sample,result)
+    print(model_f.summary())
