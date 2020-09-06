@@ -58,12 +58,13 @@ print("                                                                         
 print("                                                                           ")
 
 """ Image data """
-data = [0,0,0,0]
+# data = [0,0,0,0]
+data = [0]
 vrep_jaco_data_path = "../../../vrep_jaco_data"
 data[0] = np.load(vrep_jaco_data_path+"/data/data/dummy_data1.npy",allow_pickle=True)
-data[1] = np.load(vrep_jaco_data_path+"/data/data/dummy_data2.npy",allow_pickle=True)
-data[2] = np.load(vrep_jaco_data_path+"/data/data/dummy_data3.npy",allow_pickle=True)
-data[3] = np.load(vrep_jaco_data_path+"/data/data/dummy_data4.npy",allow_pickle=True)
+# data[1] = np.load(vrep_jaco_data_path+"/data/data/dummy_data2.npy",allow_pickle=True)
+# data[2] = np.load(vrep_jaco_data_path+"/data/data/dummy_data3.npy",allow_pickle=True)
+# data[3] = np.load(vrep_jaco_data_path+"/data/data/dummy_data4.npy",allow_pickle=True)
 data = np.array(data)
 
 train_x = []
@@ -90,9 +91,9 @@ train_x = np.array(train_x)
 test_x = np.array(test_x)
 
 input1 = train_x[0]
-input2 = train_x[1]
-input3 = train_x[2]
-input4 = train_x[3]
+# input2 = train_x[1]
+# input3 = train_x[2]
+# input4 = train_x[3]
 
 
 ####################
@@ -105,21 +106,31 @@ print("                                                                         
 print("                                                                           ")
 print("                                                                           ")
 
+
 """ training """
 if train:
     if only_vae:
         """ build graph """
+        
+        """ tensorboard setting """
         log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-        tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+        tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1,write_images=True)
+        # latent_z_callback = tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: print(model.layers[1].get_weights()))
 
-        model_ = state_gen_util.VAE_model(debug=False)
-        model = model_.vae_model
+        """ model setting """
+        input_ = tf.keras.Input(shape=(480,640,1), name='vae_input')
+        model_ = state_gen_util.VAE_model(debug=True,num_conv_blocks=5,num_deconv_blocks=5)
+        result_ = model_(input_)
+        model = tf.keras.Model(input_,result_)
         optimizer = tf.keras.optimizers.Adam(1e-3)
-        model.compile(optimizer=optimizer, loss=model_.loss_)
+        model.compile(optimizer=optimizer, loss=model_.vae_loss)
         if load == True:
             model.load_weights(weight_name)
         print(model.summary())
-        model.fit(x=input1,y=input1,batch_size=20,epochs=100,callbacks=[tensorboard_callback])
+
+        """ model train """
+        # model.fit(x=input1,y=input1,batch_size=2,epochs=100,callbacks=[tensorboard_callback,latent_z_callback])
+        model.fit(x=input1,y=input1,batch_size=2,epochs=100,callbacks=[tensorboard_callback])
         model.save_weights('weights/only_vae_autoencoder_weights')
     
     else:
@@ -199,3 +210,5 @@ else:
                 fig.add_subplot(rows, columns, i)
                 plt.imshow(pics[i-5])
         plt.show()
+
+

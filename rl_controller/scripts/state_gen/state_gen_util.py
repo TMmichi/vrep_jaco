@@ -2,16 +2,15 @@ import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras import layers
 import numpy as np
-
 import random
 from datetime import datetime as dt
-
 from state_gen.config import block_setting
+
+
 
 ############################################################################
 ########################   basic block gernerator   ########################
 ############################################################################
-
 class FCBlock(layers.Layer):
     def __init__(self,**kwargs):
         super().__init__()
@@ -331,210 +330,41 @@ class CNN_Decoder(layers.Layer):
 ##########################################################################
 ########################   full model gernerator   #######################
 ##########################################################################
-class VAE_model():
+class VAE_model(tf.keras.Model):
     def __init__(self,**kwargs):
+        super(VAE_model, self).__init__()
         self.debug = kwargs.get('debug',False)
         self._build(**kwargs)
     
     def _build(self,**kwargs):
-        self.inputs = tf.keras.Input(shape=(480,640,1),name='input')
-        
         #Build FULL VAE model frame
-        self.encoder = CNN_Encoder()
-        self.encoder_latent = CNN_Encoder_latent()
-        self.decoder_latent = CNN_Decoder_latent()
-        self.decoder = CNN_Decoder()
-   
-        #parameters for loss
-        self.mean, self.logvar = self.encoder_latent(self.encoder(self.inputs))
-        
+        self.encoder = CNN_Encoder(**kwargs)
+        self.encoder_latent = CNN_Encoder_latent(**kwargs)
+        self.decoder_latent = CNN_Decoder_latent(**kwargs)
+        self.decoder = CNN_Decoder(**kwargs)
+
+    def call(self, inputs):
+        self.mean, self.logvar = self.encoder_latent(self.encoder(inputs))
         self.z = self.reparameterize(self.mean,self.logvar)
-
-        self.logpz = self._log_normal_pdf(self.z,0.,0.)
-
-        self.logqz_x = self._log_normal_pdf(self.z,self.mean,self.logvar)
-        
         self.prob = self.decoder(self.decoder_latent(self.z))
-
-        #complete vae model
-        self.vae_model = tf.keras.Model(inputs=self.inputs,outputs=self.prob,name='variational_autoencoder')
+        return self.prob
     
     def reparameterize(self,mean,logvar):
         eps = tf.random.normal(shape=tf.shape(mean))
         return eps * tf.exp(logvar * .5) + mean
 
-    def _log_normal_pdf(self,sample, mean, logvar, raxis=1):
-        log2pi = tf.math.log(2. * np.pi)
-        return tf.reduce_sum(
-            -.5 * ((sample - mean) ** 2. * tf.exp(-logvar) + logvar + log2pi),
-            axis=raxis)
-
-    def loss_(self, true, pred):
+    def vae_loss(self, true, pred):
         reconstruction_loss = tf.reduce_mean(
             tf.keras.losses.binary_crossentropy(true, pred)
         )
-        reconstruction_loss *= 640 * 480
         kl_loss = 1 + self.logvar - tf.square(self.mean) - tf.exp(self.logvar)
         kl_loss = tf.reduce_mean(kl_loss)
         kl_loss *= -0.5
         total_loss = reconstruction_loss + kl_loss
         return total_loss
 
-class Autoencoder_encoder():
-    def __init__(self,**kwargs):
-        self.debug = kwargs.get('debug',False)
-        self._build(**kwargs)
 
-    def _build(self,**kwargs):
-        self.encoder = CNN_Encoder(**kwargs)
-        self.encoder2 = CNN_Encoder(**kwargs)
-        self.encoder3 = CNN_Encoder(**kwargs)
-        self.encoder4 = CNN_Encoder(**kwargs)
-        
-        self.encoder_latent = CNN_Encoder_latent(**kwargs)
 
-        self.input1 = tf.keras.Input(shape=(480,640,1))
-        self.input2 = tf.keras.Input(shape=(480,640,1))
-        self.input3 = tf.keras.Input(shape=(480,640,1))
-        self.input4 = tf.keras.Input(shape=(480,640,1))
-
-        self.en1 = self.encoder(self.input1)
-        self.en2 = self.encoder2(self.input2)
-        self.en3 = self.encoder3(self.input3)
-        self.en4 = self.encoder4(self.input4)
-        
-        self.concate_latent = tf.keras.layers.Concatenate(axis=1)([self.en1, self.en2, self.en3, self.en4])
-        
-        self.en_latent = self.encoder_latent(self.concate_latent)
-        tf.summary.histogram("latent",self.en_latent)
-        self.encoder_model = tf.keras.Model([self.input1,self.input2,self.input3,self.input4],self.en_latent,name='encoder')
-        
-class Autoencoder_decoder():
-    def __init__(self,**kwargs):
-        self.debug = kwargs.get('debug',False)
-        self._build(**kwargs)
-        self.latent_dim = kwargs.get('latent_dim',32)
-        self.latent_dim2 = kwargs.get('latent_dim2',32)
-
-    def _build(self,**kwargs):
-        
-        self.inputs = tf.keras.Input(shape=(32,))
-        
-        self.decoder_latent = CNN_Decoder_latent(**kwargs)
-                
-        self.decoder1 = CNN_Decoder(**kwargs)
-        self.decoder2 = CNN_Decoder(**kwargs)
-        self.decoder3 = CNN_Decoder(**kwargs)
-        self.decoder4 = CNN_Decoder(**kwargs)
-        
-        self.de_latent = self.decoder_latent(self.inputs)
-        
-        self.de1 = self.decoder1(self.de_latent)
-        self.de2 = self.decoder2(self.de_latent)
-        self.de3 = self.decoder3(self.de_latent)
-        self.de4 = self.decoder4(self.de_latent)
-
-        self.decoder_model1 = tf.keras.Model(self.inputs,self.de1,name='decoder1')
-        self.decoder_model2 = tf.keras.Model(self.inputs,self.de2,name='decoder2')
-        self.decoder_model3 = tf.keras.Model(self.inputs,self.de3,name='decoder3')
-        self.decoder_model4 = tf.keras.Model(self.inputs,self.de4,name='decoder4')
-
-class Autoencoder():
-    def __init__(self,**kwargs):
-        self.debug = kwargs.get('debug',False)
-        
-        self.input1 = tf.keras.Input(shape=(480,640,1),name='input1')
-        self.input2 = tf.keras.Input(shape=(480,640,1),name='input2')
-        self.input3 = tf.keras.Input(shape=(480,640,1),name='input3')
-        self.input4 = tf.keras.Input(shape=(480,640,1),name='input4')
-        
-        self._build(**kwargs)
-    
-    def _build(self,**kwargs):
-        self.encoder = Autoencoder_encoder()
-        self.decoder = Autoencoder_decoder()
-   
-        self.en_mean, self.en_var = self.encoder.encoder_model([self.input1,self.input2,self.input3,self.input4])
-        
-        self.z = self.reparameterize(self.en_mean,self.en_var)
-
-        self.logpz = self._log_normal_pdf(self.z,0.,0.)
-
-        self.logqz_x = self._log_normal_pdf(self.z,self.en_mean,self.en_var)
-        
-        self.prob1 = tf.keras.activations.sigmoid(self.decoder.decoder_model1(self.z))
-        self.prob2 = tf.keras.activations.sigmoid(self.decoder.decoder_model2(self.z))
-        self.prob3 = tf.keras.activations.sigmoid(self.decoder.decoder_model3(self.z))
-        self.prob4 = tf.keras.activations.sigmoid(self.decoder.decoder_model4(self.z))
-
-        self.autoencoder = tf.keras.Model(inputs=[self.input1,self.input2,self.input3,self.input4],outputs=[self.prob1,self.prob2,self.prob3,self.prob4],name='multimodal_variational_autoencoder')
-
-    def reparameterize(self,mean,logvar):
-        eps = tf.random.normal(shape=tf.shape(mean))
-        return eps * tf.exp(logvar * .5) + mean
-
-    def _log_normal_pdf(self,sample, mean, logvar, raxis=1):
-        log2pi = tf.math.log(2. * np.pi)
-        return tf.reduce_sum(
-            -.5 * ((sample - mean) ** 2. * tf.exp(-logvar) + logvar + log2pi),
-            axis=raxis)
-
-    def kl_reconstruction_loss1(self, true, pred):
-        # Reconstruction loss
-        reconstruction_loss = tf.keras.losses.binary_crossentropy(K.flatten(true), K.flatten(pred))
-        # reconstruction_loss = tf.keras.losses.MSE(K.flatten(true), K.flatten(pred))
-
-        # KL divergence loss
-        # mean , var = self.encoder.encoder_model1(true)
-        # kl_loss = 1 + K.sum(var - K.square(mean) - K.exp(var),axis=-1)
-        # kl_loss *= -0.5
-        # Total loss = 50% rec + 50% KL divergence loss
-
-        return K.mean(reconstruction_loss) # + kl_loss)
-        # return 100 * K.mean(reconstruction_loss) # + kl_loss)
-
-    def kl_reconstruction_loss2(self, true, pred):
-        # Reconstruction loss
-        reconstruction_loss = tf.keras.losses.binary_crossentropy(K.flatten(true), K.flatten(pred))
-        # reconstruction_loss = tf.keras.losses.MSE(K.flatten(true), K.flatten(pred))
-
-        # KL divergence loss
-        # mean , var = self.encoder.encoder_model2(true)
-        # kl_loss = 1 + K.sum(var - K.square(mean) - K.exp(var),axis=-1)
-        # kl_loss *= -0.5
-        # Total loss = 50% rec + 50% KL divergence loss
-
-        return K.mean(reconstruction_loss) # + kl_loss)
-        # return 100 * K.mean(reconstruction_loss) # + kl_loss)
-
-    def kl_reconstruction_loss3(self, true, pred):
-        # Reconstruction loss
-        reconstruction_loss = tf.keras.losses.binary_crossentropy(K.flatten(true), K.flatten(pred))
-        # reconstruction_loss = tf.keras.losses.MSE(K.flatten(true), K.flatten(pred))
-
-        # KL divergence loss
-        # mean , var = self.encoder.encoder_model3(true)
-        # kl_loss = 1 + K.sum(var - K.square(mean) - K.exp(var),axis=-1)
-        # kl_loss *= -0.5
-        # Total loss = 50% rec + 50% KL divergence loss
-
-        return K.mean(reconstruction_loss) # + kl_loss)
-        # return 100 * K.mean(reconstruction_loss) # + kl_loss)
-
-    def kl_reconstruction_loss4(self, true, pred):
-        # Reconstruction loss
-        reconstruction_loss = tf.keras.losses.binary_crossentropy(K.flatten(true), K.flatten(pred))
-        # reconstruction_loss = tf.keras.losses.MSE(K.flatten(true), K.flatten(pred))
-
-        # KL divergence loss
-        # mean , var = self.encoder.encoder_model4(true)
-        kl_loss = K.sum(1 + self.en_var - K.square(self.en_mean) - K.exp(self.en_var),axis=-1)
-        kl_loss *= -0.5
-        
-        # Total loss = 50% rec + 50% KL divergence loss
-
-        return K.mean(reconstruction_loss + kl_loss)
-        # return K.mean(100 * reconstruction_loss + kl_loss)
 
 
 if __name__=="__main__":
