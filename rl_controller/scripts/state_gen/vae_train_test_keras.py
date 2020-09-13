@@ -42,7 +42,7 @@ fig = plt.figure()
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth = True
-tf.enable_eager_execution(config=config)
+# tf.enable_eager_execution(config=config)
 os.environ['TF_CPP_MIN_LOG_LEVEL']='0'
 
 
